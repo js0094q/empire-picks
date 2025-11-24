@@ -10,10 +10,34 @@ export default async function handler(req, res) {
     const r = await fetch(url);
     const events = await r.json();
 
-    // Filter only Thursday→Monday games
+    // ===== NFL Week Window Logic =====
+    // OddsAPI events are always in ISO 8601 UTC format.
+    const now = new Date();
+
+    // 1. Normalize to UTC midnight
+    const todayUTC = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    ));
+
+    // 2. Determine most recent Thursday at 00:00 UTC.
+    // JS weekday: Thu = 4
+    const todayUTCDay = todayUTC.getUTCDay();
+    const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
+
+    const thursdayUTC = new Date(todayUTC);
+    thursdayUTC.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
+
+    // 3. End of window: Tuesday 11:00 UTC (covers MNF safely)
+    const tuesdayUTC = new Date(thursdayUTC);
+    tuesdayUTC.setUTCDate(tuesdayUTC.getUTCDate() + 5); // Thursday +5 = Tuesday
+    tuesdayUTC.setUTCHours(11, 0, 0, 0);  // allow MNF + delays
+
+    // 4. Filter events by kickoff within the NFL week window
     const weekGames = events.filter(ev => {
-      const d = new Date(ev.commence_time);
-      return [4, 5, 6, 0, 1].includes(d.getUTCDay());
+      const kickoff = new Date(ev.commence_time);
+      return kickoff >= thursdayUTC && kickoff <= tuesdayUTC;
     });
 
     res.status(200).json(weekGames);

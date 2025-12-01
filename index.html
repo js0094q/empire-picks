@@ -21,11 +21,6 @@
   </footer>
 
   <script src="script.js" type="module"></script>
-  <script>
-  window.__EP_SECRET = document.cookie.split('; ')
-    .find(r => r.startsWith('__EP_SECRET'))
-    ?.split('=')[1];
-</script>
   <script type="module">
   import { validateToken } from "./token.js";
   if (!validateToken()) {

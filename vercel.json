@@ -12,16 +12,17 @@
 
     { "src": "api/*.js", "use": "@vercel/node" }
   ],
+
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1.js" },
 
-    { "src": "/dashboard.js", "dest": "/dashboard.js" },
-    { "src": "/script.js",    "dest": "/script.js" },
-    { "src": "/teams.js",     "dest": "/teams.js" },
-    { "src": "/token.js",     "dest": "/token.js" },
-    { "src": "/styles.css",   "dest": "/styles.css" },
-
     { "src": "/dashboard", "dest": "/dashboard.html" },
+
+    { "src": "/dashboard.js", "dest": "/dashboard.js" },
+    { "src": "/script.js", "dest": "/script.js" },
+    { "src": "/teams.js", "dest": "/teams.js" },
+    { "src": "/token.js", "dest": "/token.js" },
+    { "src": "/styles.css", "dest": "/styles.css" },
 
     { "src": "/(.*)", "dest": "/index.html" }
   ]

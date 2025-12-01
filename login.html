@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EmpirePicks | Beta Login</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="styles.css" />
 
   <style>
     body {
@@ -14,7 +14,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-family: system-ui;
+      font-family: system-ui, sans-serif;
       color: var(--text);
     }
     .login-card {
@@ -46,11 +46,7 @@
       border: none;
       cursor: pointer;
     }
-    #error {
-      margin-top: 1rem;
-      color: #ff6b6b;
-      min-height: 20px;
-    }
+    #error { color: #f55; margin-top: 1rem; min-height: 20px; }
   </style>
 </head>
 
@@ -60,8 +56,7 @@
     <h2 style="color:var(--gold);">🏛 EmpirePicks</h2>
     <p>Private Beta Access</p>
 
-    <input id="invite" placeholder="Enter Invite Code" autocomplete="off"/>
-
+    <input id="invite" placeholder="Enter Invite Code" autocomplete="off" />
     <button id="loginBtn">Login</button>
 
     <div id="error"></div>
@@ -70,33 +65,27 @@
   <script type="module">
     import { createToken, validateToken } from "./token.js";
 
-    // If user already logged in → send to home
-    if (validateToken()) {
-      window.location.href = "/";
-    }
+    // If already logged in → redirect to home
+    if (validateToken()) window.location.href = "/";
 
     const input = document.getElementById("invite");
     const error = document.getElementById("error");
 
-    async function login(){
+    function login(){
       const code = input.value.trim();
-
       const token = createToken(code);
+
       if (!token){
         error.textContent = "Invalid invite code.";
         return;
       }
 
-      // Store token
       localStorage.setItem("EP_TOKEN", token);
-
-      // Redirect to the main app
       window.location.href = "/";
     }
 
     document.getElementById("loginBtn").onclick = login;
 
-    // Allow Enter key
     input.addEventListener("keyup", e => {
       if (e.key === "Enter") login();
     });

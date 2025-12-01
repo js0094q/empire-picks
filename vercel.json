@@ -1,11 +1,32 @@
-"builds": [
-  { "src": "index.html", "use": "@vercel/static" },
-  { "src": "dashboard.html", "use": "@vercel/static" },
-  { "src": "login.html", "use": "@vercel/static" },
-  { "src": "styles.css", "use": "@vercel/static" },
-  { "src": "script.js", "use": "@vercel/static" },
-  { "src": "dashboard.js", "use": "@vercel/static" },
-  { "src": "teams.js", "use": "@vercel/static" },
-  { "src": "token.js", "use": "@vercel/static" },
-  { "src": "api/*.js", "use": "@vercel/node" }
-]
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "dashboard.html", "use": "@vercel/static" },
+    { "src": "login.html", "use": "@vercel/static" },
+    { "src": "styles.css", "use": "@vercel/static" },
+    { "src": "script.js", "use": "@vercel/static" },
+    { "src": "dashboard.js", "use": "@vercel/static" },
+    { "src": "teams.js", "use": "@vercel/static" },
+    { "src": "token.js", "use": "@vercel/static" },
+    { "src": "api/events.js", "use": "@vercel/node" },
+    { "src": "api/odds.js", "use": "@vercel/node" },
+    { "src": "api/event-odds.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/events", "dest": "/api/events.js" },
+    { "src": "/api/odds", "dest": "/api/odds.js" },
+    { "src": "/api/event-odds", "dest": "/api/event-odds.js" },
+
+    { "src": "/login", "dest": "/login.html" },
+    { "src": "/dashboard", "dest": "/dashboard.html" },
+
+    { "src": "/styles.css", "dest": "/styles.css" },
+    { "src": "/script.js", "dest": "/script.js" },
+    { "src": "/dashboard.js", "dest": "/dashboard.js" },
+    { "src": "/teams.js", "dest": "/teams.js" },
+    { "src": "/token.js", "dest": "/token.js" },
+
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

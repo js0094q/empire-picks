@@ -1,45 +1,65 @@
-// Lightweight client-side JWT-like token signing
+// ========================================================
+// Simple, stable token system for EmpirePicks Beta Login
+// Works on static Vercel hosting, no backend needed.
+// ========================================================
 
-import { sha256 } from "https://esm.sh/@noble/hashes@1.3.2/sha256";
-
-// The secret is injected by Vercel using middleware
-const SECRET = window.__EP_SECRET;
-
-// 6-hour tokens
+// 6 hour expiration (in milliseconds)
 const EXP_MS = 6 * 60 * 60 * 1000;
 
-export async function createToken(inviteCode) {
-  // Replace this with real approval logic
-  const validCodes = ["EMPIRE-BETA-01", "TESTER-JS", "NFL-ACCESS"];  
+// YOUR approved invite codes:
+const VALID_INVITE_CODES = [
+  "EMPIRE-BETA-01",
+  "NFL-ACCESS",
+  "TESTER-JS",
+];
 
-  if (!validCodes.includes(inviteCode)) return null;
+// Create a hash (stable string transform)
+function hash(str){
+  let h = 0;
+  for (let i = 0; i < str.length; i++){
+    h = (h << 5) - h + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h.toString();
+}
+
+// Create a signed token the app can verify later
+export function createToken(inviteCode){
+  if (!VALID_INVITE_CODES.includes(inviteCode)) {
+    return null;
+  }
 
   const payload = {
-    invite: inviteCode,
+    code: inviteCode,
     ts: Date.now(),
     exp: Date.now() + EXP_MS
   };
 
-  const sig = sign(JSON.stringify(payload));
-  return btoa(JSON.stringify({ payload, sig }));
+  const signature = hash(JSON.stringify(payload) + "EMPIREPICKS_SECRET");
+
+  return btoa(JSON.stringify({ payload, signature }));
 }
 
-export function validateToken() {
+// Validate the token from localStorage
+export function validateToken(){
   const t = localStorage.getItem("EP_TOKEN");
   if (!t) return false;
 
   try {
-    const { payload, sig } = JSON.parse(atob(t));
-    if (sig !== sign(JSON.stringify(payload))) return false;
+    const { payload, signature } = JSON.parse(atob(t));
+
+    // Check expiration
     if (Date.now() > payload.exp) return false;
+
+    // Check signature integrity
+    const expected = hash(JSON.stringify(payload) + "EMPIREPICKS_SECRET");
+    if (expected !== signature) return false;
+
+    // Check invite code is still valid
+    if (!VALID_INVITE_CODES.includes(payload.code)) return false;
+
     return true;
-  } catch {
+  } catch (e){
     return false;
   }
-}
-
-function sign(str) {
-  const bytes = new TextEncoder().encode(SECRET + str);
-  const hash = sha256(bytes);
-  return Array.from(hash).map(b=>b.toString(16).padStart(2,"0")).join("");
 }

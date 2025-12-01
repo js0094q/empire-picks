@@ -18,7 +18,7 @@
     { "src": "/api/odds", "dest": "/api/odds.js" },
     { "src": "/api/event-odds", "dest": "/api/event-odds.js" },
 
-    { "src": "/login", "dest": "/login.html" },
+    { "src": "/login", "dest": "/auth.html" },
     { "src": "/dashboard", "dest": "/dashboard.html" },
 
     { "src": "/styles.css", "dest": "/styles.css" },

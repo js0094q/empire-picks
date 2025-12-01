@@ -3,16 +3,26 @@
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "dashboard.html", "use": "@vercel/static" },
+
     { "src": "styles.css", "use": "@vercel/static" },
     { "src": "script.js", "use": "@vercel/static" },
     { "src": "dashboard.js", "use": "@vercel/static" },
     { "src": "teams.js", "use": "@vercel/static" },
+    { "src": "token.js", "use": "@vercel/static" },
+
     { "src": "api/*.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1.js" },
+
+    { "src": "/dashboard.js", "dest": "/dashboard.js" },
+    { "src": "/script.js",    "dest": "/script.js" },
+    { "src": "/teams.js",     "dest": "/teams.js" },
+    { "src": "/token.js",     "dest": "/token.js" },
+    { "src": "/styles.css",   "dest": "/styles.css" },
+
     { "src": "/dashboard", "dest": "/dashboard.html" },
-    { "src": "/(styles|script|teams|dashboard)\\.(css|js)", "dest": "/$1.$2" },
+
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

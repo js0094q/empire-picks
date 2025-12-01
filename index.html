@@ -8,12 +8,6 @@
   <script type="module" src="teams.js"></script>
 </head>
 <body>
-<script type="module">
-  import { validateToken } from "./token.js";
-  if (!validateToken()) {
-    window.location.href = "/login.html";
-  }
-</script>
   <header class="header">
     <h1>🏛 EmpirePicks</h1>
     <p>NFL Odds & Props Aggregator (Week View)</p>
@@ -31,6 +25,12 @@
   window.__EP_SECRET = document.cookie.split('; ')
     .find(r => r.startsWith('__EP_SECRET'))
     ?.split('=')[1];
+</script>
+  <script type="module">
+  import { validateToken } from "./token.js";
+  if (!validateToken()) {
+    window.location.href = "/login.html";
+  }
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks | Beta Login</title>
+  <title>EmpirePicks | Login</title>
   <link rel="stylesheet" href="styles.css" />
 
   <style>
@@ -65,7 +65,7 @@
   <script type="module">
     import { createToken, validateToken } from "./token.js";
 
-    // If already logged in → redirect to home
+    // If already logged in → redirect home
     if (validateToken()) window.location.href = "/";
 
     const input = document.getElementById("invite");

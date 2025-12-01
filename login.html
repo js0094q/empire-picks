@@ -152,10 +152,10 @@
     document.getElementById("loginBtn").onclick = login;
 
     // Allow "Enter" key submission
-    input.addEventListener("keyup", e => {
-      if(e.key === "Enter") login();
-    });
-  </script>
-
+    <script>
+  if (localStorage.getItem("EP_TOKEN")) {
+    window.location.href = "/";
+  }
+   </script>
 </body>
 </html>

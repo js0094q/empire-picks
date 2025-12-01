@@ -1,5 +1,5 @@
+import { computeGameAnalytics } from "./script.js";
 import { NFL_TEAMS } from "./teams.js";
-import { computeGameAnalytics } from "./script.js"; // re-exported below
 
 // API endpoints
 async function getEvents(){ return fetch("/api/events").then(r=>r.json()); }

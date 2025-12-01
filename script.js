@@ -1,4 +1,8 @@
+// ========================================================
+//  IMPORT TEAM COLORS + LOGOS
+// ========================================================
 import { NFL_TEAMS } from "./teams.js";
+
 // ===== DOM helpers =====
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -6,14 +10,14 @@ const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 // ===== Math helpers =====
 const money = o => o > 0 ? `+${o}` : o;
 
-// American odds → implied probability (with vig)
+// Convert American odds → implied probability
 function prob(odds){
   return odds > 0
     ? 100 / (odds + 100)
     : -odds / (-odds + 100);
 }
 
-// Remove vig from a two-outcome market
+// Remove bookmaker vig from a 2-sided market
 function noVig(p1, p2){
   const total = p1 + p2;
   if(!total) return [0.5, 0.5];
@@ -22,60 +26,59 @@ function noVig(p1, p2){
 
 const avg = arr => arr && arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
 
-// Group outcomes by "name:point" key (used for spreads/totals/props)
-function groupByPoint(outcomes){
-  const map = {};
-  outcomes.forEach(o => {
+// Group outcomes like "Over:241.5"
+function groupByPoint(arr){
+  const out = {};
+  arr.forEach(o => {
     const key = `${o.name}:${o.point}`;
-    if(!map[key]) map[key] = [];
-    map[key].push(prob(o.price));
+    if(!out[key]) out[key] = [];
+    out[key].push(prob(o.price));
   });
-  return map;
+  return out;
 }
 
-// ===== API wrappers (proxy through Vercel serverless routes) =====
+// ========================================================
+//  API WRAPPERS
+// ========================================================
 const api = {
   async events(){ return fetch("/api/events").then(r => r.json()); },
   async odds(){ return fetch("/api/odds").then(r => r.json()); },
   async props(id){ return fetch(`/api/event-odds?eventId=${id}`).then(r => r.json()); }
 };
 
-// ===== UI root =====
+// ========================================================
+//  ROOT + EVENT HANDLER
+// ========================================================
 const gamesEl = $("#games");
 $("#refreshBtn").addEventListener("click", loadAll);
 
-// ===== Main load =====
+// ========================================================
+//  MAIN LOAD
+// ========================================================
 async function loadAll(){
-  gamesEl.textContent = "Loading NFL week data...";
+  gamesEl.textContent = "Loading NFL week data…";
 
   const [events, oddsWrap] = await Promise.all([api.events(), api.odds()]);
-  const odds = oddsWrap.data ?? oddsWrap;  // /api/odds returns { remaining, data }
+  const odds = oddsWrap.data ?? oddsWrap;
 
-  const oddsById = Object.fromEntries(odds.map(g => [g.id, g]));
+  const byId = Object.fromEntries(odds.map(g => [g.id, g]));
+
   const now = Date.now();
-  const cutoffMs = 4 * 60 * 60 * 1000; // hide games 4h after kickoff
+  const cutoff = 4 * 60 * 60 * 1000; // 4h after kickoff
 
-  const weekGames = events.filter(ev => {
-    const gameOdds = oddsById[ev.id];
-    if(!gameOdds) return false;
+  const validGames = events.filter(ev => {
+    if(!byId[ev.id]) return false;
     const t = new Date(ev.commence_time).getTime();
-    if(now > t + cutoffMs) return false;
-    return true;
+    return now <= t + cutoff;
   });
 
   gamesEl.innerHTML = "";
-  if(!weekGames.length){
-    gamesEl.textContent = "No NFL games in the current Thursday–Monday window.";
-    return;
-  }
-
-  weekGames.forEach(ev => {
-    const gameOdds = oddsById[ev.id];
-    gamesEl.appendChild(renderGame(ev, gameOdds));
-  });
+  validGames.forEach(ev => gamesEl.appendChild(renderGame(ev, byId[ev.id])));
 }
 
-// ===== Build a single game card =====
+// ========================================================
+//  RENDER A SINGLE GAME CARD
+// ========================================================
 function renderGame(ev, odds){
   const card = document.createElement("div");
   card.className = "card";
@@ -87,61 +90,60 @@ function renderGame(ev, odds){
       <h2>${ev.away_team} @ ${ev.home_team}</h2>
       <small>${kickoff}</small>
     </div>
+
     <div class="tabs">
       <div class="tab active" data-tab="lines">Game Lines</div>
       <div class="tab" data-tab="props">Player Props</div>
     </div>
+
     <div class="tab-content active" id="lines"></div>
     <div class="tab-content" id="props"><em>Click to load props…</em></div>
   `;
 
-  // ============================================
-  // ---- TEAM LOGOS + TEAM COLOR THEMES --------
-  // ============================================
-
-  const homeTeam = NFL_TEAMS[ev.home_team];
-  const awayTeam = NFL_TEAMS[ev.away_team];
   const header = card.querySelector(".card-header");
 
-  // Inject logos above the title
-  if (homeTeam && awayTeam) {
+  // ========================================================
+  //  TEAM LOGOS + THEME
+  // ========================================================
+  const home = NFL_TEAMS[ev.home_team];
+  const away = NFL_TEAMS[ev.away_team];
+
+  if(home && away){
     header.insertAdjacentHTML(
       "afterbegin",
       `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <img src="${awayTeam.logo}" style="height:44px;width:auto;">
-        <span style="flex:1;text-align:center;"></span>
-        <img src="${homeTeam.logo}" style="height:44px;width:auto;">
+        <img src="${away.logo}" style="height:44px;width:auto;">
+        <span style="flex:1;"></span>
+        <img src="${home.logo}" style="height:44px;width:auto;">
       </div>
       `
     );
   }
 
-  // Apply theme gradient to card
-  if (homeTeam) {
-    card.style.background = `linear-gradient(135deg, ${homeTeam.primary} 0%, ${homeTeam.secondary} 40%, #0d1228 90%)`;
-    card.style.borderColor = homeTeam.secondary;
-  }
-
-  // Tint tabs using team color
-  if (homeTeam) {
-    card.querySelectorAll(".tab").forEach(tab => {
-      tab.style.borderColor = homeTeam.primary;
+  if(home){
+    card.style.background = `linear-gradient(135deg, ${home.primary} 0%, ${home.secondary} 45%, #0d1228 95%)`;
+    card.style.borderColor = home.secondary;
+    card.querySelectorAll(".tab").forEach(t => {
+      t.style.borderBottom = `2px solid ${home.primary}`;
+      t.style.color = "#fff";
     });
   }
 
-  // ============================================
-  // ---- END TEAM LOGOS + THEME ----------------
-  // ============================================
-
-  // ESPN-style analytics block
+  // ========================================================
+  //  ANALYTICS BLOCK
+  // ========================================================
   const analytics = computeGameAnalytics(odds, ev.away_team, ev.home_team);
   header.insertAdjacentHTML("beforeend", analyticsHTML(analytics));
 
-  // Lines table with EV + Best Bet Badge
+  // ========================================================
+  //  LINES + BEST BET EV
+  // ========================================================
   renderLines($("#lines", card), odds, analytics);
 
-  // Tab switching
+  // ========================================================
+  //  TAB CONTROLS
+  // ========================================================
   $$(".tab", card).forEach(tab => {
     tab.addEventListener("click", () => {
       $$(".tab", card).forEach(t => t.classList.remove("active"));
@@ -151,7 +153,7 @@ function renderGame(ev, odds){
       const content = card.querySelector(`#${tab.dataset.tab}`);
       content.classList.add("active");
 
-      if (tab.dataset.tab === "props" && !content.dataset.loaded) {
+      if(tab.dataset.tab === "props" && !content.dataset.loaded){
         loadProps(ev.id, content);
       }
     });
@@ -160,14 +162,14 @@ function renderGame(ev, odds){
   return card;
 }
 
-// ===== Game analytics engine (ESPN-style) =====
+// ========================================================
+//  GAME ANALYTICS ENGINE (WIN %, SPREAD %, TOTAL %)
+// ========================================================
 function computeGameAnalytics(game, away, home){
   const books = game.bookmakers || [];
 
-  const mlAwayList = [];
-  const mlHomeList = [];
-  const spreadOutcomes = [];
-  const totalOutcomes = [];
+  let mlAway = [], mlHome = [];
+  let spread = [], totals = [];
 
   books.forEach(bm => {
     (bm.markets || []).forEach(m => {
@@ -175,92 +177,94 @@ function computeGameAnalytics(game, away, home){
         const a = m.outcomes.find(o => o.name === away);
         const h = m.outcomes.find(o => o.name === home);
         if(a && h){
-          mlAwayList.push(prob(a.price));
-          mlHomeList.push(prob(h.price));
+          mlAway.push(prob(a.price));
+          mlHome.push(prob(h.price));
         }
       }
       if(m.key === "spreads"){
-        m.outcomes.forEach(o => spreadOutcomes.push(o));
+        m.outcomes.forEach(o => spread.push(o));
       }
       if(m.key === "totals"){
-        m.outcomes.forEach(o => totalOutcomes.push(o));
+        m.outcomes.forEach(o => totals.push(o));
       }
     });
   });
 
-  const avgAway = avg(mlAwayList);
-  const avgHome = avg(mlHomeList);
-  const [nvAway, nvHome] = noVig(avgAway, avgHome); // consensus no-vig probs
+  const avgAway = avg(mlAway);
+  const avgHome = avg(mlHome);
+  const [nvAway, nvHome] = noVig(avgAway, avgHome);
 
-  const mlFavorite   = nvAway > nvHome ? away : home;
-  const favoriteProb = nvAway > nvHome ? nvAway : nvHome;
+  const winner = nvAway > nvHome ? away : home;
+  const winnerProb = Math.max(nvAway, nvHome);
 
-  // Consensus spread
-  const spreadGroups = groupByPoint(spreadOutcomes);
-  let bestSpreadKey  = null;
-  let bestSpreadProb = 0;
+  const spreadGroups = groupByPoint(spread);
+  let bestSpread = null, bestSpreadProb = 0;
 
   Object.entries(spreadGroups).forEach(([k, arr]) => {
     const p = avg(arr);
     if(p > bestSpreadProb){
       bestSpreadProb = p;
-      bestSpreadKey  = k;
+      bestSpread = k;
     }
   });
 
-  // Consensus total
-  const totalGroups = groupByPoint(totalOutcomes);
-  let bestTotalKey  = null;
-  let bestTotalProb = 0;
+  const totalGroups = groupByPoint(totals);
+  let bestTotal = null, bestTotalProb = 0;
 
   Object.entries(totalGroups).forEach(([k, arr]) => {
     const p = avg(arr);
     if(p > bestTotalProb){
       bestTotalProb = p;
-      bestTotalKey  = k;
+      bestTotal = k;
     }
   });
 
   return {
     away,
     home,
-    mlFavorite,
-    favoriteProb,
     nvAway,
     nvHome,
-    bestSpreadKey,
+    winner,
+    winnerProb,
+    bestSpread,
     bestSpreadProb,
-    bestTotalKey,
+    bestTotal,
     bestTotalProb
   };
 }
 
+// ========================================================
+//  ANALYTICS HTML BLOCK
+// ========================================================
 function analyticsHTML(a){
-  const [spreadTeam, spreadLine] = a.bestSpreadKey ? a.bestSpreadKey.split(":") : ["", ""];
-  const [totalSide,  totalLine]  = a.bestTotalKey  ? a.bestTotalKey.split(":")  : ["", ""];
+  const [spreadTeam, spreadLine] = a.bestSpread ? a.bestSpread.split(":") : ["", ""];
+  const [totalSide, totalLine] = a.bestTotal ? a.bestTotal.split(":") : ["", ""];
 
   return `
-    <div style="margin-top:8px;padding:8px;border-radius:8px;
-      background:#10152e;border:1px solid #2a3360;">
-      <div style="font-size:0.9rem;color:#ffcc33;font-weight:600;margin-bottom:4px;">
+    <div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(0,0,0,0.25);">
+      <div style="color:#ffcc33;font-weight:600;margin-bottom:6px;font-size:0.92rem;">
         📊 EmpirePicks Forecast
       </div>
-      <div style="font-size:0.82rem;line-height:1.4;">
-        <strong>Win Probability</strong><br>
-        • ${a.mlFavorite} favored at ${(a.favoriteProb*100).toFixed(1)}%
-          (Away ${(a.nvAway*100).toFixed(1)}%, Home ${(a.nvHome*100).toFixed(1)}%)<br><br>
-        <strong>Consensus Spread</strong><br>
-        • ${spreadTeam || "–"} ${spreadLine || ""} 
-          ${a.bestSpreadProb ? "(" + (a.bestSpreadProb*100).toFixed(1) + "% line confidence)" : ""}<br><br>
-        <strong>Consensus Total</strong><br>
-        • ${totalSide || "–"} ${totalLine || ""} 
-          ${a.bestTotalProb ? "(" + (a.bestTotalProb*100).toFixed(1) + "% side confidence)" : ""}
+
+      <div style="font-size:0.83rem;line-height:1.35;">
+        <strong>Win Probability:</strong><br>
+        • ${a.winner} favored at ${(a.winnerProb*100).toFixed(1)}%<br><br>
+
+        <strong>Consensus Spread:</strong><br>
+        • ${spreadTeam} ${spreadLine}  
+        (${(a.bestSpreadProb*100).toFixed(1)}% confidence)<br><br>
+
+        <strong>Consensus Total:</strong><br>
+        • ${totalSide} ${totalLine}
+        (${(a.bestTotalProb*100).toFixed(1)}% confidence)
       </div>
     </div>
   `;
 }
 
-// ===== Game lines table with EV “Best Bet” badge =====
+// ========================================================
+//  LINES + EV BEST BET
+// ========================================================
 function renderLines(container, game, analytics){
   const rows = [];
 
@@ -270,40 +274,34 @@ function renderLines(container, game, analytics){
       moneyline: "–",
       spread: "–",
       total: "–",
-      edge: null   // positive = bettor edge vs market
+      edge: null
     };
 
     let rowEdge = null;
 
     (bm.markets || []).forEach(m => {
       if(m.key === "h2h"){
-        const away = m.outcomes.find(o => o.name === analytics.away);
-        const home = m.outcomes.find(o => o.name === analytics.home);
-        if(away && home){
-          rec.moneyline = `${money(away.price)} / ${money(home.price)}`;
+        const a = m.outcomes.find(o => o.name === analytics.away);
+        const h = m.outcomes.find(o => o.name === analytics.home);
+        if(a && h){
+          rec.moneyline = `${money(a.price)} / ${money(h.price)}`;
 
-          const pAwayBook = prob(away.price);
-          const pHomeBook = prob(home.price);
+          const pA = prob(a.price);
+          const pH = prob(h.price);
 
-          const edgeAway = analytics.nvAway - pAwayBook;
-          const edgeHome = analytics.nvHome - pHomeBook;
-
-          rowEdge = Math.max(edgeAway, edgeHome);
+          rowEdge = Math.max(analytics.nvAway - pA, analytics.nvHome - pH);
         }
       }
 
       if(m.key === "spreads"){
-        // Pick spread closest to consensus line when available, otherwise smallest absolute point
         let best = null;
-        if(analytics.bestSpreadKey){
-          const [, line] = analytics.bestSpreadKey.split(":");
-          const lineNum = Number(line);
-          best = m.outcomes
-            .slice()
-            .sort((a,b)=>Math.abs(a.point-lineNum)-Math.abs(b.point-lineNum))[0];
+        if(analytics.bestSpread){
+          const [, line] = analytics.bestSpread.split(":");
+          const ln = Number(line);
+          best = m.outcomes.slice().sort((x,y)=>Math.abs(x.point-ln)-Math.abs(y.point-ln))[0];
         }
         if(!best){
-          best = m.outcomes.slice().sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0];
+          best = m.outcomes.slice().sort((x,y)=>Math.abs(x.point)-Math.abs(y.point))[0];
         }
         if(best){
           rec.spread = `${best.name} ${best.point} (${money(best.price)})`;
@@ -323,74 +321,73 @@ function renderLines(container, game, analytics){
     rows.push(rec);
   });
 
-  // Identify best EV row for ⭐ badge
   let bestIndex = -1;
-  let bestEdge  = 0;
-  rows.forEach((r, idx) => {
+  let bestEdge = 0;
+
+  rows.forEach((r, i) => {
     if(typeof r.edge === "number" && r.edge > bestEdge + 0.003){
       bestEdge = r.edge;
-      bestIndex = idx;
+      bestIndex = i;
     }
   });
-
-  const htmlRows = rows.map((r, idx) => {
-    const evText = typeof r.edge === "number"
-      ? `${r.edge >= 0 ? "+" : ""}${(r.edge*100).toFixed(1)}%`
-      : "";
-
-    const badge = idx === bestIndex && bestEdge > 0.01
-      ? ` <span class="ev-pos" style="font-weight:600;">⭐ Best Bet</span>`
-      : "";
-
-    return `
-      <tr>
-        <td>${r.book}</td>
-        <td>${r.moneyline}</td>
-        <td>${r.spread}</td>
-        <td>${r.total}</td>
-        <td>${evText}${badge}</td>
-      </tr>
-    `;
-  }).join("");
 
   container.innerHTML = `
     <table class="table">
       <thead>
         <tr>
           <th>Book</th>
-          <th>Moneyline (Away / Home)</th>
+          <th>Moneyline</th>
           <th>Spread</th>
-          <th>Total (O/U)</th>
+          <th>Total</th>
           <th>EV vs Market</th>
         </tr>
       </thead>
-      <tbody>${htmlRows}</tbody>
+      <tbody>
+        ${rows.map((r,i)=>`
+          <tr>
+            <td>${r.book}</td>
+            <td>${r.moneyline}</td>
+            <td>${r.spread}</td>
+            <td>${r.total}</td>
+            <td>
+              ${typeof r.edge === "number"
+                ? `${(r.edge*100).toFixed(1)}%`
+                : ""}
+              ${i===bestIndex && bestEdge>0.01
+                ? `<span class="ev-pos" style="margin-left:6px;font-weight:700;">⭐ Best Bet</span>`
+                : ""}
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
     </table>
   `;
 }
 
-// ===== Player props loader + simple consensus =====
+// ========================================================
+//  PLAYER PROPS
+// ========================================================
 async function loadProps(id, container){
   container.dataset.loaded = "1";
   container.textContent = "Loading props…";
 
   const wrap = await api.props(id);
-  const propsRoot = wrap.props ?? wrap;
+  const props = wrap.props ?? wrap;
 
-  if(!propsRoot || !propsRoot.bookmakers || !propsRoot.bookmakers.length){
-    container.textContent = "No props available yet for this game.";
+  if(!props || !props.bookmakers){
+    container.textContent = "No props available.";
     return;
   }
 
   const groups = {};
-  propsRoot.bookmakers.forEach(bm => {
+  props.bookmakers.forEach(bm => {
     (bm.markets || []).forEach(m => {
       if(!groups[m.key]) groups[m.key] = [];
       m.outcomes.forEach(o => {
         groups[m.key].push({
           book: bm.title,
           player: o.description || "–",
-          name: o.name,      // Over / Under / Yes / No
+          name: o.name,
           point: o.point,
           price: o.price,
           p: prob(o.price)
@@ -411,25 +408,24 @@ async function loadProps(id, container){
 
   order.forEach(key => {
     const arr = groups[key];
-    if(!arr || !arr.length) return;
+    if(!arr) return;
 
-    const consensus = computePropConsensus(arr);
+    const summary = computePropConsensus(arr);
 
-    html += `<h3 style="margin-top:0.8rem;">${label(key)}</h3>`;
+    html += `<h3 style="margin-top:1rem;">${label(key)} Forecast</h3>`;
+    html += `<div style="font-size:0.85rem;margin-bottom:0.6rem;">`;
 
-    // ESPN-style prop forecast list (top 8)
-    html += `<div style="font-size:0.85rem;margin-bottom:0.4rem;">`;
-    consensus.slice(0,8).forEach(p => {
+    summary.slice(0,8).forEach(s => {
       html += `
         <div>
-          ⭐ <strong>${p.player}</strong> ${p.favorite} ${p.point} 
-          (${(p.bestProb*100).toFixed(1)}% consensus)
+          ⭐ <strong>${s.player}</strong> ${s.favorite} ${s.point}
+          (${(s.bestProb*100).toFixed(1)}% consensus)
         </div>
       `;
     });
+
     html += `</div>`;
 
-    // Raw book table
     html += `
       <table class="table">
         <thead>
@@ -443,7 +439,7 @@ async function loadProps(id, container){
           </tr>
         </thead>
         <tbody>
-          ${arr.slice(0,60).map(r => `
+          ${arr.slice(0,60).map(r=>`
             <tr>
               <td>${r.book}</td>
               <td>${r.player}</td>
@@ -458,44 +454,52 @@ async function loadProps(id, container){
     `;
   });
 
-  container.innerHTML = html || "<em>No supported props for this matchup.</em>";
+  container.innerHTML = html;
 }
 
-// Build simple consensus for props so we can show “most likely” side
+// ========================================================
+//  PROP CONSENSUS ENGINE
+// ========================================================
 function computePropConsensus(arr){
-  const bucket = {};
+  const map = {};
+
   arr.forEach(r => {
     const key = `${r.player}:${r.point}`;
-    if(!bucket[key]) bucket[key] = { over: [], under: [] };
+    if(!map[key]) map[key] = { over: [], under: [] };
+
     const side = r.name.toLowerCase();
-    if(side === "over")  bucket[key].over.push(r.p);
-    if(side === "under") bucket[key].under.push(r.p);
+    if(side === "over")  map[key].over.push(r.p);
+    if(side === "under") map[key].under.push(r.p);
   });
 
-  const out = [];
-  Object.entries(bucket).forEach(([key, v]) => {
-    const [player, rawPoint] = key.split(":");
-    const point = rawPoint === "undefined" ? "" : rawPoint;
-    const avgOver  = avg(v.over);
-    const avgUnder = avg(v.under);
-    const [nvOver, nvUnder] = noVig(avgOver, avgUnder);
-    const favorite = nvOver >= nvUnder ? "Over" : "Under";
-    const bestProb = favorite === "Over" ? nvOver : nvUnder;
-    out.push({ player, point, favorite, bestProb });
+  const res = [];
+  Object.entries(map).forEach(([key,v]) => {
+    const [player, point] = key.split(":");
+
+    const avgO = avg(v.over);
+    const avgU = avg(v.under);
+
+    const [nvO, nvU] = noVig(avgO, avgU);
+    const fav = nvO >= nvU ? "Over" : "Under";
+    const bestProb = fav === "Over" ? nvO : nvU;
+
+    res.push({ player, point, favorite: fav, bestProb });
   });
 
-  return out.sort((a,b) => b.bestProb - a.bestProb);
+  return res.sort((a,b)=>b.bestProb - a.bestProb);
 }
 
 function label(k){
   return ({
-    player_anytime_td: "Anytime TD Scorer",
-    player_pass_tds:   "Pass TDs (O/U)",
-    player_pass_yds:   "Pass Yards (O/U)",
-    player_rush_yds:   "Rush Yards (O/U)",
-    player_receptions: "Receptions (O/U)"
+    player_anytime_td: "Anytime TD",
+    player_pass_tds:   "Passing TDs",
+    player_pass_yds:   "Passing Yards",
+    player_rush_yds:   "Rushing Yards",
+    player_receptions: "Receptions"
   })[k] || k;
 }
 
-// ===== Kickoff =====
+// ========================================================
+//  START
+// ========================================================
 loadAll();

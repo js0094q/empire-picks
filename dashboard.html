@@ -1,9 +1,3 @@
-<script>
-  const token = localStorage.getItem("EP_TOKEN");
-  if (!token) {
-    window.location.href = "/login.html";
-  }
-</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,6 +15,12 @@
   </style>
 </head>
 <body>
+  <script type="module">
+  import { validateToken } from "./token.js";
+  if (!validateToken()) {
+    window.location.href = "/login.html";
+  }
+  </script>
   <header class="header">
     <h1>📊 EmpirePicks Analytics Dashboard</h1>
     <p>Sortable advanced analytics for all NFL games</p>

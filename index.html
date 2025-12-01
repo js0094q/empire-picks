@@ -8,8 +8,9 @@
   <script type="module" src="teams.js"></script>
 </head>
 <body>
-  <script>
-  if (!localStorage.getItem("EP_TOKEN")) {
+<script type="module">
+  import { validateToken } from "./token.js";
+  if (!validateToken()) {
     window.location.href = "/login.html";
   }
 </script>

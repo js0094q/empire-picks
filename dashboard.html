@@ -30,8 +30,34 @@
 
   <main>
 
-    <!-- ⭐ TOP 5 EV PANEL -->
+    <!-- ⭐ TOP 5 EV PLAYS PANEL -->
     <section id="top5" style="max-width:900px;margin:20px auto;"></section>
+
+    <!-- 🎰 AUTOMATED PARLAY EV OPTIMIZER -->
+    <section id="parlay-section" style="max-width:900px;margin:0 auto 24px auto;padding:16px;border-radius:12px;background:#141a33;border:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0 0 4px 0;color:var(--gold);">🎰 Parlay EV Optimizer</h2>
+          <p style="margin:0;font-size:0.9rem;color:var(--muted);">
+            Uses EmpirePicks win probabilities to search for positive-edge 2-leg moneyline parlays.
+          </p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:0.85rem;color:var(--muted);">
+            Min single-leg edge:
+            <select id="parlayEdgeFilter" style="margin-left:4px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);background:#0d1228;color:var(--text);">
+              <option value="0.01">1%</option>
+              <option value="0.02" selected>2%</option>
+              <option value="0.03">3%</option>
+              <option value="0.05">5%</option>
+            </select>
+          </label>
+          <button id="generateParlays" style="padding:6px 10px;">⚡ Generate</button>
+        </div>
+      </div>
+
+      <div id="parlayResults" style="margin-top:12px;font-size:0.9rem;"></div>
+    </section>
 
     <!-- SORTABLE ANALYTICS TABLE -->
     <table class="table dashboard" id="dash">

@@ -95,15 +95,53 @@ function renderGame(ev, odds){
     <div class="tab-content" id="props"><em>Click to load props…</em></div>
   `;
 
+  // ============================================
+  // ---- TEAM LOGOS + TEAM COLOR THEMES --------
+  // ============================================
+
+  const homeTeam = NFL_TEAMS[ev.home_team];
+  const awayTeam = NFL_TEAMS[ev.away_team];
+  const header = card.querySelector(".card-header");
+
+  // Inject logos above the title
+  if (homeTeam && awayTeam) {
+    header.insertAdjacentHTML(
+      "afterbegin",
+      `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <img src="${awayTeam.logo}" style="height:44px;width:auto;">
+        <span style="flex:1;text-align:center;"></span>
+        <img src="${homeTeam.logo}" style="height:44px;width:auto;">
+      </div>
+      `
+    );
+  }
+
+  // Apply theme gradient to card
+  if (homeTeam) {
+    card.style.background = `linear-gradient(135deg, ${homeTeam.primary} 0%, ${homeTeam.secondary} 40%, #0d1228 90%)`;
+    card.style.borderColor = homeTeam.secondary;
+  }
+
+  // Tint tabs using team color
+  if (homeTeam) {
+    card.querySelectorAll(".tab").forEach(tab => {
+      tab.style.borderColor = homeTeam.primary;
+    });
+  }
+
+  // ============================================
+  // ---- END TEAM LOGOS + THEME ----------------
+  // ============================================
+
   // ESPN-style analytics block
   const analytics = computeGameAnalytics(odds, ev.away_team, ev.home_team);
-  const header = card.querySelector(".card-header");
   header.insertAdjacentHTML("beforeend", analyticsHTML(analytics));
 
-  // Lines table with EV + Best Bet
+  // Lines table with EV + Best Bet Badge
   renderLines($("#lines", card), odds, analytics);
 
-  // Tabs
+  // Tab switching
   $$(".tab", card).forEach(tab => {
     tab.addEventListener("click", () => {
       $$(".tab", card).forEach(t => t.classList.remove("active"));
@@ -113,7 +151,7 @@ function renderGame(ev, odds){
       const content = card.querySelector(`#${tab.dataset.tab}`);
       content.classList.add("active");
 
-      if(tab.dataset.tab === "props" && !content.dataset.loaded){
+      if (tab.dataset.tab === "props" && !content.dataset.loaded) {
         loadProps(ev.id, content);
       }
     });

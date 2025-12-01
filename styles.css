@@ -42,21 +42,16 @@ button:hover { filter: brightness(1.2); }
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
-  overflow: hidden;
+  color: #f4f7ff;
 }
 
-.card-header {
-  padding: 0.8rem;
-  border-bottom: 1px solid var(--border);
+.card-header small {
+  opacity: 0.85;
 }
 
-.card-header h2 {
-  margin: 0 0 0.2rem;
-  font-size: 1.1rem;
+.card h2 {
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
 }
 
 .tabs {

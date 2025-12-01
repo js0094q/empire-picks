@@ -1,9 +1,10 @@
 {
   "version": 2,
+
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
-    { "src": "dashboard.html", "use": "@vercel/static" },
     { "src": "login.html", "use": "@vercel/static" },
+    { "src": "dashboard.html", "use": "@vercel/static" },
 
     { "src": "styles.css", "use": "@vercel/static" },
     { "src": "script.js", "use": "@vercel/static" },
@@ -15,16 +16,16 @@
   ],
 
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1.js" }
+    { "src": "/api/(.*)", "dest": "/api/$1.js" },
 
     { "src": "/login", "dest": "/login.html" },
     { "src": "/dashboard", "dest": "/dashboard.html" },
 
     { "src": "/styles.css", "dest": "/styles.css" },
     { "src": "/script.js", "dest": "/script.js" },
+    { "src": "/dashboard.js", "dest": "/dashboard.js" },
     { "src": "/teams.js", "dest": "/teams.js" },
     { "src": "/token.js", "dest": "/token.js" },
-    { "src": "/dashboard.js", "dest": "/dashboard.js" },
 
     { "src": "/", "dest": "/index.html" },
 

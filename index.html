@@ -5,8 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EmpirePicks | NFL Odds & Props</title>
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- Team data -->
   <script type="module" src="teams.js"></script>
+
+  <!-- AUTH GUARD (MUST be here, before script.js) -->
+  <script type="module">
+    import { validateToken } from "./token.js";
+    if (!validateToken()) {
+      window.location.href = "/login.html";
+    }
+  </script>
 </head>
+
 <body>
   <header class="header">
     <h1>🏛 EmpirePicks</h1>
@@ -20,12 +31,7 @@
     Data from The Odds API | Built for EmpirePicks.com
   </footer>
 
-  <script src="script.js" type="module"></script>
-  <script type="module">
-  import { validateToken } from "./token.js";
-  if (!validateToken()) {
-    window.location.href = "/login.html";
-  }
-</script>
+  <!-- Main App Script -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>

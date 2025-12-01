@@ -1,5 +1,3 @@
-const auth = req.headers["authorization"];
-if (!auth) return res.status(401).json({ error: "Missing auth" });
 export default async function handler(req, res) {
   const { eventId } = req.query;
   const apiKey = process.env.ODDS_API_KEY;

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EmpirePicks | Login</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(135deg, #0d1228, #161c33 40%, #000 95%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: system-ui, sans-serif;
+      color: var(--text);
+    }
+    .login-card {
+      width: 360px;
+      background: var(--card);
+      padding: 2rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--gold);
+      box-shadow: 0 0 25px rgba(0,0,0,0.45);
+      text-align: center;
+    }
+    input {
+      width: 90%;
+      padding: 0.8rem;
+      margin-top: 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: #10152e;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    button {
+      width: 95%;
+      padding: 0.9rem;
+      margin-top: 1.2rem;
+      background: var(--gold);
+      color: #000;
+      font-weight: 700;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    #error { color: #f55; margin-top: 1rem; min-height: 20px; }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <h2 style="color:var(--gold);">🏛 EmpirePicks</h2>
+    <p>Private Beta Access</p>
+
+    <input id="invite" placeholder="Enter Invite Code" autocomplete="off" />
+    <button id="loginBtn">Login</button>
+
+    <div id="error"></div>
+  </div>
+
+  <script type="module">
+    import { createToken, validateToken } from "./token.js";
+
+    // Already logged in → redirect home
+    if (validateToken()) {
+      window.location.href = "/";
+    }
+
+    const input = document.getElementById("invite");
+    const error = document.getElementById("error");
+
+    function login(){
+      const code = input.value.trim();
+
+      const token = createToken(code);
+      if (!token){
+        error.textContent = "Invalid invite code.";
+        return;
+      }
+
+      localStorage.setItem("EP_TOKEN", token);
+      window.location.href = "/";
+    }
+
+    document.getElementById("loginBtn").onclick = login;
+    input.addEventListener("keyup", e => { if (e.key === "Enter") login(); });
+  </script>
+
+</body>
+</html>

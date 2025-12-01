@@ -5,47 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EmpirePicks | Analytics Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    body { background: #0d1228; }
-    table.dashboard { width: 100%; max-width: 1100px; margin: 2rem auto; }
-    table.dashboard th { cursor: pointer; }
-    tr:hover { background: rgba(255,255,255,0.05); }
-    .team-cell { display:flex; align-items:center; gap:8px; }
-    .team-cell img { height:24px; }
-  </style>
-</head>
-<body>
+
+  <!-- Auth Guard -->
   <script type="module">
-  import { validateToken } from "./token.js";
-  if (!validateToken()) {
-    window.location.href = "/login.html";
-  }
+    import { validateToken } from "./token.js";
+    if (!validateToken()) window.location.href = "/login.html";
   </script>
+</head>
+
+<body>
   <header class="header">
-    <h1>📊 EmpirePicks Analytics Dashboard</h1>
-    <p>Sortable advanced analytics for all NFL games</p>
-    <button id="refresh">⟳ Refresh</button>
-    <a href="/" style="color:#ffcc33;">← Back to Matchups</a>
+    <h1>📊 EmpirePicks Analytics</h1>
+    <a href="/" style="color:var(--gold);">← Back to Games</a>
   </header>
 
-  <main>
-    <table class="table dashboard" id="dash">
-      <thead>
-        <tr>
-          <th data-sort="team">Game</th>
-          <th data-sort="win">Win %</th>
-          <th data-sort="spread">Consensus Spread</th>
-          <th data-sort="total">Consensus Total</th>
-          <th data-sort="ev">Best Bet EV</th>
-          <th data-sort="kickoff">Kickoff</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </main>
+  <main id="dashboard"></main>
 
   <footer class="footer">
-    EmpirePicks.com | Advanced Betting Analytics
+    Data from The Odds API | EmpirePicks.com
   </footer>
 
   <script type="module" src="dashboard.js"></script>

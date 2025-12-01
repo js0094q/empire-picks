@@ -6,23 +6,24 @@
   <title>EmpirePicks | NFL Odds & Props</title>
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- Team data -->
-  <script type="module" src="teams.js"></script>
-
-  <!-- AUTH GUARD (MUST be here, before script.js) -->
+  <!-- Token check BEFORE app loads -->
   <script type="module">
     import { validateToken } from "./token.js";
     if (!validateToken()) {
-      window.location.href = "/login.html";
+      window.location.href = "/login";
     }
   </script>
+
+  <script type="module" src="teams.js"></script>
 </head>
 
 <body>
+
   <header class="header">
     <h1>🏛 EmpirePicks</h1>
     <p>NFL Odds & Props Aggregator (Week View)</p>
     <button id="refreshBtn">⟳ Refresh Data</button>
+    <a href="/dashboard" style="color:var(--gold);margin-left:1rem;">📊 Dashboard</a>
   </header>
 
   <main id="games" class="games"></main>
@@ -31,7 +32,6 @@
     Data from The Odds API | Built for EmpirePicks.com
   </footer>
 
-  <!-- Main App Script -->
   <script type="module" src="script.js"></script>
 </body>
 </html>

@@ -1,29 +1,29 @@
 // ========================================================
-// Simple, stable token system for EmpirePicks Beta Login
-// Works on static Vercel hosting, no backend needed.
+// EmpirePicks Beta Access Token System (Hash-Based)
+// No backend. Stable on Vercel static hosting.
 // ========================================================
 
-// 6 hour expiration (in milliseconds)
+// Token lifespan (6 hours)
 const EXP_MS = 6 * 60 * 60 * 1000;
 
-// YOUR approved invite codes:
+// Approved invite codes:
 const VALID_INVITE_CODES = [
   "EMPIRE-BETA-01",
   "NFL-ACCESS",
   "TESTER-JS",
 ];
 
-// Create a hash (stable string transform)
+// Simple non-cryptographic stable string hash
 function hash(str){
   let h = 0;
   for (let i = 0; i < str.length; i++){
     h = (h << 5) - h + str.charCodeAt(i);
-    h |= 0;
+    h |= 0; // force 32-bit
   }
   return h.toString();
 }
 
-// Create a signed token the app can verify later
+// Create token containing payload + signature
 export function createToken(inviteCode){
   if (!VALID_INVITE_CODES.includes(inviteCode)) {
     return null;
@@ -35,31 +35,36 @@ export function createToken(inviteCode){
     exp: Date.now() + EXP_MS
   };
 
-  const signature = hash(JSON.stringify(payload) + "EMPIREPICKS_SECRET");
+  const signature = hash(JSON.stringify(payload) + "EMPIREPICKS_SECRET_KEY");
 
   return btoa(JSON.stringify({ payload, signature }));
 }
 
-// Validate the token from localStorage
+// Validate stored token
 export function validateToken(){
-  const t = localStorage.getItem("EP_TOKEN");
-  if (!t) return false;
+  const raw = localStorage.getItem("EP_TOKEN");
+  if (!raw) return false;
 
   try {
-    const { payload, signature } = JSON.parse(atob(t));
+    const { payload, signature } = JSON.parse(atob(raw));
 
-    // Check expiration
+    // expired?
     if (Date.now() > payload.exp) return false;
 
-    // Check signature integrity
-    const expected = hash(JSON.stringify(payload) + "EMPIREPICKS_SECRET");
-    if (expected !== signature) return false;
+    // signature mismatch?
+    const expected = hash(JSON.stringify(payload) + "EMPIREPICKS_SECRET_KEY");
+    if (signature !== expected) return false;
 
-    // Check invite code is still valid
+    // invite code no longer valid?
     if (!VALID_INVITE_CODES.includes(payload.code)) return false;
 
     return true;
   } catch (e){
     return false;
   }
+}
+
+// Optional: remove the token
+export function logout(){
+  localStorage.removeItem("EP_TOKEN");
 }

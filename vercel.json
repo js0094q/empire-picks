@@ -6,10 +6,12 @@
     { "src": "script.js", "use": "@vercel/static" },
     { "src": "teams.js", "use": "@vercel/static" },
     { "src": "api/*.js", "use": "@vercel/node" }
+    { "src": "dashboard.js", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1.js" },
     { "src": "/(styles|script|teams)\\.(css|js)", "dest": "/$1.$2" },
     { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/dashboard", "dest": "/dashboard.html" }
   ]
 }

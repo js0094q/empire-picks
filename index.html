@@ -12,6 +12,11 @@
   <title>EmpirePicks | NFL Odds & Props</title>
   <link rel="stylesheet" href="styles.css" />
   <script type="module" src="teams.js"></script>
+  <script>
+  window.__EP_SECRET = document.cookie.split('; ')
+    .find(r => r.startsWith('__EP_SECRET'))
+    ?.split('=')[1];
+</script>
 </head>
 <body>
   <header class="header">

@@ -509,22 +509,32 @@ function renderBestParlay() {
   slot.innerHTML = html;
 }
 
-// --- Add-leg event listener ---
-document.addEventListener("click", e => {
-  if (!e.target.matches("button.add-leg")) return;
-  const b = e.target;
+  // ============================================================
+// FINAL FAILSAFE PARLAY CLICK HANDLER
+// (Works even if HTML structure changes or Safari blocks events)
+// ============================================================
+
+document.addEventListener("click", function (e) {
+  const btn = e.target.closest("[data-parlay='1']");
+  if (!btn) return;
+
   const leg = {
-    market: b.dataset.market,
-    price: Number(b.dataset.price),
-    game: b.dataset.game,
-    team: b.dataset.team || null,
-    player: b.dataset.player || null,
-    type: b.dataset.type || null,
-    side: b.dataset.side || null,
-    point: b.dataset.point || null,
-    trueProb: Number(b.dataset.trueprob),
-    edge: Number(b.dataset.edge || 0)
+    market: btn.dataset.market,
+    price: Number(btn.dataset.price),
+    game: btn.dataset.game,
+    team: btn.dataset.team || null,
+    player: btn.dataset.player || null,
+    side: btn.dataset.side || null,
+    type: btn.dataset.type || null,
+    point: btn.dataset.point || "",
+    trueProb: Number(btn.dataset.trueprob || 0),
+    edge: Number(btn.dataset.edge || 0)
   };
+
+  console.log("LEG CAPTURED:", leg);
+  PARLAY_POOL.push(leg);
+  renderBestParlay();
+});
   PARLAY_POOL.push(leg);
   renderBestParlay();
 });

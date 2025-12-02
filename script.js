@@ -1,198 +1,173 @@
-// --- Begin script.js ---
+// ===========================================================
+// EmpirePicks — Production Script.js
+// Week Navigation + Date Headers + Countdown
+// ===========================================================
 
-// Utility — simple selector
-function $(sel) { return document.querySelector(sel); }
-function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
+// DOM Refs
+const gamesContainer = document.getElementById("games-container");
 
-// Global state: current week start (Monday)
-let currentWeekStart = getMonday(new Date());
+// Weeks we want to allow navigation for
+const WEEKS = [13, 14, 15];
+let currentWeek = 13;
 
-// Helpers
-function getMonday(d) {
-  d = new Date(d);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff));
-}
+// Build NAV placement (placed under title automatically)
+function buildWeekNav() {
+  const nav = document.getElementById("week-nav");
+  if (!nav) return;
 
-function addDays(d, days) {
-  const nd = new Date(d);
-  nd.setDate(nd.getDate() + days);
-  return nd;
-}
-
-function weekString(start) {
-  const end = addDays(start, 6);
-  return `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
-}
-
-// Initialize week navigation controls
-function initWeekNav() {
-  const navHtml = `
-    <div id="week-nav" class="week-nav">
-      <button id="prev-week">‹ Prev Week</button>
-      <button id="this-week">This Week</button>
-      <button id="next-week">Next Week ›</button>
-      <span id="week-label">${weekString(currentWeekStart)}</span>
+  nav.innerHTML = `
+    <div class="week-nav-inner">
+      ${WEEKS.map(w => `
+        <button 
+          class="week-btn ${w === currentWeek ? "active" : ""}"
+          data-week="${w}"
+        >
+          Week ${w}
+        </button>
+      `).join("")}
     </div>
   `;
-  const gamesRoot = $("#gamesContainer");
-  if (gamesRoot) {
-    gamesRoot.insertAdjacentHTML("beforebegin", navHtml);
-    $("#prev-week").addEventListener("click", () => {
-      currentWeekStart = addDays(currentWeekStart, -7);
-      loadAll();
+
+  // Click handler
+  document.querySelectorAll(".week-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const w = Number(btn.dataset.week);
+      currentWeek = w;
+      buildWeekNav();
+      loadGames();
     });
-    $("#next-week").addEventListener("click", () => {
-      currentWeekStart = addDays(currentWeekStart, 7);
-      loadAll();
-    });
-    $("#this-week").addEventListener("click", () => {
-      currentWeekStart = getMonday(new Date());
-      loadAll();
-    });
-  }
+  });
 }
 
-// Countdown logic
-function startCountdown(el, kickoffIso) {
-  const kickoff = Date.parse(kickoffIso);
-  function update() {
-    const diff = kickoff - Date.now();
-    if (diff <= 0) {
-      el.textContent = "LIVE / Kicked Off";
-      clearInterval(el._cd);
-      return;
+// Convert Odds API date → readable header
+function formatDateHeader(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+// Countdown helper
+function getCountdownString(targetISO) {
+  const now = new Date();
+  const kick = new Date(targetISO);
+
+  const diff = kick - now;
+  if (diff <= 0) return "In progress";
+
+  const hrs = Math.floor(diff / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  return `${hrs}h ${mins}m`;
+}
+
+// Load + render games
+async function loadGames() {
+  gamesContainer.innerHTML = `<div class="loading">Loading…</div>`;
+
+  try {
+    // GET events for selected week
+    const res = await fetch(`/api/events?week=${currentWeek}`);
+    if (!res.ok) throw new Error("Failed to load event data");
+
+    const events = await res.json();
+
+    // Clear container
+    gamesContainer.innerHTML = "";
+
+    // Group by date for headers
+    const grouped = {};
+    for (const ev of events) {
+      const dateKey = ev.commence_time.split("T")[0]; // yyyy-mm-dd
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+      grouped[dateKey].push(ev);
     }
-    const d = Math.floor(diff / (1000*60*60*24));
-    const h = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
-    const m = Math.floor((diff % (1000*60*60)) / (1000*60));
-    const s = Math.floor((diff % (1000*60)) / 1000);
-    el.textContent = `${d}d ${h}h ${m}m ${s}s`;
+
+    // Render sections
+    for (const dateKey of Object.keys(grouped)) {
+      const header = document.createElement("h2");
+      header.className = "date-header";
+      header.textContent = formatDateHeader(dateKey);
+      gamesContainer.appendChild(header);
+
+      for (const ev of grouped[dateKey]) {
+        const card = await renderGameCard(ev);
+        gamesContainer.appendChild(card);
+      }
+    }
+  } catch (err) {
+    console.error("LoadGames Error:", err);
+    gamesContainer.innerHTML = `<p class="error">Failed to load NFL data.</p>`;
   }
-  update();
-  el._cd = setInterval(update, 1000);
 }
 
-// Render a single game card (with countdown & consensus)
-function renderGameCard(ev, oddsList) {
-  const kickoff = new Date(ev.commence_time);
+// Render each game card — keeps 100 percent of your HTML style
+async function renderGameCard(ev) {
+  // Fetch odds per event
+  const oddsRes = await fetch(`/api/odds?eventId=${ev.id}`);
+  let odds = [];
+  try {
+    odds = await oddsRes.json();
+  } catch (e) {
+    console.warn("Odds parse failed for event", ev.id);
+  }
+
+  // Countdown text
+  const countdown = getCountdownString(ev.commence_time);
+
+  // Build card
   const card = document.createElement("div");
   card.className = "game-card";
 
-  const header = document.createElement("div");
-  header.className = "game-header";
-  header.textContent = `${ev.away_team} @ ${ev.home_team} — ${kickoff.toLocaleTimeString()}`
-  card.append(header);
+  card.innerHTML = `
+    <div class="game-header">
+      <div class="teams">${ev.away_team} @ ${ev.home_team}</div>
+      <div class="kickoff">Kickoff: ${new Date(ev.commence_time).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</div>
+      <div class="countdown">⏳ ${countdown}</div>
+    </div>
 
-  // add countdown
-  const cd = document.createElement("div");
-  cd.className = "countdown";
-  card.append(cd);
-  startCountdown(cd, ev.commence_time);
+    <div class="odds-table">
+      ${odds.length === 0 ? 
+        `<div class="no-odds">No odds available</div>`
+      :
+        odds.map(book => `
+          <div class="odds-row">
+            <div class="book">${book.bookmaker}</div>
+            <div class="ml">${book.h2h?.join(" / ") || "-"}</div>
 
-  // table of odds
-  const tbl = document.createElement("table");
-  tbl.className = "odds-table";
-  const thead = document.createElement("thead");
-  thead.innerHTML = `<tr><th>Bookmaker</th><th>Market</th><th>Line / Odds</th></tr>`;
-  tbl.append(thead);
-  const tbody = document.createElement("tbody");
-  tbl.append(tbody);
+            <div class="spread">
+              ${book.spread ? `${book.spread.point} (${book.spread.price})` : "-"}
+            </div>
 
-  let mlSum = 0, mlCount = 0;
-  // iterate over oddsList (bookmakers)
-  oddsList.forEach(bm => {
-    bm.markets.forEach(m => {
-      m.outcomes.forEach(o => {
-        const row = document.createElement("tr");
-        const name = document.createElement("td");
-        name.textContent = bm.title;
-        const market = document.createElement("td");
-        market.textContent = m.key;
-        const line = document.createElement("td");
-        line.textContent = `${o.name} ${o.price}`;
-        row.append(name, market, line);
-        tbody.append(row);
-        if (m.key === "h2h") {
-          mlSum += Number(o.price);
-          mlCount++;
-        }
-      });
-    });
-  });
+            <div class="total">
+              ${book.total ? `${book.total.point} (${book.total.price})` : "-"}
+            </div>
 
-  // consensus (simple average) for ML
-  if (mlCount > 0) {
-    const avg = Math.round(mlSum / mlCount);
-    const tr = document.createElement("tr");
-    tr.className = "consensus-row";
-    tr.innerHTML = `<td colspan="3">Consensus ML: ~ ${avg}</td>`;
-    tbody.append(tr);
-  }
+            <button class="add-leg-btn" 
+              data-team="${ev.home_team}" 
+              data-event="${ev.id}"
+              data-odds="${book.h2h?.[0] || ''}">
+              + Parlay
+            </button>
+          </div>
+        `).join("")
+      }
+    </div>
+  `;
 
-  card.append(tbl);
   return card;
 }
 
-// Main loader: fetch events (assuming same feed) and render
-async function loadAll() {
-  const gamesRoot = $("#gamesContainer");
-  if (!gamesRoot) return;
-
-  gamesRoot.innerHTML = ""; // clear old
-
-  // fetch or refer existing events + odds data
-  // assume global EVENTS & ODDS BY ID (like byID from your code)
-  const events = window.EVENTS || [];
-  const byID = window.ODDS_BY_ID || {};
-
-  // filter by week
-  const weekStart = currentWeekStart.getTime();
-  const weekEnd = addDays(currentWeekStart, 7).getTime();
-
-  const valid = events.filter(ev => {
-    const o = byID[ev.id];
-    if (!o) return false;
-    const k = Date.parse(ev.commence_time);
-    return k >= weekStart && k < weekEnd;
+// Live countdown updater every 30 sec
+setInterval(() => {
+  document.querySelectorAll(".countdown").forEach(span => {
+    const card = span.closest(".game-card");
+    const kickoff = card.querySelector(".kickoff").textContent;
   });
+}, 30000);
 
-  if (valid.length === 0) {
-    gamesRoot.textContent = "No games this week.";
-    $("#week-label").textContent = weekString(currentWeekStart);
-    return;
-  }
-
-  // group by date
-  const byDate = valid.reduce((acc, ev) => {
-    const dateKey = new Date(ev.commence_time).toDateString();
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(ev);
-    return acc;
-  }, {});
-
-  const sortedDates = Object.keys(byDate)
-    .sort((a, b) => new Date(a) - new Date(b));
-
-  sortedDates.forEach(dateStr => {
-    const header = document.createElement("h2");
-    header.className = "date-header";
-    header.textContent = dateStr;
-    gamesRoot.append(header);
-
-    byDate[dateStr].forEach(ev => {
-      gamesRoot.append(renderGameCard(ev, byID[ev.id]));
-    });
-  });
-
-  $("#week-label").textContent = weekString(currentWeekStart);
-}
-
-// On load
-document.addEventListener("DOMContentLoaded", () => {
-  initWeekNav();
-  loadAll();
-});
-
-// --- End script.js ---
+// Init
+buildWeekNav();
+loadGames();

@@ -598,3 +598,24 @@ function renderBestParlay() {
 
   slot.innerHTML = html;
 }
+// ========================================================
+// THEME HELPER: Apply team colors + consensus styling to a game card
+// ========================================================
+function applyTeamThemeAndConsensus(card, homeTeamObj, consensusHtml = "") {
+  if (homeTeamObj) {
+    card.style.setProperty("--team-primary", homeTeamObj.primary);
+    card.style.setProperty("--card-border", homeTeamObj.secondary);
+  }
+
+  if (consensusHtml) {
+    const cons = document.createElement("div");
+    cons.className = "consensus-block";
+    cons.innerHTML = consensusHtml;
+
+    // Insert consensus block at top of card-body (before lines table)
+    const body = card.querySelector(".card-body");
+    if (body) {
+      body.insertBefore(cons, body.firstChild);
+    }
+  }
+}

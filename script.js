@@ -525,10 +525,79 @@ async function loadProps(id, container) {
 
     let html = "";
 
-    order.forEach(key => {
-      const arr = groups[key];
-      if (!arr) return;
+  order.forEach(key => {
+  const arr = groups[key];
+  if (!arr) return;
 
+  // Group by player + point
+  const byPlayer = {};
+  arr.forEach(r => {
+    const k = `${r.player}:${r.point}`;
+    if (!byPlayer[k]) byPlayer[k] = { over: [], under: [], player: r.player, point: r.point };
+    if (r.name.toLowerCase() === "over") byPlayer[k].over.push(r);
+    if (r.name.toLowerCase() === "under") byPlayer[k].under.push(r);
+  });
+
+  html += `<h3 style="margin-top:1rem;">${label(key)}</h3>`;
+
+  Object.values(byPlayer).forEach(grp => {
+    // Best price Over
+    const bestOver = grp.over.sort((a,b)=>Math.abs(a.price)-Math.abs(b.price))[0];
+    // Best price Under
+    const bestUnder = grp.under.sort((a,b)=>Math.abs(a.price)-Math.abs(b.price))[0];
+
+    // Consensus probabilities (your existing logic)
+    const avgO = avg(grp.over.map(x=>x.p));
+    const avgU = avg(grp.under.map(x=>x.p));
+    const [nvO, nvU] = noVig(avgO, avgU);
+
+    html += `
+      <div style="padding:10px;background:#0d1228;border-radius:8px;margin-bottom:10px;">
+        <strong style="color:var(--gold);">${grp.player}</strong>
+        <span style="color:#9ca7c8;">${label(key)}</span>  
+        <br>
+
+        <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            Over ${grp.point} <span style="color:#fff;">(${money(bestOver.price)})</span>
+            <span style="color:#28d16c;">${(nvO*100).toFixed(1)}%</span>
+          </div>
+
+          <button class="add-leg"
+            data-market="PROP"
+            data-player="${grp.player}"
+            data-type="${label(key)}"
+            data-side="Over"
+            data-point="${grp.point}"
+            data-price="${bestOver.price}"
+            data-trueprob="${nvO}"
+            data-game="${ev.away_team} @ ${ev.home_team}"
+            style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#141a33;color:var(--gold);"
+          >➕</button>
+        </div>
+
+        <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            Under ${grp.point} <span style="color:#fff;">(${money(bestUnder.price)})</span>
+            <span style="color:#9ca7c8;">${(nvU*100).toFixed(1)}%</span>
+          </div>
+
+          <button class="add-leg"
+            data-market="PROP"
+            data-player="${grp.player}"
+            data-type="${label(key)}"
+            data-side="Under"
+            data-point="${grp.point}"
+            data-price="${bestUnder.price}"
+            data-trueprob="${nvU}"
+            data-game="${ev.away_team} @ ${ev.home_team}"
+            style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#141a33;color:var(--gold);"
+          >➕</button>
+        </div>
+      </div>
+    `;
+  });
+    
       const summary = computePropConsensus(arr);
 
       html += `<h3 style="margin-top:1rem;">${label(key)} Forecast</h3>`;

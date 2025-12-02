@@ -1,66 +1,86 @@
-/* === Full-odds card style === */
-
-.card-full-odds .card-body {
-  padding: 8px 12px;
-  background: rgba(0,0,0,0.4);
-  max-height: 600px;
-  overflow-y: auto;
+body {
+  background: #111;
+  color: #eee;
+  font-family: sans-serif;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
 }
 
-.odds-wrapper {
+#games-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+}
+
+.card {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  width: 280px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-.bookmaker {
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 8px;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #333;
 }
 
-.bookmaker .bm-title {
-  font-weight: bold;
-  margin-bottom: 4px;
-  color: #fff;
+.team {
+  display: flex;
+  align-items: center;
 }
 
-.market {
+.logo {
+  width: 28px;
+  height: auto;
+  margin: 0 6px;
+}
+
+.kickoff {
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.card-body {
+  padding: 10px 12px;
+}
+
+.odds div {
   margin-bottom: 6px;
 }
 
-.market-key {
-  font-size: 0.9rem;
-  color: #ccc;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.market-outcomes {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.market-outcomes td {
+.odds button.btn-parlay {
+  margin-left: 8px;
   padding: 2px 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
 }
 
-.outcome-name {
-  font-weight: 500;
+.parlay-panel {
+  background: #222;
+  padding: 12px;
+  color: #eef;
 }
 
-.outcome-point {
-  text-align: center;
-  width: 40px;
+.parlay-leg {
+  margin: 4px 0;
 }
 
-.outcome-price {
-  text-align: right;
-  width: 60px;
+.parlay-leg button {
+  margin-left: 8px;
+  padding: 2px 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
 }
 
-@media (max-width: 600px) {
-  .card-full-odds .card-body {
-    max-height: none;
-  }
+#parlay-payout {
+  margin-top: 8px;
+  font-weight: bold;
 }

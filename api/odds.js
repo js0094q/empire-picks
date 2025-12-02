@@ -1,6 +1,4 @@
 // /api/odds.js
-// Fetches NFL odds for H2H, spreads, totals, using the same weekly window.
-
 export default async function handler(req, res) {
   try {
     const apiKey = process.env.ODDS_API_KEY;
@@ -17,18 +15,16 @@ export default async function handler(req, res) {
 
     const games = await response.json();
 
-    // -------------------------------
-    // EMPIREPICKS WEEK WINDOW LOGIC
-    // Tuesday 00:00 → Monday 23:59
-    // -------------------------------
+    // --------------------------------------------------
+    // EMPIREPICKS WEEK WINDOW (Tuesday 00:00 → Monday 23:59)
+    // --------------------------------------------------
 
     const now = new Date();
-
     const weekStart = new Date(now);
-    const dayOfWeek = now.getDay();
-    const daysSinceTuesday = (dayOfWeek + 5) % 7;
+    const day = now.getDay();
+    const daysFromTuesday = (day + 5) % 7;
 
-    weekStart.setDate(now.getDate() - daysSinceTuesday);
+    weekStart.setDate(now.getDate() - daysFromTuesday);
     weekStart.setHours(0, 0, 0, 0);
 
     const weekEnd = new Date(weekStart);

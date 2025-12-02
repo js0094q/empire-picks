@@ -1,36 +1,43 @@
+import { NFL_TEAMS } from "./teams.js";
 import { computeGameAnalytics } from "./script.js";
 
-async function loadDashboard() {
-  try {
-    const events = await fetch("/api/events").then(r => r.json());
-    const odds = await fetch("/api/odds").then(r => r.json());
+// ---------- API ----------
+async function getEvents(){ return fetch("/api/events").then(r=>r.json()); }
+async function getOdds(){ return fetch("/api/odds").then(r=>r.json()); }
 
-    // Create a lookup table for odds by game id
-    const oddsById = Object.fromEntries(odds.map(g => [g.id, g]));
+// DOM
+const table = document.querySelector("#dash tbody");
+const topPanel = document.querySelector("#top5");
+const parlayResults = document.querySelector("#parlayResults");
+const parlayEdgeFilter = document.querySelector("#parlayEdgeFilter");
 
-    const table = document.querySelector("#dashboard");
-    table.innerHTML = "";
+document.querySelector("#refresh").onclick = loadDashboard;
+document.querySelector("#generateParlays").onclick = () => buildParlays(globalLegs);
 
-    events.forEach(ev => {
-      const gameOdds = oddsById[ev.id];
-      if (!gameOdds) return;
+// store legs globally for optimizer
+let globalLegs = [];
+let globalRows = [];
 
-      const analytics = computeGameAnalytics(
-        gameOdds,
-        ev.away_team,
-        ev.home_team
-      );
+// ========================================================
+// MAIN LOAD
+// ========================================================
+async function loadDashboard(){
+  table.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
+  topPanel.innerHTML = "Loading…";
+  parlayResults.textContent = "Waiting for data…";
 
-      table.appendChild(renderRow(ev, analytics));
-    });
-  } catch (err) {
-    console.error("DASHBOARD LOAD ERROR:", err);
-    document.querySelector("#dashboard").innerHTML =
-      "<tr><td colspan='6'>Failed to load analytics.</td></tr>";
-  }
-}
+  const [events, oddsWrap] = await Promise.all([getEvents(), getOdds()]);
+  const odds = oddsWrap.data ?? oddsWrap;
+  const byId = Object.fromEntries(odds.map(g => [g.id,g]));
 
-loadDashboard();
+  const rows = [];
+  const edges = [];
+  const legsForParlays = [];
+
+  for(const ev of events){
+    const game = byId[ev.id];
+    if(!game) continue;
+
     const ana = computeGameAnalytics(game, ev.away_team, ev.home_team);
     const kickoff = new Date(ev.commence_time);
 

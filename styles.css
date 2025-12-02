@@ -1,154 +1,103 @@
-/* === Card Grid Container === */
-#gamesContainer {
+:root {
+  --bg: #0d1228;
+  --card: #171c36;
+  --border: #2a3360;
+  --text: #eaf1ff;
+  --muted: #9ca7c8;
+  --gold: #ffcc33;
+  --green: #28d16c;
+  --red: #f45d67;
+  --radius: 12px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+}
+
+.header {
+  text-align: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.2); }
+
+.games {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1rem;
   padding: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-/* === Week nav styling === */
-.week-nav {
-  text-align: center;
-  margin: 1rem 0;
+.card {
+  color: #f4f7ff;
 }
-.week-nav button {
-  margin: 0 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  background-color: #0066ff;
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
+
+.card-header small {
+  opacity: 0.85;
 }
-.week-nav button:hover {
-  background-color: #004ccb;
-}
-.week-nav #week-label {
-  margin-left: 1rem;
-  font-weight: bold;
+
+.card h2 {
   color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
 }
 
-/* === Card styling === */
-.game-card {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  overflow: hidden;
+.tabs {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 200px;
-  padding: 1rem;
-  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-.game-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  border-bottom: 1px solid var(--border);
 }
 
-/* Header & kickoff time */
-.game-header {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.6rem;
+.tab {
+  flex: 1;
+  padding: 0.6rem;
+  text-align: center;
+  cursor: pointer;
+  background: #10152e;
+  border-right: 1px solid var(--border);
+}
+.tab.active {
+  background: #192045;
+  color: var(--gold);
 }
 
-/* Countdown timer styling */
-.countdown {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #e0e0ff;
-  margin-bottom: 0.8rem;
+.tab-content {
+  display: none;
+  padding: 0.8rem;
 }
+.tab-content.active { display: block; }
 
-/* Odds table inside card */
-.odds-table {
+.table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 0.6rem;
-}
-.odds-table th,
-.odds-table td {
-  padding: 0.4rem 0.6rem;
-  text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-  color: #f0f0f0;
   font-size: 0.9rem;
 }
-.odds-table th {
-  font-weight: 500;
-  opacity: 0.9;
+.table th, .table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.4rem;
 }
+.table th {
+  text-align: left;
+  color: var(--muted);
+}
+.ev-pos { color: var(--green); }
+.ev-neg { color: var(--red); }
 
-/* Consensus row styling */
-.consensus-row td {
-  background: rgba(255,255,255,0.1);
-  font-style: italic;
+.footer {
   text-align: center;
-  padding: 0.5rem;
-  color: #dfe;
-}
-
-/* Date header above groups */
-.date-header {
-  grid-column: 1 / -1;
-  margin: 2rem 0 0.4rem;
-  font-size: 1.3rem;
-  color: #ffffff;
-  border-bottom: 2px solid #444;
-  padding-bottom: 0.3rem;
-}
-/* Week Navigation */
-#week-nav {
-  margin-top: 10px;
-  text-align: center;
-}
-
-.week-nav-inner {
-  display: inline-flex;
-  gap: 10px;
-}
-
-.week-btn {
-  padding: 6px 14px;
-  border-radius: 6px;
-  background: #1d2b4d;
-  color: #fff;
-  border: 1px solid #3a4d7a;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.week-btn:hover {
-  background: #243863;
-}
-
-.week-btn.active {
-  background: #ffca28;
-  color: #000;
-  border-color: #ffca28;
-}
-
-.date-header {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 25px 0 10px;
-  color: #ffeaa7;
-  border-bottom: 1px solid #314266;
-  padding-bottom: 4px;
-}
-
-.countdown {
-  color: #ffd166;
-  font-size: 14px;
-  margin-top: 4px;
-}
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  .game-card {
-    min-height: auto;
-  }
+  padding: 1rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
 }

@@ -6,12 +6,13 @@ import { NFL_TEAMS } from "./teams.js";
 // ========================================================
 //  SMALL HELPERS
 // ========================================================
-const $  = (sel, root = document) => root.querySelector(sel);
+const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-const money = o => o > 0 ? `+${o}` : o;
+const money = o => (o > 0 ? `+${o}` : `${o}`);
 
 function prob(odds) {
+  // Convert American odds to implied probability
   return odds > 0
     ? 100 / (odds + 100)
     : -odds / (-odds + 100);
@@ -34,6 +35,14 @@ function groupByPoint(arr) {
     out[key].push(prob(o.price));
   });
   return out;
+}
+
+// Utilities that parlay.js will reuse
+function americanToDecimal(o) {
+  return o > 0 ? 1 + o / 100 : 1 + 100 / -o;
+}
+function formatAmerican(o) {
+  return o > 0 ? `+${o}` : `${o}`;
 }
 
 // ========================================================
@@ -76,7 +85,7 @@ async function loadAll() {
     const byId = Object.fromEntries(odds.map(g => [g.id, g]));
 
     const now = Date.now();
-    const cutoff = 4 * 60 * 60 * 1000; // 4h after kickoff
+    const cutoff = 4 * 60 * 60 * 1000; // 4 hours after kickoff
 
     const validGames = events.filter(ev => {
       const game = byId[ev.id];
@@ -86,8 +95,10 @@ async function loadAll() {
     });
 
     gamesEl.innerHTML = "";
-    validGames.forEach(ev => gamesEl.appendChild(renderGame(ev, byId[ev.id])));
-
+    validGames.forEach(ev => {
+      const gameOdds = byId[ev.id];
+      gamesEl.appendChild(renderGame(ev, gameOdds));
+    });
   } catch (err) {
     console.error(err);
     gamesEl.textContent = "Failed to load NFL data. Try refreshing.";
@@ -100,6 +111,7 @@ async function loadAll() {
 function renderGame(ev, odds) {
   const card = document.createElement("div");
   card.className = "card";
+  card.id = ev.id;
 
   const kickoff = new Date(ev.commence_time).toLocaleString();
 
@@ -128,10 +140,15 @@ function renderGame(ev, odds) {
     header.insertAdjacentHTML(
       "afterbegin",
       `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <img src="${away.logo}" style="height:44px;width:auto;">
+      <div style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        margin-bottom:6px;
+      ">
+        <img src="${away.logo}" style="height:44px;width:auto;" alt="${ev.away_team} logo">
         <span style="flex:1;"></span>
-        <img src="${home.logo}" style="height:44px;width:auto;">
+        <img src="${home.logo}" style="height:44px;width:auto;" alt="${ev.home_team} logo">
       </div>
       `
     );
@@ -151,7 +168,7 @@ function renderGame(ev, odds) {
   header.insertAdjacentHTML("beforeend", analyticsHTML(analytics));
 
   // ---------- Lines table ----------
-  renderLines($("#lines", card), odds, analytics);
+  renderLines($("#lines", card), odds, analytics, ev);
 
   // ---------- Tabs behaviour ----------
   $$(".tab", card).forEach(tab => {
@@ -278,8 +295,9 @@ function analyticsHTML(a) {
 
 // ========================================================
 //  LINES + EV BEST BET
+//  (now emits data attributes for external parlay.js)
 // ========================================================
-function renderLines(container, game, analytics) {
+function renderLines(container, game, analytics, ev) {
   const rows = [];
 
   (game.bookmakers || []).forEach(bm => {
@@ -288,7 +306,8 @@ function renderLines(container, game, analytics) {
       moneyline: "–",
       spread: "–",
       total: "–",
-      edge: null
+      edge: null,
+      mlButtons: ""
     };
 
     let rowEdge = null;
@@ -307,6 +326,32 @@ function renderLines(container, game, analytics) {
             analytics.nvAway - pA,
             analytics.nvHome - pH
           );
+
+          // Expose ML legs for parlay.js
+          rec.mlButtons = `
+            <div style="margin-top:4px;font-size:0.8rem;">
+              <button
+                class="add-leg"
+                data-market="ML"
+                data-team="${analytics.away}"
+                data-price="${a.price}"
+                data-trueprob="${analytics.nvAway}"
+                data-game="${ev.away_team} @ ${ev.home_team}"
+              >
+                ➕ ${analytics.away}
+              </button>
+              <button
+                class="add-leg"
+                data-market="ML"
+                data-team="${analytics.home}"
+                data-price="${h.price}"
+                data-trueprob="${analytics.nvHome}"
+                data-game="${ev.away_team} @ ${ev.home_team}"
+              >
+                ➕ ${analytics.home}
+              </button>
+            </div>
+          `;
         }
       }
 
@@ -369,7 +414,10 @@ function renderLines(container, game, analytics) {
             (r, i) => `
           <tr>
             <td>${r.book}</td>
-            <td>${r.moneyline}</td>
+            <td>
+              ${r.moneyline}
+              ${r.mlButtons || ""}
+            </td>
             <td>${r.spread}</td>
             <td>${r.total}</td>
             <td>
@@ -550,4 +598,4 @@ loadAll();
 // ========================================================
 //  EXPORT FOR DASHBOARD
 // ========================================================
-export { computeGameAnalytics };
+export { computeGameAnalytics, prob, americanToDecimal, formatAmerican };

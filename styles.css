@@ -1,104 +1,66 @@
-/* === Reset / base === */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-body {
-  background: #0d0d0d;
-  color: #e0e0e0;
-  font-family: sans-serif;
-  line-height: 1.4;
+/* === Full-odds card style === */
+
+.card-full-odds .card-body {
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.4);
+  max-height: 600px;
+  overflow-y: auto;
 }
 
-/* === Container layout === */
-#games-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-  padding: 16px;
-}
-
-/* === Card base === */
-.card {
-  border: 1px solid #444;
-  border-radius: 10px;
-  overflow: hidden;
+.odds-wrapper {
   display: flex;
   flex-direction: column;
-  background: #1a1a1a;  /* fallback if no gradient */
-  transition: transform 0.1s ease, box-shadow 0.2s ease;
-}
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  gap: 12px;
 }
 
-/* class for cards that should use team-gradient backgrounds */
-.card-dark {
-  /* background set inline via JS (gradient + border color) */
-  color: #f5f5f5;
+.bookmaker {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 8px;
 }
 
-/* === Card header (teams + kickoff) === */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+.bookmaker .bm-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: #fff;
 }
 
-.team {
-  display: flex;
-  align-items: center;
+.market {
+  margin-bottom: 6px;
 }
 
-.team .logo {
-  height: 28px;
-  width: auto;
-  margin: 0 6px;
-}
-
-/* Kickoff time styling */
-.kickoff {
-  font-size: 0.85rem;
-  color: rgba(230,230,230,0.8);
-}
-
-/* === Card body (odds / info) === */
-.card-body {
-  padding: 10px 12px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.odds {
+.market-key {
   font-size: 0.9rem;
-  margin-bottom: 8px;
-}
-.odds strong {
-  color: #fafafa;
-}
-
-.odds br + strong {
-  margin-top: 4px;
+  color: #ccc;
+  text-transform: uppercase;
+  margin-bottom: 2px;
 }
 
-/* === Responsive / small screen tweaks === */
-@media (max-width: 500px) {
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
+.market-outcomes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.market-outcomes td {
+  padding: 2px 6px;
+}
+
+.outcome-name {
+  font-weight: 500;
+}
+
+.outcome-point {
+  text-align: center;
+  width: 40px;
+}
+
+.outcome-price {
+  text-align: right;
+  width: 60px;
+}
+
+@media (max-width: 600px) {
+  .card-full-odds .card-body {
+    max-height: none;
   }
-  .kickoff {
-    margin: 6px 0;
-  }
-}
-
-/* === Utility for hidden image fallback === */
-.card .team img {
-  display: inline-block;
 }

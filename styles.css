@@ -1,48 +1,110 @@
-.card {
-  border-radius: 14px;
-  padding: 14px;
-  margin: 24px auto;
-  width: 92%;
+/* === Card Grid Container === */
+#gamesContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* === Week nav styling === */
+.week-nav {
+  text-align: center;
+  margin: 1rem 0;
+}
+.week-nav button {
+  margin: 0 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background-color: #0066ff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.week-nav button:hover {
+  background-color: #004ccb;
+}
+.week-nav #week-label {
+  margin-left: 1rem;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+/* === Card styling === */
+.game-card {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
   color: #fff;
-  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
+  padding: 1rem;
+  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
 }
 
-.card-header {
+/* Header & kickoff time */
+.game-header {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+/* Countdown timer styling */
+.countdown {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #e0e0ff;
+  margin-bottom: 0.8rem;
+}
+
+/* Odds table inside card */
+.odds-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.6rem;
+}
+.odds-table th,
+.odds-table td {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
   border-bottom: 1px solid rgba(255,255,255,0.2);
-  padding-bottom: 6px;
-  margin-bottom: 10px;
+  color: #f0f0f0;
+  font-size: 0.9rem;
+}
+.odds-table th {
+  font-weight: 500;
+  opacity: 0.9;
 }
 
-.teams-row {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+/* Consensus row styling */
+.consensus-row td {
+  background: rgba(255,255,255,0.1);
+  font-style: italic;
+  text-align: center;
+  padding: 0.5rem;
+  color: #dfe;
 }
 
-.team-logo {
-  height: 46px;
+/* Date header above groups */
+.date-header {
+  grid-column: 1 / -1;
+  margin: 2rem 0 0.4rem;
+  font-size: 1.3rem;
+  color: #ffffff;
+  border-bottom: 2px solid #444;
+  padding-bottom: 0.3rem;
 }
 
-.tab {
-  display:inline-block;
-  padding:6px 12px;
-  cursor:pointer;
-}
-
-.tab.active {
-  background:#0004;
-  border-radius: 6px;
-}
-
-.tab-content { display:none; }
-.tab-content.active { display:block; }
-
-.add-leg {
-  margin-left: 6px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background:#ffcc33;
-  color:#000;
-  cursor:pointer;
-  font-size:0.8rem;
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .game-card {
+    min-height: auto;
+  }
 }

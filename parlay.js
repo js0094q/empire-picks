@@ -1,74 +1,40 @@
-// -- Global parlay state
-const parlay = {
-  legs: []  // each leg: { market, price (American), team/player, type, side, extra... }
+// parlay.js — ensure this works with the updated script.js
+
+let parlayLegs = [];
+
+window.addParlayLeg = function(leg) {
+  // avoid duplicates (same game + market + outcome)
+  const key = `${leg.gameId}|${leg.market}|${leg.outcome}`;
+  if (parlayLegs.some(l => l.key === key)) return;
+  leg.key = key;
+  parlayLegs.push(leg);
+  renderParlay();
 };
 
-// -- Convert American odds to decimal multiplier
-function americanToDecimal(odds) {
-  odds = Number(odds);
-  if (odds > 0) return 1 + odds / 100;
-  return 1 + 100 / Math.abs(odds);
-}
+window.removeParlayLeg = function(key) {
+  parlayLegs = parlayLegs.filter(l => l.key !== key);
+  renderParlay();
+};
 
-// -- Compute total parlay odds & implied probability
-function computeParlay(parlay) {
-  if (!parlay.legs.length) return null;
-  let dec = 1;
-  for (const leg of parlay.legs) {
-    dec *= americanToDecimal(leg.price);
-  }
-  const impliedProb = 1 / dec;
-  return { decimal: dec, impliedProb };
-}
-
-// -- Render parlay slip UI
-function renderParlaySlip() {
-  const container = document.getElementById("parlay-slip");
+window.renderParlay = function() {
+  const container = document.getElementById("parlay-legs");
   if (!container) return;
   container.innerHTML = "";
 
-  if (parlay.legs.length === 0) {
-    container.textContent = "No legs in parlay.";
+  if (parlayLegs.length === 0) {
+    container.textContent = "No legs added.";
     return;
   }
 
   const ul = document.createElement("ul");
-  parlay.legs.forEach((leg, i) => {
+  parlayLegs.forEach(leg => {
     const li = document.createElement("li");
-    li.textContent = `${leg.market} — ${leg.team || leg.player} @ ${leg.price}`;
+    li.textContent = `${leg.away} @ ${leg.home} — ${leg.market.toUpperCase()}:${leg.outcome} @ ${leg.odds > 0 ? "+" + leg.odds : leg.odds}`;
     const btn = document.createElement("button");
     btn.textContent = "Remove";
-    btn.onclick = () => {
-      parlay.legs.splice(i, 1);
-      renderParlaySlip();
-    };
+    btn.onclick = () => window.removeParlayLeg(leg.key);
     li.appendChild(btn);
     ul.appendChild(li);
   });
   container.appendChild(ul);
-
-  const result = computeParlay(parlay);
-  const oddsDiv = document.createElement("div");
-  oddsDiv.textContent = `Parlay odds (decimal): ${result.decimal.toFixed(2)}, implied win %: ${(result.impliedProb * 100).toFixed(1)}%`;
-  container.appendChild(oddsDiv);
-}
-
-// -- Hook add-leg buttons
-document.addEventListener("click", e => {
-  if (!e.target.matches("button.add-leg")) return;
-  const b = e.target;
-  const leg = {
-    market: b.dataset.market,
-    price: b.dataset.price,
-    team: b.dataset.team,
-    player: b.dataset.player,
-    type: b.dataset.type,
-    side: b.dataset.side
-    // add extra metadata as needed
-  };
-  parlay.legs.push(leg);
-  renderParlaySlip();
-});
-
-// Right after page load, create a container in DOM:
-// <div id="parlay-slip"></div>
+};

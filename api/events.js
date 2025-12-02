@@ -1,41 +1,36 @@
+import { parseISO } from "date-fns";
+
 export default async function handler(req, res) {
-  const apiKey = process.env.ODDS_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "Missing ODDS_API_KEY" });
-
-  const base = "https://api.the-odds-api.com/v4";
-  const sport = "americanfootball_nfl";
-  const url = `${base}/sports/${sport}/events?apiKey=${apiKey}`;
-
   try {
-    const r = await fetch(url);
+    const apiKey = process.env.ODDS_API_KEY;
+
+    const r = await fetch(
+      `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events?apiKey=${apiKey}`
+    );
+
     const events = await r.json();
 
+    // --- Correct NFL weekly range ---
     const now = new Date();
 
-    const todayUTC = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate()
-    ));
+    // Week starts on TUESDAY at 00:00
+    const thisTuesday = new Date(now);
+    thisTuesday.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Moves to previous Tuesday
+    thisTuesday.setHours(0, 0, 0, 0);
 
-    const todayUTCDay = todayUTC.getUTCDay();  
-    const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
+    // Week ends next Monday 23:59
+    const nextMonday = new Date(thisTuesday);
+    nextMonday.setDate(thisTuesday.getDate() + 6);
+    nextMonday.setHours(23, 59, 59, 999);
 
-    const thursdayUTC = new Date(todayUTC);
-    thursdayUTC.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
-
-    const tuesdayUTC = new Date(thursdayUTC);
-    tuesdayUTC.setUTCDate(tuesdayUTC.getUTCDate() + 5);
-    tuesdayUTC.setUTCHours(11, 0, 0, 0);
-
-    const weekGames = events.filter(ev => {
-      const kickoff = new Date(ev.commence_time);
-      return kickoff >= thursdayUTC && kickoff <= tuesdayUTC;
+    const filtered = events.filter(ev => {
+      const d = parseISO(ev.commence_time);
+      return d >= thisTuesday && d <= nextMonday;
     });
 
-    res.status(200).json(weekGames);
-
+    return res.status(200).json(filtered);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    return res.status(500).json({ error: "NFL events fetch failed" });
   }
 }

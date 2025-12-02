@@ -1,26 +1,34 @@
 // ========================================================
-// EmpirePicks — JS Frontend (ES Module style)
+// EmpirePicks — Cleaned-up script.js
 // ========================================================
 
-// --- Import your NFL_TEAMS data (team names → logos/colors) ---
 import { NFL_TEAMS } from "./teams.js";
 
 // --- DOM helpers ---
-const $  = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const money = o => (o > 0 ? `+${o}` : o);
 
-// --- Convert American odds to probability ---
+// --- Odds → implied prob ---
 function prob(odds) {
-  return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
+  odds = Number(odds);
+  if (odds > 0) {
+    return 100 / (odds + 100);
+  } else {
+    return -odds / (-odds + 100);
+  }
 }
-function noVig(p1, p2) {
-  const t = p1 + p2;
-  return t === 0 ? [0.5, 0.5] : [p1 / t, p2 / t];
-}
-const avg = arr => (arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0);
 
-// --- API Wrappers ---
+// --- Convert American odds to decimal multiplier ---
+function americanToDecimal(odds) {
+  odds = Number(odds);
+  return odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
+}
+
+// --- Average helper ---
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
+
+// --- API wrapper ---
 const api = {
   async events() {
     const r = await fetch("/api/events");
@@ -39,10 +47,10 @@ const api = {
   }
 };
 
-// --- Parlay pool for Best Parlay generator ---
+// --- Global Parlay Pool ---
 let PARLAY_POOL = [];
 
-// --- Root elements ---
+// --- Root Elements ---
 const gamesEl = $("#games");
 const refreshBtn = $("#refreshBtn");
 if (refreshBtn) refreshBtn.addEventListener("click", loadAll);
@@ -53,10 +61,14 @@ async function loadAll() {
   PARLAY_POOL = [];
 
   try {
-    const [events, oddsWrap] = await Promise.all([api.events(), api.odds()]);
+    const [events, oddsWrap] = await Promise.all([
+      api.events(),
+      api.odds()
+    ]);
     const odds = Array.isArray(oddsWrap) ? oddsWrap : oddsWrap.data ?? [];
 
     const byId = Object.fromEntries(odds.map(g => [g.id, g]));
+
     const now = Date.now();
     const cutoffMs = 4 * 60 * 60 * 1000;
 
@@ -70,7 +82,7 @@ async function loadAll() {
     gamesEl.innerHTML = "";
     valid.forEach(ev => {
       const card = renderGame(ev, byId[ev.id]);
-      gamesEl.appendChild(card);
+      gamesEl.append(card);
     });
 
     renderBestParlay();
@@ -83,13 +95,14 @@ async function loadAll() {
 
 loadAll();
 
-// --- Render a single game card ---
+// --- Render single game card ---
 function renderGame(ev, odds) {
   const card = document.createElement("div");
   card.className = "card";
 
   const kickoff = new Date(ev.commence_time).toLocaleString();
 
+  // Header
   const header = document.createElement("div");
   header.className = "card-header";
 
@@ -126,11 +139,12 @@ function renderGame(ev, odds) {
   header.append(away, center, home);
   card.append(header);
 
+  // Body
   const body = document.createElement("div");
   body.className = "card-body";
 
   const analytics = computeGameAnalytics(odds, ev.away_team, ev.home_team);
-  body.append( createAnalyticsBlock(analytics) );
+  body.append(createAnalyticsBlock(analytics));
 
   const linesBlock = document.createElement("div");
   linesBlock.className = "lines-block";
@@ -138,7 +152,6 @@ function renderGame(ev, odds) {
   renderLines(linesBlock, odds, analytics, ev.id);
 
   const propsBlock = document.createElement("div");
-  propsBlock.className = "props-block";
   propsBlock.style.marginTop = "16px";
   const loadPropsBtn = document.createElement("button");
   loadPropsBtn.textContent = "Load Player Props";
@@ -158,12 +171,13 @@ function renderGame(ev, odds) {
   return card;
 }
 
-// --- Compute analytics (win %, projection, consensus lines) ---
+// --- Game analytics (win %, projected scoreline) ---
 function computeGameAnalytics(game, away, home) {
   const books = game.bookmakers || [];
-
-  const mlAway = [], mlHome = [];
-  const homeSpreads = [], totals = [];
+  const mlAway = [];
+  const mlHome = [];
+  const homeSpreads = [];
+  const totals = [];
 
   books.forEach(bm => {
     (bm.markets || []).forEach(m => {
@@ -188,6 +202,7 @@ function computeGameAnalytics(game, away, home) {
 
   const pa = avg(mlAway), ph = avg(mlHome);
   const [nvA, nvH] = noVig(pa, ph);
+
   const winner = nvA > nvH ? away : home;
   const winnerProb = Math.max(nvA, nvH);
 
@@ -201,11 +216,21 @@ function computeGameAnalytics(game, away, home) {
     projAway = (T + s) / 2;
   }
 
-  return { away, home, nvAway: nvA, nvHome: nvH, winner, winnerProb,
-           consensusSpread, consensusTotal, projHome, projAway };
+  return {
+    away, home,
+    nvAway: nvA, nvHome: nvH,
+    winner, winnerProb,
+    consensusSpread, consensusTotal,
+    projHome, projAway
+  };
 }
 
-// --- Build analytics block JSX-style ---
+function noVig(p1, p2) {
+  const t = p1 + p2;
+  return t === 0 ? [0.5, 0.5] : [p1 / t, p2 / t];
+}
+
+// --- Build Analytics UI block ---
 function createAnalyticsBlock(a) {
   const box = document.createElement("div");
   box.className = "analytics-block";
@@ -213,28 +238,27 @@ function createAnalyticsBlock(a) {
   const awayPct = (a.nvAway * 100).toFixed(1);
   const homePct = (a.nvHome * 100).toFixed(1);
 
-  const html = `
+  box.innerHTML = `
     <div style="margin-bottom:6px;">
-      <strong>Win Probability:</strong> ${a.winner} — ${(a.winnerProb*100).toFixed(1)}%
+      <strong>Win Probability:</strong> ${a.winner} — ${(a.winnerProb * 100).toFixed(1)}%
     </div>
     <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
       <div style="display:flex; align-items:center; gap:6px;">
         <span style="width:60px;">${a.away}</span>
         <div style="flex:1; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; height:6px;">
-          <div style="width:${awayPct}%; height:100%; background:var(--accent);"></div>
+          <div style="width:${awayPct}%; height:100%; background:var(--accent, #ffcc33);"></div>
         </div>
         <span style="width:40px; text-align:right;">${awayPct}%</span>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         <span style="width:60px;">${a.home}</span>
         <div style="flex:1; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; height:6px;">
-          <div style="width:${homePct}%; height:100%; background:var(--accent);"></div>
+          <div style="width:${homePct}%; height:100%; background:var(--accent, #ffcc33);"></div>
         </div>
         <span style="width:40px; text-align:right;">${homePct}%</span>
       </div>
     </div>
   `;
-  box.innerHTML = html;
 
   if (a.projHome != null && a.projAway != null) {
     const p = document.createElement("div");
@@ -243,22 +267,20 @@ function createAnalyticsBlock(a) {
     p.textContent = `Projected Score → ${a.away} ${a.projAway.toFixed(1)}, ${a.home} ${a.projHome.toFixed(1)}`;
     box.append(p);
   }
+
   return box;
 }
 
-// --- Render Odds lines + parlay add buttons ---
+// --- Render lines + parlay add buttons ---
 function renderLines(container, game, analytics, gameId) {
   const rows = [];
 
   (game.bookmakers || []).forEach(bm => {
     const rec = {
       book: bm.title,
-      mlAway: null,
-      mlHome: null,
-      spread: null,
-      spreadPrice: null,
-      total: null,
-      totalPrice: null
+      mlAway: null, mlHome: null,
+      spread: null, spreadPrice: null,
+      total: null, totalPrice: null
     };
     const mk = bm.markets || [];
 
@@ -296,6 +318,7 @@ function renderLines(container, game, analytics, gameId) {
   const tbody = document.createElement("tbody");
   rows.forEach(r => {
     const tr = document.createElement("tr");
+
     const tdBook = document.createElement("td");
     tdBook.textContent = r.book;
     tdBook.style.padding = "6px";
@@ -304,6 +327,7 @@ function renderLines(container, game, analytics, gameId) {
     tdML.style.padding = "6px";
     if (r.mlAway != null && r.mlHome != null) {
       tdML.textContent = `${money(r.mlAway)} / ${money(r.mlHome)}`;
+
       const btnA = document.createElement("button");
       btnA.className = "add-leg";
       btnA.textContent = `➕ ${analytics.away}`;
@@ -312,6 +336,7 @@ function renderLines(container, game, analytics, gameId) {
       btnA.dataset.price = r.mlAway;
       btnA.dataset.trueprob = analytics.nvAway;
       btnA.dataset.game = `${analytics.away} @ ${analytics.home}`;
+      btnA.dataset.edge = analytics.nvAway - prob(r.mlAway);
       tdML.append(document.createElement("br"), btnA);
 
       const btnH = document.createElement("button");
@@ -322,8 +347,11 @@ function renderLines(container, game, analytics, gameId) {
       btnH.dataset.price = r.mlHome;
       btnH.dataset.trueprob = analytics.nvHome;
       btnH.dataset.game = `${analytics.away} @ ${analytics.home}`;
+      btnH.dataset.edge = analytics.nvHome - prob(r.mlHome);
       tdML.append(btnH);
-    } else tdML.textContent = "–";
+    } else {
+      tdML.textContent = "–";
+    }
 
     const tdS = document.createElement("td");
     tdS.style.padding = "6px";
@@ -338,7 +366,9 @@ function renderLines(container, game, analytics, gameId) {
       btnS.dataset.game = `${analytics.away} @ ${analytics.home}`;
       btnS.dataset.side = r.spread;
       tdS.append(document.createElement("br"), btnS);
-    } else tdS.textContent = "–";
+    } else {
+      tdS.textContent = "–";
+    }
 
     const tdT = document.createElement("td");
     tdT.style.padding = "6px";
@@ -349,11 +379,13 @@ function renderLines(container, game, analytics, gameId) {
       btnT.textContent = "➕ Total";
       btnT.dataset.market = "TOTAL";
       btnT.dataset.price = r.totalPrice;
-      btnT.dataset.trueprob = (analytics.nvAway + analytics.nvHome) / 2;
+      btnT.dataset.trueprob = (analytics.nvAway + analytics.nvHome)/2;
       btnT.dataset.game = `${analytics.away} @ ${analytics.home}`;
       btnT.dataset.side = r.total;
       tdT.append(document.createElement("br"), btnT);
-    } else tdT.textContent = "–";
+    } else {
+      tdT.textContent = "–";
+    }
 
     const tdP = document.createElement("td");
     tdP.style.padding = "6px";
@@ -362,13 +394,13 @@ function renderLines(container, game, analytics, gameId) {
     tr.append(tdBook, tdML, tdS, tdT, tdP);
     tbody.append(tr);
   });
-
   tbl.append(tbody);
+
   container.innerHTML = "";
   container.append(tbl);
 }
 
-// --- Load and render player props with parlay buttons ---
+// --- Load player props and allow add-leg for props ---
 async function loadProps(evId, container) {
   container.innerHTML = "Loading props…";
   try {
@@ -391,17 +423,14 @@ async function loadProps(evId, container) {
         tbl.style.marginTop = "8px";
 
         const thead = document.createElement("thead");
-        thead.innerHTML = `
-          <tr>
-            <th>Book</th><th>Player</th><th>Pick</th><th>Line</th><th>Price</th><th>Parlay</th>
-          </tr>`;
+        thead.innerHTML = `<tr><th>Book</th><th>Player</th><th>Pick</th><th>Line</th><th>Price</th><th>Parlay</th></tr>`;
         tbl.append(thead);
 
         const tbody = document.createElement("tbody");
         m.outcomes.forEach(o => {
           const tr = document.createElement("tr");
 
-          const tdBook   = document.createElement("td");
+          const tdBook = document.createElement("td");
           tdBook.textContent = bm.title;
           tdBook.style.padding = "4px";
 
@@ -409,15 +438,15 @@ async function loadProps(evId, container) {
           tdPlayer.textContent = o.description || o.name || "–";
           tdPlayer.style.padding = "4px";
 
-          const tdPick   = document.createElement("td");
+          const tdPick = document.createElement("td");
           tdPick.textContent = o.name;
           tdPick.style.padding = "4px";
 
-          const tdLine   = document.createElement("td");
+          const tdLine = document.createElement("td");
           tdLine.textContent = o.point != null ? o.point : "–";
           tdLine.style.padding = "4px";
 
-          const tdPrice  = document.createElement("td");
+          const tdPrice = document.createElement("td");
           tdPrice.textContent = money(o.price);
           tdPrice.style.padding = "4px";
 
@@ -434,11 +463,13 @@ async function loadProps(evId, container) {
           btn.dataset.price  = o.price;
           btn.dataset.trueprob = prob(o.price);
           btn.dataset.game   = `${propsWrap.away_team} @ ${propsWrap.home_team}`;
+          btn.dataset.edge   = 0; // optional
           tdParlay.append(btn);
 
           tr.append(tdBook, tdPlayer, tdPick, tdLine, tdPrice, tdParlay);
           tbody.append(tr);
         });
+
         tbl.append(tbody);
         out.append(tbl);
       });
@@ -453,7 +484,7 @@ async function loadProps(evId, container) {
   }
 }
 
-// --- Best Parlay of the Week auto-builder ---
+// --- Best Parlay of the Week generator ---
 function renderBestParlay() {
   const slot = $("#bestParlay");
   if (!slot) return;
@@ -461,64 +492,68 @@ function renderBestParlay() {
   if (!PARLAY_POOL.length) {
     slot.innerHTML = `
       <h2>🔥 Best Parlay of the Week</h2>
-      <p style="color:#ccc;">No +EV moneyline legs found yet. Refresh after lines settle.</p>
+      <p style="color:#ccc;">No +EV legs detected yet.</p>
     `;
     return;
   }
-  const sorted = PARLAY_POOL.slice().sort((a,b) => b.edge - a.edge);
+
+  const sorted = PARLAY_POOL
+    .filter(l => !isNaN(l.edge))
+    .sort((a,b) => b.edge - a.edge);
+
   const picks = [];
   const usedGames = new Set();
   for (const l of sorted) {
     if (usedGames.has(l.game)) continue;
     picks.push(l);
     usedGames.add(l.game);
-    if (picks.length >= 4) break;
+    if (picks.length >= 3) break;
   }
+
   if (!picks.length) {
-    slot.innerHTML = `<h2>🔥 Best Parlay of the Week</h2><p style="color:#ccc;">No safe parlays now.</p>`;
+    slot.innerHTML = `
+      <h2>🔥 Best Parlay of the Week</h2>
+      <p style="color:#ccc;">No valid legs right now.</p>
+    `;
     return;
   }
-  const probMarket = picks.reduce((acc, l) => acc * prob(l.price), 1);
-  const probFair   = picks.reduce((acc, l) => acc * l.trueProb, 1);
-  const toAm = p => p > 0.5
-    ? "-" + Math.round((p/(1-p))*100)
-    : "+" + Math.round(((1-p)/p)*100);
-  const mo = toAm(probMarket);
-  const fo = toAm(probFair);
-  const edgePct = (probFair - probMarket) * 100;
 
-  let html = `<h2>🔥 Best Parlay of the Week</h2><ul style="color:#eee; margin-left:1rem;">`;
-  picks.forEach(l => {
-    html += `<li>${l.team} (${l.game}) @ ${money(l.price)} — edge ${(l.edge*100).toFixed(1)}%</li>`;
+  let dec = 1;
+  picks.forEach(l => dec *= americanToDecimal(l.price));
+
+  const marketOdds = dec >= 2
+    ? "+" + Math.round((dec - 1) * 100)
+    : "-" + Math.round(100 / (dec - 1));
+
+  let html = `<h2>🔥 Best Parlay of the Week</h2><ul>`;
+  picks.forEach(p => {
+    html += `<li>${p.team ?? p.player} (${p.game}) @ ${money(p.price)} — edge ${(p.edge*100).toFixed(1)}%</li>`;
   });
-  html += `</ul><div style="color:#ccc; font-size:0.9rem;">
-    Market Odds: ${money(mo)}<br>
-    Fair Odds:   ${money(fo)}<br>
-    Expected Edge: ${edgePct.toFixed(1)}%
-  </div>`;
+  html += `</ul>
+    <div style="color:#ccc; font-size:0.9rem;">
+      Parlay Odds: ${marketOdds}
+    </div>
+  `;
 
   slot.innerHTML = html;
 }
 
-// --- Parlay-leg add handler (ML / Spread / Total / Props) ---
+// --- Add-leg handler --- 
 document.addEventListener("click", e => {
   if (!e.target.matches("button.add-leg")) return;
-  const btn = e.target;
-  const market = btn.dataset.market;
-  const leg = { market, price: Number(btn.dataset.price), game: btn.dataset.game };
-
-  if (market === "PROP") {
-    leg.type = btn.dataset.type;
-    leg.player = btn.dataset.player;
-    leg.side   = btn.dataset.side;
-    leg.point  = btn.dataset.point;
-  } else {
-    leg.team = btn.dataset.team;
-    if (btn.dataset.side) leg.side = btn.dataset.side;
-  }
-  // trueProb could be used for EV calculations / fair-odds later
-  leg.trueProb = Number(btn.dataset.trueprob);
-
+  const b = e.target;
+  const leg = {
+    market: b.dataset.market,
+    price: Number(b.dataset.price),
+    game: b.dataset.game,
+    team: b.dataset.team || null,
+    player: b.dataset.player || null,
+    type: b.dataset.type || null,
+    side: b.dataset.side || null,
+    point: b.dataset.point || null,
+    trueProb: Number(b.dataset.trueprob),
+    edge: Number(b.dataset.edge || 0)
+  };
   PARLAY_POOL.push(leg);
   renderBestParlay();
 });

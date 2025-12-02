@@ -1,103 +1,188 @@
+/* ========================================================= */
+/* Empire-Picks: Global Styles & Reset */
+/* ========================================================= */
+
 :root {
-  --bg: #0d1228;
-  --card: #171c36;
-  --border: #2a3360;
-  --text: #eaf1ff;
-  --muted: #9ca7c8;
-  --gold: #ffcc33;
-  --green: #28d16c;
-  --red: #f45d67;
-  --radius: 12px;
+  --bg-page: #0d1228;
+  --bg-card: rgba(13, 18, 40, 0.96);
+  --bg-card-header: #111;
+  --text-light: #eee;
+  --text-muted: #888;
+  --accent: #ffcc33;
+  --border-light: #333;
+  --table-row-border: #444;
+  --btn-bg: rgba(255, 204, 51, 0.15);
+  --btn-hover: rgba(255, 204, 51, 0.3);
 }
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, sans-serif;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--text-light);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
 }
 
-.header {
-  text-align: center;
-  padding: 1rem;
-  border-bottom: 1px solid var(--border);
+a {
+  color: var(--accent);
+  text-decoration: none;
 }
 
 button {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 0.4rem 0.8rem;
   cursor: pointer;
+  font-family: inherit;
+  color: var(--text-light);
+  background: var(--btn-bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 8px;
+  transition: background 0.15s, border-color 0.15s;
 }
-button:hover { filter: brightness(1.2); }
 
-.games {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  max-width: 900px;
-  margin: 0 auto;
+button:hover {
+  background: var(--btn-hover);
+  border-color: var(--accent);
 }
+
+/* ========================================================= */
+/* Card Layout (Game Cards + Parlay Panel) */
+/* ========================================================= */
 
 .card {
-  color: #f4f7ff;
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.4rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
-.card-header small {
-  opacity: 0.85;
-}
-
-.card h2 {
-  color: #ffffff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-}
-
-.tabs {
+.card-header {
+  background: var(--bg-card-header);
   display: flex;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  color: var(--text-light);
 }
 
-.tab {
-  flex: 1;
-  padding: 0.6rem;
-  text-align: center;
-  cursor: pointer;
-  background: #10152e;
-  border-right: 1px solid var(--border);
-}
-.tab.active {
-  background: #192045;
-  color: var(--gold);
+.card-header img {
+  height: 36px;
+  width: auto;
+  opacity: 0.9;
 }
 
-.tab-content {
-  display: none;
-  padding: 0.8rem;
+.card-body {
+  padding: 12px;
 }
-.tab-content.active { display: block; }
 
-.table {
+/* ========================================================= */
+/* Analytics Block (Win % gauge, projected score) */
+/* ========================================================= */
+
+.analytics-block {
+  margin-bottom: 8px;
+}
+
+.analytics-block .gauge-bar {
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.analytics-block .gauge-bar-inner {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+/* ========================================================= */
+/* Lines Table (Odds, Spread, Total, Parlay Buttons) */
+/* ========================================================= */
+
+table.lines-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  margin-top: 8px;
+  font-size: 0.88rem;
+  color: var(--text-light);
 }
-.table th, .table td {
-  border-bottom: 1px solid var(--border);
-  padding: 0.4rem;
-}
-.table th {
-  text-align: left;
-  color: var(--muted);
-}
-.ev-pos { color: var(--green); }
-.ev-neg { color: var(--red); }
 
-.footer {
-  text-align: center;
-  padding: 1rem;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
-  margin-top: 2rem;
+table.lines-table thead th {
+  text-align: left;
+  padding: 6px;
+  border-bottom: 1px solid var(--table-row-border);
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+table.lines-table tbody tr {
+  border-bottom: 1px solid var(--table-row-border);
+}
+
+table.lines-table td {
+  padding: 6px;
+  vertical-align: top;
+}
+
+table.lines-table td > button {
+  margin-top: 4px;
+  font-size: 0.75rem;
+}
+
+/* optionally: zebra-striping for readability */
+/*
+table.lines-table tbody tr:nth-child(even) {
+  background: rgba(255,255,255,0.03);
+}
+*/
+
+/* ========================================================= */
+/* Props / Parlay / Best-Parlay Panel Styles */
+/* ========================================================= */
+
+#bestParlay {
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 1.6rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+
+#bestParlay h2 {
+  margin-top: 0;
+  color: var(--accent);
+}
+
+#bestParlay ul {
+  padding-left: 1.2rem;
+}
+
+#bestParlay li {
+  margin-bottom: 6px;
+}
+
+/* ========================================================= */
+/* Responsive adjustments */
+/* ========================================================= */
+
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  table.lines-table {
+    font-size: 0.80rem;
+  }
+
+  button {
+    padding: 3px 6px;
+  }
 }

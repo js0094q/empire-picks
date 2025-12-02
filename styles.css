@@ -1,53 +1,23 @@
 :root {
-  --bg-page: #0d1228;
-  --text-light: #eee;
-  --text-muted: #888;
-  --accent: #ffcc33;
-
-  /* fallback card colors if team vars not defined */
-  --card-bg: rgba(13,18,40,0.95);
+  --card-bg: rgba(13, 18, 40, 0.96);
   --card-header-bg: #111;
   --card-border: #333;
+  /* fallback vars if no team vars provided */
+  --team-primary: var(--card-header-bg);
+  --team-secondary: var(--card-border);
 }
 
-/* Page + global reset */
-body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg-page);
-  color: var(--text-light);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.4;
-}
-
-button {
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--text-light);
-  background: rgba(255, 204, 51, 0.15);
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  padding: 4px 8px;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-button:hover {
-  background: rgba(255, 204, 51, 0.3);
-  border-color: var(--accent);
-}
-
-/* Card layout */
 .card {
   background: var(--card-bg);
   border: 2px solid var(--card-border);
   border-radius: 10px;
-  overflow: hidden;
   margin-bottom: 1.4rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  overflow: hidden;
 }
 
 .card-header {
-  background: var(--team-primary, var(--card-header-bg));
+  background: var(--team-primary);
   color: #fff;
   display: flex;
   justify-content: space-between;
@@ -55,41 +25,33 @@ button:hover {
   padding: 12px;
 }
 
-.card-header img {
-  height: 36px;
-  width: auto;
-  opacity: 0.9;
-}
-
 .card-body {
   padding: 12px;
   background: var(--card-bg);
-}
-
-/* Analytics block (win % gauge + projection) */
-.analytics-block {
-  margin-bottom: 8px;
-  padding: 8px;
-  background: rgba(0,0,0,0.2);
-  border-radius: 8px;
   color: #eee;
-  font-size: 0.88rem;
 }
 
-/* Lines table */
+.consensus-block {
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  color: #ccc;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 12px;
+}
+
 table.lines-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
   font-size: 0.88rem;
-  color: var(--text-light);
+  color: #eee;
 }
 
 table.lines-table thead th {
   text-align: left;
   padding: 6px;
   border-bottom: 1px solid #444;
-  font-weight: 600;
 }
 
 table.lines-table tbody tr {
@@ -101,57 +63,18 @@ table.lines-table td {
   vertical-align: top;
 }
 
-table.lines-table td > button {
-  margin-top: 4px;
-  font-size: 0.75rem;
+button {
+  cursor: pointer;
+  font-family: inherit;
+  color: #eee;
+  background: rgba(255,204,51,0.15);
+  border: 1px solid #ffcc33;
+  border-radius: 4px;
+  padding: 4px 8px;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-/* Consensus / movement block inside table header or before table */
-.consensus-block {
-  margin-bottom: 10px;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 4px 12px;
-}
-
-/* Parlay panel styling */
-#bestParlay {
-  background: var(--card-bg);
-  border: 2px solid var(--card-border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 1.6rem;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-}
-
-#bestParlay h2 {
-  margin-top: 0;
-  color: var(--accent);
-}
-
-#bestParlay ul {
-  padding-left: 1.2rem;
-}
-
-#bestParlay li {
-  margin-bottom: 6px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  table.lines-table {
-    font-size: 0.80rem;
-  }
-
-  button {
-    padding: 3px 6px;
-  }
+button:hover {
+  background: rgba(255,204,51,0.3);
+  border-color: #ffcc33;
 }

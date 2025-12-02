@@ -1,71 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks | NFL Odds & Props</title>
-
+  <meta charset="UTF-8" />
+  <title>EmpirePicks — NFL Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
-  <script type="module" src="teams.js"></script>
 </head>
-
 <body>
-
-  <header class="header">
-    <h1>🏛 EmpirePicks</h1>
-    <p>NFL Odds & Props Aggregator (Week View)</p>
-    <button id="refreshBtn">⟳ Refresh Data</button>
-    <a href="/dashboard" style="color:var(--gold);margin-left:1rem;">📊 Dashboard</a>
+  <header style="padding:16px; text-align:center; background:#0d1228; color:#fff;">
+    <h1>EmpirePicks NFL Dashboard</h1>
+    <button id="refreshBtn" style="padding:8px 16px; font-size:1rem;">Refresh Games</button>
   </header>
 
-  <main id="games" class="games"></main>
-
-  <!-- ONLY ONE Parlay Maker -->
-  <div id="parlayMaker"
-    style="
-      position: fixed;
-      bottom: 0;
-      right: 0;
-      width: 350px;
-      max-height: 70vh;
-      overflow-y: auto;
-      background: #141a33;
-      border-left: 2px solid var(--gold);
-      border-top: 2px solid var(--gold);
-      padding: 14px;
-      border-radius: 12px 0 0 0;
-      box-shadow: 0 -2px 12px rgba(0,0,0,0.45);
-      z-index: 9999;"
-  >
-    <h3 style="margin-top:0;color:var(--gold);font-size:1.1rem;">🎰 Parlay Maker</h3>
-    <div id="parlayLegs"></div>
-
-    <div id="parlayCalc"
-      style="margin-top:12px;font-size:0.9rem;color:var(--muted);">
-      Add legs to calculate EV…
-    </div>
-
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button id="clearParlay"
-        style="
-          flex:1;
-          padding:6px;
-          border-radius:8px;
-          background:#0d1228;
-          border:1px solid var(--border);
-          color:#f55;
-        ">
-        Clear
-      </button>
-    </div>
-  </div>
-
-  <footer class="footer">
-    Data from The Odds API | Built for EmpirePicks.com
-  </footer>
+  <main style="max-width:960px; margin:24px auto; padding:0 12px;">
+    <section id="bestParlay"></section>
+    <div id="games"></div>
+  </main>
 
   <script type="module" src="script.js"></script>
-  <script type="module" src="parlay.js"></script>
-
 </body>
 </html>

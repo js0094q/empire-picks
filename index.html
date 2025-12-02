@@ -6,16 +6,11 @@
   <title>EmpirePicks | NFL Odds & Props</title>
 
   <link rel="stylesheet" href="styles.css" />
-
-  <!-- Teams is safe to load early -->
   <script type="module" src="teams.js"></script>
 </head>
 
 <body>
 
-  <!-- ========================= -->
-  <!--        MAIN HEADER        -->
-  <!-- ========================= -->
   <header class="header">
     <h1>🏛 EmpirePicks</h1>
     <p>NFL Odds & Props Aggregator (Week View)</p>
@@ -23,14 +18,9 @@
     <a href="/dashboard" style="color:var(--gold);margin-left:1rem;">📊 Dashboard</a>
   </header>
 
-  <!-- ========================= -->
-  <!--         GAME CARDS        -->
-  <!-- ========================= -->
   <main id="games" class="games"></main>
 
-  <!-- ========================= -->
-  <!--       PARLAY MAKER        -->
-  <!-- ========================= -->
+  <!-- ONLY ONE Parlay Maker -->
   <div id="parlayMaker"
     style="
       position: fixed;
@@ -45,12 +35,10 @@
       padding: 14px;
       border-radius: 12px 0 0 0;
       box-shadow: 0 -2px 12px rgba(0,0,0,0.45);
-      z-index: 9999;
-    "
+      z-index: 9999;"
   >
     <h3 style="margin-top:0;color:var(--gold);font-size:1.1rem;">🎰 Parlay Maker</h3>
-
-    <div id="parlayLegs" style="margin-top:6px;"></div>
+    <div id="parlayLegs"></div>
 
     <div id="parlayCalc"
       style="margin-top:12px;font-size:0.9rem;color:var(--muted);">
@@ -66,23 +54,16 @@
           background:#0d1228;
           border:1px solid var(--border);
           color:#f55;
-        "
-      >
+        ">
         Clear
       </button>
     </div>
   </div>
 
-  <!-- ========================= -->
-  <!--           FOOTER          -->
-  <!-- ========================= -->
   <footer class="footer">
     Data from The Odds API | Built for EmpirePicks.com
   </footer>
 
-  <!-- ========================= -->
-  <!--        SCRIPT LOADING     -->
-  <!-- ========================= -->
   <script type="module" src="script.js"></script>
   <script type="module" src="parlay.js"></script>
 

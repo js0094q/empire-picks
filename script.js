@@ -71,7 +71,14 @@ async function loadAll() {
 
   try {
     const [events, oddsWrap] = await Promise.all([api.events(), api.odds()]);
-    const odds = oddsWrap.data ?? oddsWrap;
+    let odds;
+    if (Arr ay.isArray(oddsWrap)) {
+    odds = oddsWrap;
+  } else if (Array.isArray(oddsWrap?.data)) {
+    odds = oddsWrap.data;
+  } else {
+    odds = [];
+}
 
     const byId = Object.fromEntries(odds.map(g => [g.id, g]));
 

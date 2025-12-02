@@ -1,20 +1,16 @@
-/* ========================================================= */
-/* Empire-Picks: Global Styles & Reset */
-/* ========================================================= */
-
 :root {
   --bg-page: #0d1228;
-  --bg-card: rgba(13, 18, 40, 0.96);
-  --bg-card-header: #111;
   --text-light: #eee;
   --text-muted: #888;
   --accent: #ffcc33;
-  --border-light: #333;
-  --table-row-border: #444;
-  --btn-bg: rgba(255, 204, 51, 0.15);
-  --btn-hover: rgba(255, 204, 51, 0.3);
+
+  /* fallback card colors if team vars not defined */
+  --card-bg: rgba(13,18,40,0.95);
+  --card-header-bg: #111;
+  --card-border: #333;
 }
 
+/* Page + global reset */
 body {
   margin: 0;
   padding: 0;
@@ -24,16 +20,11 @@ body {
   line-height: 1.4;
 }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
 button {
   cursor: pointer;
   font-family: inherit;
   color: var(--text-light);
-  background: var(--btn-bg);
+  background: rgba(255, 204, 51, 0.15);
   border: 1px solid var(--accent);
   border-radius: 4px;
   padding: 4px 8px;
@@ -41,17 +32,14 @@ button {
 }
 
 button:hover {
-  background: var(--btn-hover);
+  background: rgba(255, 204, 51, 0.3);
   border-color: var(--accent);
 }
 
-/* ========================================================= */
-/* Card Layout (Game Cards + Parlay Panel) */
-/* ========================================================= */
-
+/* Card layout */
 .card {
-  background: var(--bg-card);
-  border: 2px solid var(--border-light);
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 1.4rem;
@@ -59,12 +47,12 @@ button:hover {
 }
 
 .card-header {
-  background: var(--bg-card-header);
+  background: var(--team-primary, var(--card-header-bg));
+  color: #fff;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   padding: 12px;
-  color: var(--text-light);
 }
 
 .card-header img {
@@ -75,35 +63,20 @@ button:hover {
 
 .card-body {
   padding: 12px;
+  background: var(--card-bg);
 }
 
-/* ========================================================= */
-/* Analytics Block (Win % gauge, projected score) */
-/* ========================================================= */
-
+/* Analytics block (win % gauge + projection) */
 .analytics-block {
   margin-bottom: 8px;
+  padding: 8px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  color: #eee;
+  font-size: 0.88rem;
 }
 
-.analytics-block .gauge-bar {
-  height: 6px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.1);
-  overflow: hidden;
-  margin: 4px 0;
-}
-
-.analytics-block .gauge-bar-inner {
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.3s ease;
-  border-radius: 4px;
-}
-
-/* ========================================================= */
-/* Lines Table (Odds, Spread, Total, Parlay Buttons) */
-/* ========================================================= */
-
+/* Lines table */
 table.lines-table {
   width: 100%;
   border-collapse: collapse;
@@ -115,13 +88,12 @@ table.lines-table {
 table.lines-table thead th {
   text-align: left;
   padding: 6px;
-  border-bottom: 1px solid var(--table-row-border);
+  border-bottom: 1px solid #444;
   font-weight: 600;
-  color: var(--text-light);
 }
 
 table.lines-table tbody tr {
-  border-bottom: 1px solid var(--table-row-border);
+  border-bottom: 1px solid #444;
 }
 
 table.lines-table td {
@@ -134,20 +106,20 @@ table.lines-table td > button {
   font-size: 0.75rem;
 }
 
-/* optionally: zebra-striping for readability */
-/*
-table.lines-table tbody tr:nth-child(even) {
-  background: rgba(255,255,255,0.03);
+/* Consensus / movement block inside table header or before table */
+.consensus-block {
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 12px;
 }
-*/
 
-/* ========================================================= */
-/* Props / Parlay / Best-Parlay Panel Styles */
-/* ========================================================= */
-
+/* Parlay panel styling */
 #bestParlay {
-  background: var(--bg-card);
-  border: 2px solid var(--border-light);
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 1.6rem;
@@ -167,10 +139,7 @@ table.lines-table tbody tr:nth-child(even) {
   margin-bottom: 6px;
 }
 
-/* ========================================================= */
 /* Responsive adjustments */
-/* ========================================================= */
-
 @media (max-width: 768px) {
   .card-header {
     flex-direction: column;

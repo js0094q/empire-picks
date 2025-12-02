@@ -7,6 +7,9 @@ export default async function handler(req, res) {
     }
 
     const apiKey = process.env.ODDS_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "Missing Odds API key" });
+    }
 
     const markets = [
       "player_pass_attempts",
@@ -29,21 +32,20 @@ export default async function handler(req, res) {
       `&markets=${markets}` +
       `&oddsFormat=american`;
 
-    const r = await fetch(url);
-    if (!r.ok) {
-      return res.status(r.status).json({ error: "Odds API failed" });
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: "Odds API error" });
     }
 
-    const data = await r.json();
+    const data = await response.json();
 
     return res.status(200).json({
-      props: {
-        bookmakers: data.bookmakers || []
-      }
+      props: { bookmakers: data.bookmakers || [] }
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error loading props" });
+    console.error("PROPS API ERROR:", err);
+    return res.status(500).json({ error: "Server error loading props" });
   }
 }

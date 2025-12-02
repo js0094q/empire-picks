@@ -1,7 +1,16 @@
 // ========================================================
-//  PARLAY MAKER MODULE
+//  PARLAY MAKER MODULE — FIXED (No external imports)
 // ========================================================
-import { americanToDecimal, formatAmerican } from "./utils.js";
+
+// American odds → Decimal
+function americanToDecimal(o){
+  return o > 0 ? 1 + o/100 : 1 + 100/(-o);
+}
+
+// Format +110, -120
+function formatAmerican(o){
+  return o > 0 ? `+${o}` : `${o}`;
+}
 
 // Internal store
 const parlayLegs = [];

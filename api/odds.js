@@ -14,32 +14,17 @@ export default async function handler(req, res) {
     const data = await r.json();
     const remaining = r.headers.get("x-requests-remaining");
 
-    const now = new Date();
+   const now = new Date();
 
-    const todayUTC = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate()
-    ));
+const thisTuesday = new Date(now);
+thisTuesday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+thisTuesday.setHours(0, 0, 0, 0);
 
-    const todayUTCDay = todayUTC.getUTCDay();
-    const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
+const nextMonday = new Date(thisTuesday);
+nextMonday.setDate(thisTuesday.getDate() + 6);
+nextMonday.setHours(23, 59, 59, 999);
 
-    const thursdayUTC = new Date(todayUTC);
-    thursdayUTC.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
-
-    const tuesdayUTC = new Date(thursdayUTC);
-    tuesdayUTC.setUTCDate(tuesdayUTC.getUTCDate() + 5);
-    tuesdayUTC.setUTCHours(11, 0, 0, 0);
-
-    const filtered = (data || []).filter(game => {
-      const kickoff = new Date(game.commence_time);
-      return kickoff >= thursdayUTC && kickoff <= tuesdayUTC;
-    });
-
-    res.status(200).json({ remaining, data: filtered });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}
+games = games.filter(g => {
+  const d = new Date(g.commence_time);
+  return d >= thisTuesday && d <= nextMonday;
+});

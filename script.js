@@ -1,5 +1,5 @@
 // ========================================================
-// EmpirePicks — Final script.js (Option B styling, parlay fixed)
+// EmpirePicks — Final script.js (parlay & dashboard fixed)
 // ========================================================
 
 import { NFL_TEAMS } from "./teams.js";
@@ -7,29 +7,26 @@ import { NFL_TEAMS } from "./teams.js";
 // DOM Helpers
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-const money = o => (o > 0 ? `+${o}` : o);
+const money = o  => o > 0 ? `+${o}` : String(o);
 
-// Odds ↔ probability converters
+// Prob & odds converters
 function prob(odds) {
   odds = Number(odds);
   return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
 }
-
 function americanToDecimal(odds) {
   odds = Number(odds);
-  return odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
+  return odds > 0 ? 1 + odds/100 : 1 + 100/Math.abs(odds);
 }
-
 function avg(arr) {
-  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  return arr.length ? arr.reduce((a,b) => a + b, 0)/arr.length : 0;
 }
-
 function noVig(p1, p2) {
   const t = p1 + p2;
-  return t === 0 ? [0.5, 0.5] : [p1 / t, p2 / t];
+  return t === 0 ? [0.5, 0.5] : [p1/t, p2/t];
 }
 
-// API wrappers
+// API
 const api = {
   async events() {
     const r = await fetch("/api/events");
@@ -48,7 +45,7 @@ const api = {
   }
 };
 
-// Parlay state
+// Parlay pool
 let PARLAY_POOL = [];
 
 // Root elements
@@ -56,15 +53,15 @@ const gamesEl = $("#games");
 const refreshBtn = $("#refreshBtn");
 if (refreshBtn) refreshBtn.addEventListener("click", loadAll);
 
-// Main loader
+// Main load
 async function loadAll() {
+  if (!gamesEl) return;
   gamesEl.textContent = "Loading NFL week data…";
   PARLAY_POOL = [];
 
   try {
     const [events, oddsWrap] = await Promise.all([api.events(), api.odds()]);
-    const odds = Array.isArray(oddsWrap) ? oddsWrap : oddsWrap.data ?? [];
-
+    const odds = Array.isArray(oddsWrap) ? oddsWrap : (oddsWrap.data ?? []);
     const byId = Object.fromEntries(odds.map(g => [g.id, g]));
 
     const now = Date.now();
@@ -92,14 +89,14 @@ async function loadAll() {
 
 loadAll();
 
-// --- Render single game card ---
+// Render single game card
 function renderGame(ev, odds) {
   const card = document.createElement("div");
   card.className = "card";
 
   const kickoff = new Date(ev.commence_time).toLocaleString();
 
-  // Header (team colors / logos)
+  // Header
   const header = document.createElement("div");
   header.className = "card-header";
 
@@ -108,8 +105,7 @@ function renderGame(ev, odds) {
   away.style.alignItems = "center";
   const awayLogo = document.createElement("img");
   awayLogo.src = NFL_TEAMS[ev.away_team]?.logo || "";
-  awayLogo.style.height = "36px";
-  awayLogo.style.opacity = "0.9";
+  awayLogo.style.height = "36px"; awayLogo.style.opacity = "0.9";
   const awayName = document.createElement("span");
   awayName.textContent = ev.away_team;
   awayName.style.marginLeft = "8px";
@@ -129,8 +125,7 @@ function renderGame(ev, odds) {
   homeName.style.marginRight = "8px";
   const homeLogo = document.createElement("img");
   homeLogo.src = NFL_TEAMS[ev.home_team]?.logo || "";
-  homeLogo.style.height = "36px";
-  homeLogo.style.opacity = "0.9";
+  homeLogo.style.height = "36px"; homeLogo.style.opacity = "0.9";
   home.append(homeName, homeLogo);
 
   header.append(away, center, home);
@@ -151,13 +146,14 @@ function renderGame(ev, odds) {
   propsBlock.style.marginTop = "16px";
   const loadPropsBtn = document.createElement("button");
   loadPropsBtn.textContent = "Load Player Props";
+  loadPropsBtn.dataset.parlay = "0";  // not a parlay button
   loadPropsBtn.addEventListener("click", () => loadProps(ev.id, propsBlock));
   propsBlock.append(loadPropsBtn);
   body.append(propsBlock);
 
   card.append(body);
 
-  // Apply team header colors (home team)
+  // team colors
   const homeTeamObj = NFL_TEAMS[ev.home_team];
   if (homeTeamObj) {
     card.style.setProperty("--team-primary", homeTeamObj.primary);
@@ -167,13 +163,11 @@ function renderGame(ev, odds) {
   return card;
 }
 
-// --- Compute analytics ---
+// Compute analytics
 function computeGameAnalytics(game, away, home) {
   const books = game.bookmakers || [];
-  const mlAway = [];
-  const mlHome = [];
-  const homeSpreads = [];
-  const totals = [];
+  const mlAway = [], mlHome = [];
+  const homeSpreads = [], totals = [];
 
   books.forEach(bm => {
     (bm.markets || []).forEach(m => {
@@ -190,7 +184,7 @@ function computeGameAnalytics(game, away, home) {
         if (h && typeof h.point === "number") homeSpreads.push(h.point);
       }
       if (m.key === "totals") {
-        const ov = m.outcomes.find(o => o.name.toLowerCase()==="over");
+        const ov = m.outcomes.find(x => x.name.toLowerCase()==="over");
         if (ov && typeof ov.point === "number") totals.push(ov.point);
       }
     });
@@ -202,7 +196,7 @@ function computeGameAnalytics(game, away, home) {
   const winnerProb = Math.max(nvA, nvH);
 
   const consensusSpread = homeSpreads.length ? avg(homeSpreads) : null;
-  const consensusTotal = totals.length ? avg(totals) : null;
+  const consensusTotal  = totals.length ? avg(totals) : null;
 
   let projHome = null, projAway = null;
   if (consensusSpread != null && consensusTotal != null) {
@@ -220,29 +214,22 @@ function computeGameAnalytics(game, away, home) {
   };
 }
 
-// --- Analytics block (simple, no bars) ---
 function createAnalyticsBlock(a) {
   const box = document.createElement("div");
   box.className = "analytics-block";
-  box.style.color = "#eee";
 
-  let html = `
-    <div style="margin-bottom:6px;">
-      <strong>Win Probability:</strong> ${a.winner} — ${(a.winnerProb * 100).toFixed(1)}%
-    </div>
-  `;
+  let html = `<div style="margin-bottom:6px;">
+      <strong>Win Probability:</strong> ${a.winner} — ${(a.winnerProb*100).toFixed(1)}%
+    </div>`;
   if (a.projHome != null && a.projAway != null) {
-    html += `
-      <div style="font-size:0.89rem; color:#ccc;">
-        Projected Score → ${a.away} ${a.projAway.toFixed(1)}, ${a.home} ${a.projHome.toFixed(1)}
-      </div>
-    `;
+    html += `<div style="font-size:0.89rem; color:#ccc;">
+      Projected Score → ${a.away} ${a.projAway.toFixed(1)}, ${a.home} ${a.projHome.toFixed(1)}
+    </div>`;
   }
   box.innerHTML = html;
   return box;
 }
 
-// --- Render lines + parlay buttons ---
 function renderLines(container, game, analytics) {
   const rows = [];
 
@@ -281,7 +268,6 @@ function renderLines(container, game, analytics) {
 
   const tbl = document.createElement("table");
   tbl.className = "lines-table";
-
   const thead = document.createElement("thead");
   thead.innerHTML = `<tr><th>Book</th><th>Moneyline</th><th>Spread</th><th>Total</th><th>Parlay</th></tr>`;
   tbl.append(thead);
@@ -302,23 +288,25 @@ function renderLines(container, game, analytics) {
 
       const btnAway = document.createElement("button");
       btnAway.className = "add-leg";
+      btnAway.dataset.parlay = "1";
       btnAway.textContent = `➕ ${analytics.away}`;
       btnAway.dataset.market = "ML";
-      btnAway.dataset.team = analytics.away;
-      btnAway.dataset.price = r.mlAway;
+      btnAway.dataset.team   = analytics.away;
+      btnAway.dataset.price  = r.mlAway;
       btnAway.dataset.trueprob = analytics.nvAway;
-      btnAway.dataset.game = `${analytics.away} @ ${analytics.home}`;
-      btnAway.dataset.edge = analytics.nvAway - prob(r.mlAway);
+      btnAway.dataset.edge     = analytics.nvAway - prob(r.mlAway);
+      btnAway.dataset.game   = `${analytics.away} @ ${analytics.home}`;
 
       const btnHome = document.createElement("button");
       btnHome.className = "add-leg";
+      btnHome.dataset.parlay = "1";
       btnHome.textContent = `➕ ${analytics.home}`;
       btnHome.dataset.market = "ML";
-      btnHome.dataset.team = analytics.home;
-      btnHome.dataset.price = r.mlHome;
+      btnHome.dataset.team   = analytics.home;
+      btnHome.dataset.price  = r.mlHome;
       btnHome.dataset.trueprob = analytics.nvHome;
-      btnHome.dataset.game = `${analytics.away} @ ${analytics.home}`;
-      btnHome.dataset.edge = analytics.nvHome - prob(r.mlHome);
+      btnHome.dataset.edge     = analytics.nvHome - prob(r.mlHome);
+      btnHome.dataset.game   = `${analytics.away} @ ${analytics.home}`;
 
       tdML.append(document.createElement("br"), btnAway, btnHome);
     } else {
@@ -331,12 +319,13 @@ function renderLines(container, game, analytics) {
       tdS.textContent = `${r.spread} (${money(r.spreadPrice)})`;
       const btnS = document.createElement("button");
       btnS.className = "add-leg";
+      btnS.dataset.parlay = "1";
       btnS.textContent = "➕ Spread";
       btnS.dataset.market = "SPREAD";
-      btnS.dataset.price = r.spreadPrice;
+      btnS.dataset.price  = r.spreadPrice;
       btnS.dataset.trueprob = analytics.nvHome;
-      btnS.dataset.game = `${analytics.away} @ ${analytics.home}`;
-      btnS.dataset.side = r.spread;
+      btnS.dataset.side   = r.spread;
+      btnS.dataset.game   = `${analytics.away} @ ${analytics.home}`;
       tdS.append(document.createElement("br"), btnS);
     } else {
       tdS.textContent = "–";
@@ -348,12 +337,13 @@ function renderLines(container, game, analytics) {
       tdT.textContent = r.total;
       const btnT = document.createElement("button");
       btnT.className = "add-leg";
+      btnT.dataset.parlay = "1";
       btnT.textContent = "➕ Total";
       btnT.dataset.market = "TOTAL";
       btnT.dataset.price = r.totalPrice;
-      btnT.dataset.trueprob = (analytics.nvAway + analytics.nvHome) / 2;
-      btnT.dataset.game = `${analytics.away} @ ${analytics.home}`;
-      btnT.dataset.side = r.total;
+      btnT.dataset.trueprob = (analytics.nvAway + analytics.nvHome)/2;
+      btnT.dataset.side   = r.total;
+      btnT.dataset.game   = `${analytics.away} @ ${analytics.home}`;
       tdT.append(document.createElement("br"), btnT);
     } else {
       tdT.textContent = "–";
@@ -372,7 +362,7 @@ function renderLines(container, game, analytics) {
   container.append(tbl);
 }
 
-// --- Load player props & add-leg for props ---
+// Load player props
 async function loadProps(evId, container) {
   container.innerHTML = "Loading props…";
   try {
@@ -426,6 +416,7 @@ async function loadProps(evId, container) {
           tdParlay.style.padding = "4px";
           const btn = document.createElement("button");
           btn.className = "add-leg";
+          btn.dataset.parlay = "1";
           btn.textContent = "➕ Add";
           btn.dataset.market = "PROP";
           btn.dataset.player = o.description || o.name || "";
@@ -434,8 +425,8 @@ async function loadProps(evId, container) {
           btn.dataset.point  = o.point ?? "";
           btn.dataset.price  = o.price;
           btn.dataset.trueprob = prob(o.price);
+          btn.dataset.edge     = 0;
           btn.dataset.game   = `${propsWrap.away_team} @ ${propsWrap.home_team}`;
-          btn.dataset.edge   = 0;
           tdParlay.append(btn);
 
           tr.append(tdBook, tdPlayer, tdPick, tdLine, tdPrice, tdParlay);
@@ -454,7 +445,7 @@ async function loadProps(evId, container) {
   }
 }
 
-// --- Best Parlay of the Week generator ---
+// Best Parlay of the Week
 function renderBestParlay() {
   const slot = $("#bestParlay");
   if (!slot) return;
@@ -467,13 +458,19 @@ function renderBestParlay() {
     return;
   }
 
-  const sorted = PARLAY_POOL
-    .filter(l => !isNaN(l.edge))
-    .sort((a, b) => b.edge - a.edge);
+  const valid = PARLAY_POOL.filter(l => !isNaN(l.price));
+  if (!valid.length) {
+    slot.innerHTML = `
+      <h2>🔥 Best Parlay of the Week</h2>
+      <p style="color:#ccc;">No valid legs available.</p>
+    `;
+    return;
+  }
+
+  const sorted = valid.sort((a,b) => ( (b.edge || 0) - (a.edge || 0) ));
 
   const picks = [];
   const usedGames = new Set();
-
   for (const l of sorted) {
     if (usedGames.has(l.game)) continue;
     picks.push(l);
@@ -493,48 +490,39 @@ function renderBestParlay() {
   picks.forEach(l => dec *= americanToDecimal(l.price));
 
   const marketOdds = dec >= 2
-    ? "+" + Math.round((dec - 1) * 100)
-    : "-" + Math.round(100 / (dec - 1));
+    ? "+" + Math.round((dec - 1)*100)
+    : "-" + Math.round(100/(dec - 1));
 
   let html = `<h2>🔥 Best Parlay of the Week</h2><ul>`;
   picks.forEach(p => {
-    html += `<li>${p.team || p.player} (${p.game}) @ ${money(p.price)} — edge ${(p.edge*100).toFixed(1)}%</li>`;
+    const label = p.team || p.player || "Leg";
+    html += `<li>${label} — ${p.game} @ ${money(p.price)} (edge ${(p.edge||0)*100 .toFixed(1)}%)</li>`;
   });
   html += `</ul>
     <div style="color:#ccc; font-size:0.9rem;">
-      Parlay Odds: ${marketOdds}
+      Parlay Odds: <strong>${marketOdds}</strong>
     </div>
   `;
-
   slot.innerHTML = html;
 }
 
-  // ============================================================
-// FINAL FAILSAFE PARLAY CLICK HANDLER
-// (Works even if HTML structure changes or Safari blocks events)
-// ============================================================
-
-document.addEventListener("click", function (e) {
+// GLOBAL click handler (delegation)
+document.addEventListener("click", function(e) {
   const btn = e.target.closest("[data-parlay='1']");
   if (!btn) return;
-
   const leg = {
     market: btn.dataset.market,
-    price: Number(btn.dataset.price),
-    game: btn.dataset.game,
-    team: btn.dataset.team || null,
+    price:  Number(btn.dataset.price),
+    game:   btn.dataset.game,
+    team:   btn.dataset.team || null,
     player: btn.dataset.player || null,
-    side: btn.dataset.side || null,
-    type: btn.dataset.type || null,
-    point: btn.dataset.point || "",
+    side:   btn.dataset.side || null,
+    type:   btn.dataset.type || null,
+    point:  btn.dataset.point || "",
     trueProb: Number(btn.dataset.trueprob || 0),
-    edge: Number(btn.dataset.edge || 0)
+    edge:     Number(btn.dataset.edge     || 0)
   };
-
-  console.log("LEG CAPTURED:", leg);
-  PARLAY_POOL.push(leg);
-  renderBestParlay();
-});
+  console.log("Parlay leg added:", leg);
   PARLAY_POOL.push(leg);
   renderBestParlay();
 });

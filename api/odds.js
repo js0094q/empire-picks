@@ -1,4 +1,3 @@
-// /api/odds.js
 export default async function handler(req, res) {
   try {
     const apiKey = process.env.ODDS_API_KEY;
@@ -6,25 +5,28 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing ODDS_API_KEY" });
     }
 
-    const url = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
+    const url =
+      `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?` +
+      `apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      return res.status(500).json({ error: "Failed to fetch NFL odds" });
+    const r = await fetch(url);
+
+    if (!r.ok) {
+      return res.status(500).json({ error: "Failed fetching NFL odds" });
     }
 
-    const games = await response.json();
+    const games = await r.json();
 
     // --------------------------------------------------
-    // EMPIREPICKS WEEK WINDOW (Tuesday 00:00 → Monday 23:59)
+    // SAME WINDOW AS EVENTS
     // --------------------------------------------------
 
     const now = new Date();
-    const weekStart = new Date(now);
-    const day = now.getDay();
-    const daysFromTuesday = (day + 5) % 7;
+    const today = now.getDay();
 
-    weekStart.setDate(now.getDate() - daysFromTuesday);
+    const weekStart = new Date(now);
+    const offset = (today >= 2) ? today - 2 : today + 5;
+    weekStart.setDate(now.getDate() - offset);
     weekStart.setHours(0, 0, 0, 0);
 
     const weekEnd = new Date(weekStart);

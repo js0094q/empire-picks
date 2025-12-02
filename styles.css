@@ -1,196 +1,104 @@
-/* ============================================================
-   EMPIREPICKS — ROYAL BLUE PREMIUM SPORTSBOOK THEME
-   ============================================================ */
-
-/* GLOBAL PAGE BACKGROUND */
-html, body {
+/* === Reset / base === */
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  background: #0b1a39;       /* EmpirePicks Royal Blue */
-  color: #e9ecf5;            /* soft off-white */
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  min-height: 100%;
+}
+body {
+  background: #0d0d0d;
+  color: #e0e0e0;
+  font-family: sans-serif;
+  line-height: 1.4;
 }
 
-/* Page Content Container */
-main, #games, #dashboard {
-  width: 100%;
-  max-width: 1150px;
-  margin: 0 auto;
-  padding: 20px;
-  background: transparent !important;
+/* === Container layout === */
+#games-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 16px;
 }
 
-/* ================================
-   CARD BASE
-   ================================ */
+/* === Card base === */
 .card {
-  background: #111e3e;        /* slightly lighter than page bg */
-  border: 1px solid #1f2f55;
-  border-radius: 12px;
-  margin: 20px 0;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.50);
+  border: 1px solid #444;
+  border-radius: 10px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;  /* fallback if no gradient */
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
 }
 
-/* Card Header — Home Team Colors Apply */
+/* class for cards that should use team-gradient backgrounds */
+.card-dark {
+  /* background set inline via JS (gradient + border color) */
+  color: #f5f5f5;
+}
+
+/* === Card header (teams + kickoff) === */
 .card-header {
-  background: var(--team-primary, #1f3b73); /* fallback royal blue */
-  color: #ffffff;
-  padding: 14px 18px;
-  font-size: 1rem;
-  font-weight: 600;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid var(--team-secondary, #2f5aa8);
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Card Body */
+.team {
+  display: flex;
+  align-items: center;
+}
+
+.team .logo {
+  height: 28px;
+  width: auto;
+  margin: 0 6px;
+}
+
+/* Kickoff time styling */
+.kickoff {
+  font-size: 0.85rem;
+  color: rgba(230,230,230,0.8);
+}
+
+/* === Card body (odds / info) === */
 .card-body {
-  background: #111e3e;
-  padding: 18px 20px;
-  color: #eef2ff;
-  font-size: 0.94rem;
+  padding: 10px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-/* ================================
-   ANALYTICS BLOCK
-   ================================ */
-.analytics-block {
-  margin-bottom: 12px;
-  color: #e9ecf5;
+.odds {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+.odds strong {
+  color: #fafafa;
 }
 
-.analytics-block strong {
-  color: #ffd86b;  /* gold highlight */
-}
-
-/* ================================
-   LINES TABLE
-   ================================ */
-
-table.lines-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 14px;
-  font-size: 0.90rem;
-  color: #f0f4ff;
-}
-
-table.lines-table th {
-  text-align: left;
-  padding: 10px 6px;
-  border-bottom: 2px solid #32466d;
-  font-weight: 600;
-  color: #a8c5ff;
-}
-
-table.lines-table td {
-  padding: 8px 6px;
-  border-bottom: 1px solid #24375e;
-  color: #e6ebf7;
-}
-
-/* Subtle zebra striping */
-table.lines-table tr:nth-child(even) td {
-  background: rgba(255,255,255,0.03);
-}
-
-/* ================================
-   BUTTONS (Parlay Add / Props)
-   ================================ */
-
-button, .add-leg {
-  background: #1d2d55;
-  color: #ffffff;
-  border: 1px solid #3a528c;
-  border-radius: 6px;
-  padding: 5px 10px;
+.odds br + strong {
   margin-top: 4px;
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: 0.12s ease;
 }
 
-button:hover, .add-leg:hover {
-  background: #2b4480;
-  border-color: #5f89e6;
+/* === Responsive / small screen tweaks === */
+@media (max-width: 500px) {
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .kickoff {
+    margin: 6px 0;
+  }
 }
 
-/* Props "Load" Button */
-button {
-  margin-bottom: 10px;
-}
-
-/* ================================
-   BEST PARLAY BLOCK
-   ================================ */
-
-#bestParlay {
-  background: #111e3e;
-  border: 1px solid #2b3f69;
-  padding: 22px;
-  border-radius: 12px;
-  margin-bottom: 25px;
-  color: #ffffff;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-}
-
-#bestParlay h2 {
-  color: #ffd86b;
-  margin-top: 0;
-  margin-bottom: 10px;
-}
-
-#bestParlay ul {
-  margin: 0;
-  padding-left: 22px;
-}
-
-#bestParlay li {
-  margin-bottom: 6px;
-  color: #e8ebf7;
-  line-height: 1.35;
-}
-
-/* ================================
-   HEADER / TITLE BAR
-   ================================ */
-
-.header, .dashboard-header {
-  width: 100%;
-  text-align: center;
-  padding: 25px 0;
-  margin-bottom: 15px;
-  background: #0c1d43;
-  border-bottom: 2px solid #1b2c58;
-  color: #ffffff;
-}
-
-.header h1, .dashboard-header h1 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
-}
-
-/* EMPIREPICKS GOLD PARLAY BUTTONS — FINAL OVERRIDE */
-button.add-leg,
-.card button.add-leg,
-.lines-table button.add-leg {
-  background: #ffd86b !important;
-  color: #1a1a1a !important;
-  border: 1px solid #e8c45a !important;
-  border-radius: 6px !important;
-  padding: 4px 10px !important;
-  font-size: 0.80rem !important;
-  font-weight: 600 !important;
-  cursor: pointer !important;
-}
-
-button.add-leg:hover,
-.card button.add-leg:hover,
-.lines-table button.add-leg:hover {
-  background: #ffefbf !important;
-  border-color: #fff3c9 !important;
+/* === Utility for hidden image fallback === */
+.card .team img {
+  display: inline-block;
 }

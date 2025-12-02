@@ -1,34 +1,35 @@
 // ========================================================
-// EmpirePicks — Cleaned-up script.js
+// EmpirePicks — Final script.js (Option B styling, parlay fixed)
 // ========================================================
 
 import { NFL_TEAMS } from "./teams.js";
 
-// --- DOM helpers ---
+// DOM Helpers
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const money = o => (o > 0 ? `+${o}` : o);
 
-// --- Odds → implied prob ---
+// Odds ↔ probability converters
 function prob(odds) {
   odds = Number(odds);
-  if (odds > 0) {
-    return 100 / (odds + 100);
-  } else {
-    return -odds / (-odds + 100);
-  }
+  return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
 }
 
-// --- Convert American odds to decimal multiplier ---
 function americanToDecimal(odds) {
   odds = Number(odds);
   return odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
 }
 
-// --- Average helper ---
-const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
+function avg(arr) {
+  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+}
 
-// --- API wrapper ---
+function noVig(p1, p2) {
+  const t = p1 + p2;
+  return t === 0 ? [0.5, 0.5] : [p1 / t, p2 / t];
+}
+
+// API wrappers
 const api = {
   async events() {
     const r = await fetch("/api/events");
@@ -47,24 +48,21 @@ const api = {
   }
 };
 
-// --- Global Parlay Pool ---
+// Parlay state
 let PARLAY_POOL = [];
 
-// --- Root Elements ---
+// Root elements
 const gamesEl = $("#games");
 const refreshBtn = $("#refreshBtn");
 if (refreshBtn) refreshBtn.addEventListener("click", loadAll);
 
-// --- Main loader ---
+// Main loader
 async function loadAll() {
   gamesEl.textContent = "Loading NFL week data…";
   PARLAY_POOL = [];
 
   try {
-    const [events, oddsWrap] = await Promise.all([
-      api.events(),
-      api.odds()
-    ]);
+    const [events, oddsWrap] = await Promise.all([api.events(), api.odds()]);
     const odds = Array.isArray(oddsWrap) ? oddsWrap : oddsWrap.data ?? [];
 
     const byId = Object.fromEntries(odds.map(g => [g.id, g]));
@@ -86,7 +84,6 @@ async function loadAll() {
     });
 
     renderBestParlay();
-
   } catch (err) {
     console.error("LOADALL ERROR:", err);
     gamesEl.textContent = "Failed to load NFL data. Try refreshing.";
@@ -102,7 +99,7 @@ function renderGame(ev, odds) {
 
   const kickoff = new Date(ev.commence_time).toLocaleString();
 
-  // Header
+  // Header (team colors / logos)
   const header = document.createElement("div");
   header.className = "card-header";
 
@@ -139,7 +136,6 @@ function renderGame(ev, odds) {
   header.append(away, center, home);
   card.append(header);
 
-  // Body
   const body = document.createElement("div");
   body.className = "card-body";
 
@@ -149,7 +145,7 @@ function renderGame(ev, odds) {
   const linesBlock = document.createElement("div");
   linesBlock.className = "lines-block";
   body.append(linesBlock);
-  renderLines(linesBlock, odds, analytics, ev.id);
+  renderLines(linesBlock, odds, analytics);
 
   const propsBlock = document.createElement("div");
   propsBlock.style.marginTop = "16px";
@@ -161,17 +157,17 @@ function renderGame(ev, odds) {
 
   card.append(body);
 
-  // Apply team colors
+  // Apply team header colors (home team)
   const homeTeamObj = NFL_TEAMS[ev.home_team];
   if (homeTeamObj) {
     card.style.setProperty("--team-primary", homeTeamObj.primary);
-    card.style.setProperty("--card-border", homeTeamObj.secondary);
+    card.style.setProperty("--team-secondary", homeTeamObj.secondary);
   }
 
   return card;
 }
 
-// --- Game analytics (win %, projected scoreline) ---
+// --- Compute analytics ---
 function computeGameAnalytics(game, away, home) {
   const books = game.bookmakers || [];
   const mlAway = [];
@@ -202,7 +198,6 @@ function computeGameAnalytics(game, away, home) {
 
   const pa = avg(mlAway), ph = avg(mlHome);
   const [nvA, nvH] = noVig(pa, ph);
-
   const winner = nvA > nvH ? away : home;
   const winnerProb = Math.max(nvA, nvH);
 
@@ -225,54 +220,30 @@ function computeGameAnalytics(game, away, home) {
   };
 }
 
-function noVig(p1, p2) {
-  const t = p1 + p2;
-  return t === 0 ? [0.5, 0.5] : [p1 / t, p2 / t];
-}
-
-// --- Build Analytics UI block ---
+// --- Analytics block (simple, no bars) ---
 function createAnalyticsBlock(a) {
   const box = document.createElement("div");
   box.className = "analytics-block";
+  box.style.color = "#eee";
 
-  const awayPct = (a.nvAway * 100).toFixed(1);
-  const homePct = (a.nvHome * 100).toFixed(1);
-
-  box.innerHTML = `
+  let html = `
     <div style="margin-bottom:6px;">
       <strong>Win Probability:</strong> ${a.winner} — ${(a.winnerProb * 100).toFixed(1)}%
     </div>
-    <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span style="width:60px;">${a.away}</span>
-        <div style="flex:1; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; height:6px;">
-          <div style="width:${awayPct}%; height:100%; background:var(--accent, #ffcc33);"></div>
-        </div>
-        <span style="width:40px; text-align:right;">${awayPct}%</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span style="width:60px;">${a.home}</span>
-        <div style="flex:1; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; height:6px;">
-          <div style="width:${homePct}%; height:100%; background:var(--accent, #ffcc33);"></div>
-        </div>
-        <span style="width:40px; text-align:right;">${homePct}%</span>
-      </div>
-    </div>
   `;
-
   if (a.projHome != null && a.projAway != null) {
-    const p = document.createElement("div");
-    p.style.fontSize = "0.84rem";
-    p.style.color = "#ddd";
-    p.textContent = `Projected Score → ${a.away} ${a.projAway.toFixed(1)}, ${a.home} ${a.projHome.toFixed(1)}`;
-    box.append(p);
+    html += `
+      <div style="font-size:0.89rem; color:#ccc;">
+        Projected Score → ${a.away} ${a.projAway.toFixed(1)}, ${a.home} ${a.projHome.toFixed(1)}
+      </div>
+    `;
   }
-
+  box.innerHTML = html;
   return box;
 }
 
-// --- Render lines + parlay add buttons ---
-function renderLines(container, game, analytics, gameId) {
+// --- Render lines + parlay buttons ---
+function renderLines(container, game, analytics) {
   const rows = [];
 
   (game.bookmakers || []).forEach(bm => {
@@ -316,6 +287,7 @@ function renderLines(container, game, analytics, gameId) {
   tbl.append(thead);
 
   const tbody = document.createElement("tbody");
+
   rows.forEach(r => {
     const tr = document.createElement("tr");
 
@@ -328,27 +300,27 @@ function renderLines(container, game, analytics, gameId) {
     if (r.mlAway != null && r.mlHome != null) {
       tdML.textContent = `${money(r.mlAway)} / ${money(r.mlHome)}`;
 
-      const btnA = document.createElement("button");
-      btnA.className = "add-leg";
-      btnA.textContent = `➕ ${analytics.away}`;
-      btnA.dataset.market = "ML";
-      btnA.dataset.team = analytics.away;
-      btnA.dataset.price = r.mlAway;
-      btnA.dataset.trueprob = analytics.nvAway;
-      btnA.dataset.game = `${analytics.away} @ ${analytics.home}`;
-      btnA.dataset.edge = analytics.nvAway - prob(r.mlAway);
-      tdML.append(document.createElement("br"), btnA);
+      const btnAway = document.createElement("button");
+      btnAway.className = "add-leg";
+      btnAway.textContent = `➕ ${analytics.away}`;
+      btnAway.dataset.market = "ML";
+      btnAway.dataset.team = analytics.away;
+      btnAway.dataset.price = r.mlAway;
+      btnAway.dataset.trueprob = analytics.nvAway;
+      btnAway.dataset.game = `${analytics.away} @ ${analytics.home}`;
+      btnAway.dataset.edge = analytics.nvAway - prob(r.mlAway);
 
-      const btnH = document.createElement("button");
-      btnH.className = "add-leg";
-      btnH.textContent = `➕ ${analytics.home}`;
-      btnH.dataset.market = "ML";
-      btnH.dataset.team = analytics.home;
-      btnH.dataset.price = r.mlHome;
-      btnH.dataset.trueprob = analytics.nvHome;
-      btnH.dataset.game = `${analytics.away} @ ${analytics.home}`;
-      btnH.dataset.edge = analytics.nvHome - prob(r.mlHome);
-      tdML.append(btnH);
+      const btnHome = document.createElement("button");
+      btnHome.className = "add-leg";
+      btnHome.textContent = `➕ ${analytics.home}`;
+      btnHome.dataset.market = "ML";
+      btnHome.dataset.team = analytics.home;
+      btnHome.dataset.price = r.mlHome;
+      btnHome.dataset.trueprob = analytics.nvHome;
+      btnHome.dataset.game = `${analytics.away} @ ${analytics.home}`;
+      btnHome.dataset.edge = analytics.nvHome - prob(r.mlHome);
+
+      tdML.append(document.createElement("br"), btnAway, btnHome);
     } else {
       tdML.textContent = "–";
     }
@@ -379,7 +351,7 @@ function renderLines(container, game, analytics, gameId) {
       btnT.textContent = "➕ Total";
       btnT.dataset.market = "TOTAL";
       btnT.dataset.price = r.totalPrice;
-      btnT.dataset.trueprob = (analytics.nvAway + analytics.nvHome)/2;
+      btnT.dataset.trueprob = (analytics.nvAway + analytics.nvHome) / 2;
       btnT.dataset.game = `${analytics.away} @ ${analytics.home}`;
       btnT.dataset.side = r.total;
       tdT.append(document.createElement("br"), btnT);
@@ -394,13 +366,13 @@ function renderLines(container, game, analytics, gameId) {
     tr.append(tdBook, tdML, tdS, tdT, tdP);
     tbody.append(tr);
   });
-  tbl.append(tbody);
 
+  tbl.append(tbody);
   container.innerHTML = "";
   container.append(tbl);
 }
 
-// --- Load player props and allow add-leg for props ---
+// --- Load player props & add-leg for props ---
 async function loadProps(evId, container) {
   container.innerHTML = "Loading props…";
   try {
@@ -456,20 +428,19 @@ async function loadProps(evId, container) {
           btn.className = "add-leg";
           btn.textContent = "➕ Add";
           btn.dataset.market = "PROP";
-          btn.dataset.player = o.description || o.name;
+          btn.dataset.player = o.description || o.name || "";
           btn.dataset.type   = m.key;
           btn.dataset.side   = o.name;
           btn.dataset.point  = o.point ?? "";
           btn.dataset.price  = o.price;
           btn.dataset.trueprob = prob(o.price);
           btn.dataset.game   = `${propsWrap.away_team} @ ${propsWrap.home_team}`;
-          btn.dataset.edge   = 0; // optional
+          btn.dataset.edge   = 0;
           tdParlay.append(btn);
 
           tr.append(tdBook, tdPlayer, tdPick, tdLine, tdPrice, tdParlay);
           tbody.append(tr);
         });
-
         tbl.append(tbody);
         out.append(tbl);
       });
@@ -477,7 +448,6 @@ async function loadProps(evId, container) {
 
     container.innerHTML = "";
     container.append(out);
-
   } catch (err) {
     console.error("PROPS ERROR:", err);
     container.textContent = "Failed to load props.";
@@ -499,10 +469,11 @@ function renderBestParlay() {
 
   const sorted = PARLAY_POOL
     .filter(l => !isNaN(l.edge))
-    .sort((a,b) => b.edge - a.edge);
+    .sort((a, b) => b.edge - a.edge);
 
   const picks = [];
   const usedGames = new Set();
+
   for (const l of sorted) {
     if (usedGames.has(l.game)) continue;
     picks.push(l);
@@ -513,7 +484,7 @@ function renderBestParlay() {
   if (!picks.length) {
     slot.innerHTML = `
       <h2>🔥 Best Parlay of the Week</h2>
-      <p style="color:#ccc;">No valid legs right now.</p>
+      <p style="color:#ccc;">No valid legs available.</p>
     `;
     return;
   }
@@ -527,7 +498,7 @@ function renderBestParlay() {
 
   let html = `<h2>🔥 Best Parlay of the Week</h2><ul>`;
   picks.forEach(p => {
-    html += `<li>${p.team ?? p.player} (${p.game}) @ ${money(p.price)} — edge ${(p.edge*100).toFixed(1)}%</li>`;
+    html += `<li>${p.team || p.player} (${p.game}) @ ${money(p.price)} — edge ${(p.edge*100).toFixed(1)}%</li>`;
   });
   html += `</ul>
     <div style="color:#ccc; font-size:0.9rem;">
@@ -538,7 +509,7 @@ function renderBestParlay() {
   slot.innerHTML = html;
 }
 
-// --- Add-leg handler --- 
+// --- Add-leg event listener ---
 document.addEventListener("click", e => {
   if (!e.target.matches("button.add-leg")) return;
   const b = e.target;

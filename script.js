@@ -66,24 +66,28 @@ $("#refreshBtn").addEventListener("click", loadAll);
 // ========================================================
 //  MAIN LOAD
 // ========================================================
-async function loadAll() {
-  gamesEl.textContent = "Loading NFL week data…";
+const countdown = getCountdownString(ev.commence_time);
 
-  try {
-    const [events, oddsWrap] = await Promise.all([api.events(), api.odds()]);
-    const odds = oddsWrap.data ?? oddsWrap;
+// FIXED kickoff time (local EST instead of UTC)
+const kickoffLocal = new Date(ev.commence_time).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit"
+});
 
-    const byId = Object.fromEntries(odds.map(g => [g.id, g]));
+// Build card
+const card = document.createElement("div");
+card.className = "game-card";
 
-    const now = Date.now();
-    const cutoff = 4 * 60 * 60 * 1000; // 4h after kickoff
-
-    const validGames = events.filter(ev => {
-      const game = byId[ev.id];
-      if (!game) return false;
-      const t = new Date(ev.commence_time).getTime();
-      return now <= t + cutoff;
-    });
+card.innerHTML = `
+  <div class="game-header">
+      <div class="teams">${ev.away_team} @ ${ev.home_team}</div>
+      <div class="kickoff">Kickoff: ${kickoffLocal}</div>
+      <div class="countdown">⏳ ${countdown}</div>
+  </div>
+  
+  <!-- rest of your card stays unchanged -->
+`;
 
     gamesEl.innerHTML = "";
     validGames.forEach(ev => gamesEl.appendChild(renderGame(ev, byId[ev.id])));

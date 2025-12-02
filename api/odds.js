@@ -1,30 +1,48 @@
+// /api/odds.js
+// Fetches NFL odds for H2H, spreads, totals, using the same weekly window.
+
 export default async function handler(req, res) {
-  const apiKey = process.env.ODDS_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "Missing ODDS_API_KEY" });
-
-  const base = "https://api.the-odds-api.com/v4";
-  const sport = "americanfootball_nfl";
-  const regions = "us";
-  const markets = "h2h,spreads,totals";
-
-  const url = `${base}/sports/${sport}/odds?apiKey=${apiKey}&regions=${regions}&markets=${markets}&oddsFormat=american`;
-
   try {
-    const r = await fetch(url);
-    const data = await r.json();
-    const remaining = r.headers.get("x-requests-remaining");
+    const apiKey = process.env.ODDS_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "Missing ODDS_API_KEY" });
+    }
 
-   const now = new Date();
+    const url = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 
-const thisTuesday = new Date(now);
-thisTuesday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-thisTuesday.setHours(0, 0, 0, 0);
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(500).json({ error: "Failed to fetch NFL odds" });
+    }
 
-const nextMonday = new Date(thisTuesday);
-nextMonday.setDate(thisTuesday.getDate() + 6);
-nextMonday.setHours(23, 59, 59, 999);
+    const games = await response.json();
 
-games = games.filter(g => {
-  const d = new Date(g.commence_time);
-  return d >= thisTuesday && d <= nextMonday;
-});
+    // -------------------------------
+    // EMPIREPICKS WEEK WINDOW LOGIC
+    // Tuesday 00:00 → Monday 23:59
+    // -------------------------------
+
+    const now = new Date();
+
+    const weekStart = new Date(now);
+    const dayOfWeek = now.getDay();
+    const daysSinceTuesday = (dayOfWeek + 5) % 7;
+
+    weekStart.setDate(now.getDate() - daysSinceTuesday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const filtered = games.filter(g => {
+      const d = new Date(g.commence_time);
+      return d >= weekStart && d <= weekEnd;
+    });
+
+    return res.status(200).json(filtered);
+  } catch (error) {
+    console.error("ODDS API ERROR:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}

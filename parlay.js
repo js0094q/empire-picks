@@ -1,204 +1,125 @@
-// ========================================================
-//  EMPIREPICKS PARLAY MAKER
-//  - Supports ML + PROP legs
-//  - Pure front-end, no imports
-// ========================================================
+// parlay.js — supports ML, Spread, Total, and Props legs
 
-// ---------- Helpers ----------
-function americanToDecimal(o) {
-  return o > 0 ? 1 + o / 100 : 1 + 100 / -o;
-}
-
-function formatAmerican(o) {
-  return o > 0 ? `+${o}` : `${o}`;
-}
-
-// ---------- State ----------
-const parlayLegs = [];
-
-const legsEl   = document.querySelector("#parlayLegs");
-const calcEl   = document.querySelector("#parlayCalc");
-const clearBtn = document.querySelector("#clearParlay");
-
-// Safeguard: if markup is missing, bail quietly
-if (!legsEl || !calcEl || !clearBtn) {
-  console.warn("[Parlay] Missing parlayMaker elements in DOM.");
-}
-
-// ========================================================
-//  EVENT WIRING
-// ========================================================
-
-// Global handler for “➕ Add” buttons (ML + Props)
-document.body.addEventListener("click", e => {
-  const btn = e.target.closest(".add-leg");
-  if (!btn) return;
-
-  const market = btn.dataset.market;
-
-  let leg;
-
-  if (market === "ML") {
-    leg = {
-      market: "ML",
-      team: btn.dataset.team,
-      price: Number(btn.dataset.price),
-      trueProb: Number(btn.dataset.trueprob),
-      game: btn.dataset.game
-    };
-  } else if (market === "PROP") {
-    leg = {
-      market: "PROP",
-      player: btn.dataset.player,
-      type: btn.dataset.type,
-      side: btn.dataset.side,
-      point: Number(btn.dataset.point),
-      price: Number(btn.dataset.price),
-      trueProb: Number(btn.dataset.trueprob),
-      game: btn.dataset.game
-    };
+// ---------- Helper: convert one American odds to decimal multiplier ----------
+function americanToDecimal(odds) {
+  odds = Number(odds);
+  if (odds > 0) {
+    return (odds / 100) + 1;
   } else {
-    // Unknown market type, ignore
-    return;
+    return (100 / Math.abs(odds)) + 1;
   }
-
-  // Optional rule: limit to one leg per game (prevents dumb correlateds)
-  if (parlayLegs.some(l => l.game === leg.game)) {
-    alert("You already have a leg from this game in your parlay.");
-    return;
-  }
-
-  parlayLegs.push(leg);
-  renderParlaySlip();
-});
-
-// Clear entire parlay
-if (clearBtn) {
-  clearBtn.addEventListener("click", () => {
-    parlayLegs.length = 0;
-    renderParlaySlip();
-  });
 }
 
-// Expose removal for ✖ buttons
-window.removeLeg = function(idx) {
-  parlayLegs.splice(idx, 1);
-  renderParlaySlip();
+// ---------- Parlay slip state ----------
+const parlay = {
+  legs: []
 };
 
-// ========================================================
-//  RENDER PARLAY SLIP
-// ========================================================
-function renderParlaySlip() {
-  if (!legsEl || !calcEl) return;
-
-  if (!parlayLegs.length) {
-    legsEl.innerHTML = `<em style="color:var(--muted);">No legs added yet.</em>`;
-    calcEl.textContent = "Add legs to calculate EV…";
-    return;
-  }
-
-  legsEl.innerHTML = parlayLegs
-    .map((l, i) => {
-      let mainLine = "";
-      let subLine  = "";
-
-      if (l.market === "ML") {
-        mainLine = `<strong>${l.team}</strong> Moneyline`;
-        subLine  = l.game;
-      } else if (l.market === "PROP") {
-        const typeLabel = (l.type || "")
-          .replace("player_", "")
-          .replace(/_/g, " ");
-        mainLine = `<strong>${l.player}</strong> ${l.side} ${l.point} <span style="color:#9ca7c8;">${typeLabel}</span>`;
-        subLine  = l.game;
-      }
-
-      return `
-        <div style="
-          padding:8px 6px;
-          border-bottom:1px solid var(--border);
-          font-size:0.88rem;
-          position:relative;
-        ">
-          <div>
-            ${mainLine}
-            <br>
-            <span style="color:#fff;">${formatAmerican(l.price)}</span>
-          </div>
-          <div style="color:#9ca7c8;font-size:0.8rem;margin-top:2px;">
-            ${subLine}
-          </div>
-
-          <button
-            onclick="removeLeg(${i})"
-            style="
-              position:absolute;
-              top:6px;
-              right:6px;
-              background:none;
-              border:1px solid var(--border);
-              border-radius:4px;
-              padding:0 5px;
-              color:#f55;
-              cursor:pointer;
-              font-size:0.75rem;
-            "
-          >
-            ✖
-          </button>
-        </div>
-      `;
-    })
-    .join("");
-
-  calcParlayEV();
+function addLeg(leg) {
+  // leg must include: market, price (American odds), and identifying info
+  parlay.legs.push(leg);
+  renderParlay();
 }
 
-// ========================================================
-//  EV CALCULATION
-// ========================================================
-function calcParlayEV() {
-  if (!calcEl) return;
+function removeLeg(index) {
+  parlay.legs.splice(index, 1);
+  renderParlay();
+}
 
-  if (parlayLegs.length < 2) {
-    calcEl.innerHTML =
-      `<em style="color:var(--muted);">Add 2 or more legs to calculate parlay EV.</em>`;
+function clearParlay() {
+  parlay.legs = [];
+  renderParlay();
+}
+
+// ---------- Compute parlay odds & payout ----------
+function computeParlay(multiplierLegs) {
+  // Convert each leg’s American odds → decimal, then multiply
+  let dec = 1;
+  for (const leg of multiplierLegs) {
+    const d = americanToDecimal(leg.price);
+    dec *= d;
+  }
+  return dec;
+}
+
+// ---------- Render parlay slip UI ----------
+function renderParlay() {
+  const container = document.getElementById("parlay-slip");
+  if (!container) return;
+
+  container.innerHTML = "";  
+
+  if (!parlay.legs.length) {
+    container.textContent = "Parlay slip is empty.";
     return;
   }
 
-  let trueProb = 1;
-  let decOdds  = 1;
-
-  parlayLegs.forEach(l => {
-    const p  = Number(l.trueProb) || 0;
-    const ao = Number(l.price) || 0;
-
-    trueProb *= p;
-    decOdds  *= americanToDecimal(ao);
+  const ul = document.createElement("ul");
+  parlay.legs.forEach((leg, i) => {
+    const li = document.createElement("li");
+    let desc = "";
+    if (leg.market === "PROP") {
+      desc = `${leg.player} — ${leg.type} ${leg.side} ${leg.point || ""} @ ${leg.price}`;
+    } else {
+      // ML / SPREAD / TOTAL
+      desc = `${leg.market} — ${leg.team || leg.game} @ ${leg.price}`;
+    }
+    li.textContent = desc + "  ";
+    const btn = document.createElement("button");
+    btn.textContent = "Remove";
+    btn.addEventListener("click", () => removeLeg(i));
+    li.appendChild(btn);
+    ul.appendChild(li);
   });
+  container.appendChild(ul);
 
-  const impliedProb = decOdds > 0 ? 1 / decOdds : 0;
-  const edge        = trueProb - impliedProb;
+  // Compute combined odds
+  const decTotal = computeParlay(parlay.legs);
+  const americanCombined = decTotal >= 2
+    ? "+" + Math.round((decTotal - 1) * 100)
+    : "-" + Math.round(100 / (decTotal - 1));
 
-  calcEl.innerHTML = `
-    <div style="margin-top:8px;color:#fff;font-size:0.9rem;">
-      <div>
-        <strong style="color:var(--gold);">True Hit Rate:</strong>
-        ${(trueProb * 100).toFixed(2)}%
-      </div>
-      <div>
-        <strong style="color:var(--gold);">Implied Probability:</strong>
-        ${(impliedProb * 100).toFixed(2)}%
-      </div>
-      <div style="margin-top:4px;">
-        <strong style="color:${edge >= 0 ? "var(--green)" : "var(--red)"};">
-          EV Edge: ${(edge * 100).toFixed(2)}%
-        </strong>
-      </div>
-      <div style="margin-top:4px;color:var(--muted);font-size:0.8rem;">
-        Decimal Odds: ${decOdds.toFixed(3)}
-      </div>
-    </div>
-  `;
+  const p = document.createElement("div");
+  p.textContent = `Combined Parlay Odds: ${americanCombined}`;
+  container.appendChild(p);
+
+  const stakeInput = document.createElement("input");
+  stakeInput.type = "number";
+  stakeInput.min = 1;
+  stakeInput.placeholder = "Stake $";
+  stakeInput.style.margin = "8px 0";
+  container.appendChild(stakeInput);
+
+  const payoutBtn = document.createElement("button");
+  payoutBtn.textContent = "Calculate payout";
+  payoutBtn.addEventListener("click", () => {
+    const stake = Number(stakeInput.value);
+    if (!stake || stake <= 0) return;
+    const payout = (stake * decTotal).toFixed(2);
+    alert(`If all legs win: you get $${payout} (incl. stake)`);
+  });
+  container.appendChild(payoutBtn);
 }
+
+// ---------- Hook “Add leg” buttons automatically ----------
+document.addEventListener("click", e => {
+  if (!e.target.matches("button.add-leg")) return;
+  const btn = e.target;
+
+  const market = btn.dataset.market;
+  const leg = { market, price: btn.dataset.price };
+
+  if (market === "PROP") {
+    leg.type = btn.dataset.type;
+    leg.player = btn.dataset.player;
+    leg.side   = btn.dataset.side;
+    leg.point  = btn.dataset.point;
+    leg.game   = btn.dataset.game;
+  } else {
+    leg.team   = btn.dataset.team;
+    leg.game   = btn.dataset.game;
+    if (btn.dataset.side) leg.side = btn.dataset.side;
+  }
+
+  addLeg(leg);
+});

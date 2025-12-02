@@ -317,8 +317,48 @@ function renderLines(container, game, analytics, ev) {
         const a = m.outcomes.find(o => o.name === analytics.away);
         const h = m.outcomes.find(o => o.name === analytics.home);
         if (a && h) {
-          rec.moneyline = `${money(a.price)} / ${money(h.price)}`;
+        rec.moneyline = `
+  ${money(a.price)} / ${money(h.price)}
+  <div style="margin-top:4px;font-size:0.8rem;display:flex;gap:6px;">
+    <button
+      class="add-leg"
+      data-market="ML"
+      data-team="${analytics.away}"
+      data-price="${a.price}"
+      data-trueprob="${analytics.nvAway}"
+      data-game="${ev.away_team} @ ${ev.home_team}"
+      style="
+        padding:2px 6px;
+        border-radius:6px;
+        border:1px solid var(--border);
+        background:#0d1228;
+        color:var(--gold);
+        cursor:pointer;
+      "
+    >
+      ➕ ${analytics.away}
+    </button>
 
+    <button
+      class="add-leg"
+      data-market="ML"
+      data-team="${analytics.home}"
+      data-price="${h.price}"
+      data-trueprob="${analytics.nvHome}"
+      data-game="${ev.away_team} @ ${ev.home_team}"
+      style="
+        padding:2px 6px;
+        border-radius:6px;
+        border:1px solid var(--border);
+        background:#0d1228;
+        color:var(--gold);
+        cursor:pointer;
+      "
+    >
+      ➕ ${analytics.home}
+    </button>
+  </div>
+`;
           const pA = prob(a.price);
           const pH = prob(h.price);
 

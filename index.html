@@ -2,22 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>NFL Odds & Parlay Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Odds Aggregator + EV Finder</title>
+  <style>
+    /* Basic styling; expand as needed */
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f7f7f7; }
+    #header { background: #333; color: #fff; padding: 10px; }
+    .game-card { background: #fff; margin: 10px; padding: 10px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .teams { display: flex; justify-content: space-between; font-weight: bold; }
+    .odds-line { margin-top: 8px; }
+    .ev-badge { background: #2ecc71; color: #111; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-size: 0.9em; }
+    .value-bet { border: 2px solid #2ecc71; }
+    #parlay-panel { background: #fff; margin: 10px; padding: 10px; border-radius: 6px; }
+    #filter-ev { margin: 10px; }
+  </style>
 </head>
 <body>
-  <div id="parlay-panel" class="parlay-panel">
-    <h2>Parlay Builder</h2>
-    <div id="parlay-legs"></div>
-    <div id="parlay-summary">No legs selected</div>
-    <label>
-      Stake: $ <input type="number" id="parlay-stake" value="100" min="1" />
-    </label>
-    <div id="parlay-payout"></div>
+  <div id="header">
+    <h1>Odds Aggregator + EV Finder</h1>
+    <button id="filter-ev">Show +EV Only</button>
   </div>
 
   <div id="games-container"></div>
 
-  <script type="module" src="script.js"></script>
+  <div id="parlay-panel">
+    <h2>Parlay Builder</h2>
+    <div id="parlay-legs">No legs added.</div>
+  </div>
+
+  <script type="module" src="./script.js"></script>
 </body>
 </html>

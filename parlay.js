@@ -1,125 +1,74 @@
-// parlay.js — supports ML, Spread, Total, and Props legs
-
-// ---------- Helper: convert one American odds to decimal multiplier ----------
-function americanToDecimal(odds) {
-  odds = Number(odds);
-  if (odds > 0) {
-    return (odds / 100) + 1;
-  } else {
-    return (100 / Math.abs(odds)) + 1;
-  }
-}
-
-// ---------- Parlay slip state ----------
+// -- Global parlay state
 const parlay = {
-  legs: []
+  legs: []  // each leg: { market, price (American), team/player, type, side, extra... }
 };
 
-function addLeg(leg) {
-  // leg must include: market, price (American odds), and identifying info
-  parlay.legs.push(leg);
-  renderParlay();
+// -- Convert American odds to decimal multiplier
+function americanToDecimal(odds) {
+  odds = Number(odds);
+  if (odds > 0) return 1 + odds / 100;
+  return 1 + 100 / Math.abs(odds);
 }
 
-function removeLeg(index) {
-  parlay.legs.splice(index, 1);
-  renderParlay();
-}
-
-function clearParlay() {
-  parlay.legs = [];
-  renderParlay();
-}
-
-// ---------- Compute parlay odds & payout ----------
-function computeParlay(multiplierLegs) {
-  // Convert each leg’s American odds → decimal, then multiply
+// -- Compute total parlay odds & implied probability
+function computeParlay(parlay) {
+  if (!parlay.legs.length) return null;
   let dec = 1;
-  for (const leg of multiplierLegs) {
-    const d = americanToDecimal(leg.price);
-    dec *= d;
+  for (const leg of parlay.legs) {
+    dec *= americanToDecimal(leg.price);
   }
-  return dec;
+  const impliedProb = 1 / dec;
+  return { decimal: dec, impliedProb };
 }
 
-// ---------- Render parlay slip UI ----------
-function renderParlay() {
+// -- Render parlay slip UI
+function renderParlaySlip() {
   const container = document.getElementById("parlay-slip");
   if (!container) return;
+  container.innerHTML = "";
 
-  container.innerHTML = "";  
-
-  if (!parlay.legs.length) {
-    container.textContent = "Parlay slip is empty.";
+  if (parlay.legs.length === 0) {
+    container.textContent = "No legs in parlay.";
     return;
   }
 
   const ul = document.createElement("ul");
   parlay.legs.forEach((leg, i) => {
     const li = document.createElement("li");
-    let desc = "";
-    if (leg.market === "PROP") {
-      desc = `${leg.player} — ${leg.type} ${leg.side} ${leg.point || ""} @ ${leg.price}`;
-    } else {
-      // ML / SPREAD / TOTAL
-      desc = `${leg.market} — ${leg.team || leg.game} @ ${leg.price}`;
-    }
-    li.textContent = desc + "  ";
+    li.textContent = `${leg.market} — ${leg.team || leg.player} @ ${leg.price}`;
     const btn = document.createElement("button");
     btn.textContent = "Remove";
-    btn.addEventListener("click", () => removeLeg(i));
+    btn.onclick = () => {
+      parlay.legs.splice(i, 1);
+      renderParlaySlip();
+    };
     li.appendChild(btn);
     ul.appendChild(li);
   });
   container.appendChild(ul);
 
-  // Compute combined odds
-  const decTotal = computeParlay(parlay.legs);
-  const americanCombined = decTotal >= 2
-    ? "+" + Math.round((decTotal - 1) * 100)
-    : "-" + Math.round(100 / (decTotal - 1));
-
-  const p = document.createElement("div");
-  p.textContent = `Combined Parlay Odds: ${americanCombined}`;
-  container.appendChild(p);
-
-  const stakeInput = document.createElement("input");
-  stakeInput.type = "number";
-  stakeInput.min = 1;
-  stakeInput.placeholder = "Stake $";
-  stakeInput.style.margin = "8px 0";
-  container.appendChild(stakeInput);
-
-  const payoutBtn = document.createElement("button");
-  payoutBtn.textContent = "Calculate payout";
-  payoutBtn.addEventListener("click", () => {
-    const stake = Number(stakeInput.value);
-    if (!stake || stake <= 0) return;
-    const payout = (stake * decTotal).toFixed(2);
-    alert(`If all legs win: you get $${payout} (incl. stake)`);
-  });
-  container.appendChild(payoutBtn);
+  const result = computeParlay(parlay);
+  const oddsDiv = document.createElement("div");
+  oddsDiv.textContent = `Parlay odds (decimal): ${result.decimal.toFixed(2)}, implied win %: ${(result.impliedProb * 100).toFixed(1)}%`;
+  container.appendChild(oddsDiv);
 }
 
-// ---------- Hook “Add leg” buttons automatically ----------
+// -- Hook add-leg buttons
 document.addEventListener("click", e => {
   if (!e.target.matches("button.add-leg")) return;
-  const btn = e.target;
-
-  const market = btn.dataset.market;
-  const leg = { market, price: btn.dataset.price };
-
-  if (market === "PROP") {
-    leg.type = btn.dataset.type;
-    leg.player = btn.dataset.player;
-    leg.side   = btn.dataset.side;
-    leg.point  = btn.dataset.point;
-    leg.game   = btn.dataset.game;
-  } else {
-    leg.team   = btn.dataset.team;
-    leg.game   = btn.dataset.game;
-    if (btn.dataset.side) leg.side = btn.dataset.side;
-  }
-
-  addLeg(leg);
+  const b = e.target;
+  const leg = {
+    market: b.dataset.market,
+    price: b.dataset.price,
+    team: b.dataset.team,
+    player: b.dataset.player,
+    type: b.dataset.type,
+    side: b.dataset.side
+    // add extra metadata as needed
+  };
+  parlay.legs.push(leg);
+  renderParlaySlip();
 });
+
+// Right after page load, create a container in DOM:
+// <div id="parlay-slip"></div>

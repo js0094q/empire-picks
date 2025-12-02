@@ -1,6 +1,6 @@
-// script.js — EmpirePicks NFL Dashboard (Option-A, live odds only)
+// script-full-odds.js — EmpirePicks NFL Dashboard (full odds display + dynamic markets)
 
-import { NFL_TEAMS } from "./teams.js";  // adjust path if needed
+import { NFL_TEAMS } from "./teams.js";
 
 function impliedProb(odds) {
   odds = Number(odds);
@@ -39,26 +39,14 @@ async function loadGames() {
       const away = ev.away_team;
       const kickoff = new Date(ev.commence_time).toLocaleString();
 
-      const bm = g.bookmakers && g.bookmakers[0];
-      if (!bm) continue;
-
-      const ml = bm.markets.find(m => m.key === "h2h");
-      const sp = bm.markets.find(m => m.key === "spreads");
-      const tot = bm.markets.find(m => m.key === "totals");
-      if (!ml || !sp || !tot) continue;
-
-      const mlHome = ml.outcomes.find(o => o.name === home)?.price;
-      const mlAway = ml.outcomes.find(o => o.name === away)?.price;
-      const spreadPoint = sp.outcomes.find(o => o.name === home)?.point;
-      const totalPoint = tot.outcomes[0]?.point;
-
       const teamHome = NFL_TEAMS[home] || {};
       const teamAway = NFL_TEAMS[away] || {};
 
       const card = document.createElement("div");
-      card.className = "card card-dark";
+      card.className = "card card-full-odds";
 
-      card.innerHTML = `
+      // build header
+      const headerHtml = `
         <div class="card-header">
           <div class="team away">
             ${teamAway.logo ? `<img src="${teamAway.logo}" alt="${away}" class="logo">` : ""}
@@ -70,15 +58,36 @@ async function loadGames() {
             ${teamHome.logo ? `<img src="${teamHome.logo}" alt="${home}" class="logo">` : ""}
           </div>
         </div>
-        <div class="card-body">
-          <div class="odds">
-            <strong>Moneyline:</strong> ${away} ${mlAway}, ${home} ${mlHome}<br>
-            <strong>Spread (home):</strong> ${home} ${spreadPoint} pts<br>
-            ${totalPoint != null ? `<strong>Total (O/U):</strong> ${totalPoint}` : ""}
-          </div>
-        </div>
       `;
 
+      // build odds section dynamically
+      let oddsHtml = `<div class="odds-wrapper">`;
+
+      g.bookmakers.forEach(bm => {
+        oddsHtml += `<div class="bookmaker">
+                      <div class="bm-title">${bm.title}</div>
+                      <div class="markets">`;
+        bm.markets.forEach(mkt => {
+          oddsHtml += `<div class="market">
+                         <div class="market-key">${mkt.key}</div>
+                         <table class="market-outcomes">`;
+          mkt.outcomes.forEach(o => {
+            oddsHtml += `<tr>
+                           <td class="outcome-name">${o.name}</td>
+                           ${o.point !== undefined ? `<td class="outcome-point">${o.point}</td>` : ""}
+                           <td class="outcome-price">${o.price}</td>
+                         </tr>`;
+          });
+          oddsHtml += `</table></div>`;
+        });
+        oddsHtml += `</div></div>`;
+      });
+
+      oddsHtml += `</div>`;  // .odds-wrapper
+
+      card.innerHTML = headerHtml + `<div class="card-body">${oddsHtml}</div>`;
+
+      // if team color available, apply gradient
       if (teamHome.primary && teamHome.secondary) {
         card.style.background = `linear-gradient(135deg, ${teamHome.primary} 0%, ${teamHome.secondary} 60%)`;
         card.style.borderColor = teamHome.secondary;

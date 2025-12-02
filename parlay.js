@@ -1,10 +1,7 @@
 // ========================================================
 //  PARLAY MAKER MODULE
 // ========================================================
-import {
-  americanToDecimal,
-  formatAmerican
-} from "./script.js";
+import { americanToDecimal, formatAmerican } from "./utils.js";
 
 // Internal store
 const parlayLegs = [];

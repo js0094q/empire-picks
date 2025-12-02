@@ -170,7 +170,19 @@ function renderGameCard(ev, container) {
 
   container.appendChild(card);
 }
+// Countdown text (unchanged)
+const countdown = getCountdownString(ev.commence_time);
 
+// FIXED EST TIME — guaranteed
+const kickoffLocal = new Date(ev.commence_time).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+});
 // ============================================================
 // Start
 // ============================================================

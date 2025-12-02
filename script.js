@@ -20,7 +20,8 @@ function noVig(p1, p2) {
   return sum ? [p1 / sum, p2 / sum] : [0.5, 0.5];
 }
 
-const avg = arr => (arr?.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+const avg = arr =>
+  arr && arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
 function groupByPoint(arr) {
   const out = {};
@@ -139,12 +140,13 @@ function renderGame(ev, odds) {
     tab.addEventListener("click", () => {
       $$(".tab", card).forEach(t => t.classList.remove("active"));
       $$(".tab-content", card).forEach(c => c.classList.remove("active"));
-  
+
       tab.classList.add("active");
-      $("#" + tab.dataset.tab, card).classList.add("active");
+      const pane = $("#" + tab.dataset.tab, card);
+      pane.classList.add("active");
 
       if (tab.dataset.tab === "props") {
-        renderProps(ev, $("#" + tab.dataset.tab, card));
+        renderProps(ev, pane);
       }
     })
   );
@@ -181,9 +183,9 @@ function computeGameAnalytics(game, away, home) {
   const totalGroups = groupByPoint(totals);
 
   const bestSpread = Object.entries(spreadGroups)
-    .sort((a,b) => avg(b[1]) - avg(a[1]))[0];
+    .sort((a, b) => avg(b[1]) - avg(a[1]))[0];
   const bestTotal = Object.entries(totalGroups)
-    .sort((a,b) => avg(b[1]) - avg(a[1]))[0];
+    .sort((a, b) => avg(b[1]) - avg(a[1]))[0];
 
   return {
     away,
@@ -216,8 +218,7 @@ function analyticsHTML(a) {
 }
 
 // ========================================================
-//  GAME LINES (ML + SPREAD + TOTAL)
-//  Fully compatible with Parlay Maker
+//  GAME LINES (ML + SPREAD + TOTAL)  – Parlay-ready
 // ========================================================
 function renderLines(container, game, ana, ev) {
   const rows = [];
@@ -255,13 +256,18 @@ function renderLines(container, game, ana, ev) {
       }
 
       if (m.key === "spreads") {
-        const best = m.outcomes.sort((x,y) => Math.abs(x.point - Number(ana.bestSpread?.split(":")[1] ?? 0)) - Math.abs(y.point - Number(ana.bestSpread?.split(":")[1] ?? 0)))[0];
-        rec.spread = `${best.name} ${best.point} (${money(best.price)})`;
+        const target = Number(a.bestSpread?.split?.(":")[1] ?? 0);
+        const best = (m.outcomes || []).slice().sort(
+          (x, y) => Math.abs(x.point - target) - Math.abs(y.point - target)
+        )[0];
+        if (best) {
+          rec.spread = `${best.name} ${best.point} (${money(best.price)})`;
+        }
       }
 
       if (m.key === "totals") {
-        const over = m.outcomes.find(o => o.name === "Over");
-        const under = m.outcomes.find(o => o.name === "Under");
+        const over = m.outcomes?.find(o => o.name === "Over");
+        const under = m.outcomes?.find(o => o.name === "Under");
         rec.total = `O${over?.point ?? ""} / U${under?.point ?? ""}`;
       }
     });
@@ -291,7 +297,7 @@ function renderLines(container, game, ana, ev) {
 }
 
 // ========================================================
-//  PLAYER PROPS (CLEAN, GROUPED, PARLAY-SAFE)
+//  PLAYER PROPS (CLEAN, GROUPED, PARLAY-SAFE, CRASH-PROOF)
 // ========================================================
 async function renderProps(ev, container) {
   container.textContent = "Loading props…";
@@ -299,55 +305,75 @@ async function renderProps(ev, container) {
   try {
     const wrap = await api.props(ev.id);
     const props = wrap.props ?? wrap;
-    if (!props?.bookmakers) {
+
+    if (!props || !props.bookmakers || !props.bookmakers.length) {
       container.textContent = "No props available.";
       return;
     }
 
+    // Group by player + stat + line
     const groups = {};
 
-    props.bookmakers.forEach(bm =>
-      (bm.markets ?? []).forEach(m =>
-        m.outcomes.forEach(o => {
-          const key = `${m.key}:${o.description}:${o.point}`;
-          (groups[key] ||= []).push({
-            book: bm.title,
-            player: o.description,
-            name: o.name,
-            point: o.point,
-            stat: m.key,
-            price: o.price,
-            p: prob(o.price),
-          });
-        })
-      )
-    );
+    props.bookmakers.forEach(bm => {
+      (bm.markets || []).forEach(market => {
+        (market.outcomes || []).forEach(o => {
+          const player = o.description || "Unknown Player";
+          const stat   = market.key || "unknown_stat";
+          const point  = o.point ?? null;
+          const key    = `${player}:${stat}:${point}`;
+
+          if (!groups[key]) {
+            groups[key] = {
+              player,
+              stat,
+              point,
+              overs: [],
+              unders: [],
+            };
+          }
+
+          if (o.name === "Over")  groups[key].overs.push(o);
+          if (o.name === "Under") groups[key].unders.push(o);
+        });
+      });
+    });
 
     let html = "";
 
-    Object.values(groups).forEach(arr => {
-      const player = arr[0].player;
-      const stat = arr[0].stat;
-      const point = arr[0].point;
+    Object.values(groups).forEach(g => {
+      const { player, stat, point } = g;
 
-      const over = arr.filter(x => x.name === "Over");
-      const under = arr.filter(x => x.name === "Under");
+      // Best prices, if any
+      const bestOver  = g.overs.length
+        ? g.overs.slice().sort((a, b) => Math.abs(a.price) - Math.abs(b.price))[0]
+        : null;
+      const bestUnder = g.unders.length
+        ? g.unders.slice().sort((a, b) => Math.abs(a.price) - Math.abs(b.price))[0]
+        : null;
 
-      const bestOver = over.sort((a, b) => Math.abs(a.price) - Math.abs(b.price))[0];
-      const bestUnder = under.sort((a, b) => Math.abs(a.price) - Math.abs(b.price))[0];
+      if (!bestOver && !bestUnder) return; // nothing usable
 
-      const avgOver = avg(over.map(x => x.p));
-      const avgUnder = avg(under.map(x => x.p));
+      const avgOver  = g.overs.length  ? avg(g.overs.map(x => prob(x.price))) : 0;
+      const avgUnder = g.unders.length ? avg(g.unders.map(x => prob(x.price))) : 0;
       const [nvO, nvU] = noVig(avgOver, avgUnder);
 
-      html += `
-        <div style="padding:10px;background:#0d1228;border-radius:8px;margin-bottom:10px;">
-          <strong style="color:var(--gold);">${player}</strong>
-          <span style="color:#9ca7c8;">${stat.replace("player_", "").replace(/_/g," ")}</span>
-          <br>
+      const statLabel = stat.replace("player_", "").replace(/_/g, " ");
 
-          <div style="margin-top:6px;display:flex;justify-content:space-between;">
-            <div>Over ${point} (${money(bestOver.price)}) <span style="color:#28d16c;">${(nvO*100).toFixed(1)}%</span></div>
+      html += `
+        <div style="padding:12px;background:#0d1228;border-radius:8px;margin-bottom:12px;">
+          <strong style="color:var(--gold);">${player}</strong>
+          <span style="color:#a8b2d4;">${statLabel}</span>
+          <br>
+      `;
+
+      if (bestOver) {
+        html += `
+          <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              Over ${point}
+              <span style="color:#fff;">(${money(bestOver.price)})</span>
+              <span style="color:#28d16c;">${(nvO * 100).toFixed(1)}%</span>
+            </div>
             <button class="add-leg"
               data-market="PROP"
               data-player="${player}"
@@ -357,12 +383,20 @@ async function renderProps(ev, container) {
               data-price="${bestOver.price}"
               data-trueprob="${nvO}"
               data-game="${ev.away_team} @ ${ev.home_team}"
-              style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#141a33;color:var(--gold);"
+              style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#141a33;color:var(--gold);cursor:pointer;"
             >➕</button>
           </div>
+        `;
+      }
 
-          <div style="margin-top:6px;display:flex;justify-content:space-between;">
-            <div>Under ${point} (${money(bestUnder.price)}) <span style="color:#9ca7c8;">${(nvU*100).toFixed(1)}%</span></div>
+      if (bestUnder) {
+        html += `
+          <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              Under ${point}
+              <span style="color:#fff;">(${money(bestUnder.price)})</span>
+              <span style="color:#9ca7c8;">${(nvU * 100).toFixed(1)}%</span>
+            </div>
             <button class="add-leg"
               data-market="PROP"
               data-player="${player}"
@@ -372,16 +406,18 @@ async function renderProps(ev, container) {
               data-price="${bestUnder.price}"
               data-trueprob="${nvU}"
               data-game="${ev.away_team} @ ${ev.home_team}"
-              style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#141a33;color:var(--gold);"
+              style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#141a33;color:var(--gold);cursor:pointer;"
             >➕</button>
           </div>
-        </div>
-      `;
+        `;
+      }
+
+      html += `</div>`;
     });
 
-    container.innerHTML = html;
+    container.innerHTML = html || `<em>No props available.</em>`;
   } catch (err) {
-    console.error(err);
+    console.error("Props render error:", err);
     container.textContent = "Failed to load props.";
   }
 }

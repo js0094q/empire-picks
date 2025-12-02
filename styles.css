@@ -1,55 +1,126 @@
-/* ============================================================
-   GLOBAL DARK THEME (DraftKings-style dark UI)
-   ============================================================ */
+/* =====================================================================
+   GLOBAL DARK THEME FIX — HIGH CONTRAST, SPORTSBOOK STYLE
+   ===================================================================== */
 
 html, body {
   margin: 0;
   padding: 0;
-  background: #0a0f22;          /* deep sportsbook navy */
-  color: #f0f0f0;
+  background: #070b18; /* richer, deeper blue-black */
+  color: #e6e9ef;      /* high-contrast off-white */
   font-family: system-ui, sans-serif;
-  min-height: 100%;
 }
 
-body {
+/* Page container */
+main, #games, #dashboard {
+  width: 100%;
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* -------------------------------
+   CARD VISIBILITY FIX
+----------------------------------*/
+.card {
+  background: #0d1326; /* distinguish from background */
+  border: 1px solid #1f2a44;
+  border-radius: 12px;
+  padding: 0;
+  margin: 25px 0;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.55);
+}
+
+/* Header bar (team-colored but bright text) */
+.card-header {
+  background: var(--team-primary, #1a2b4c);
+  color: #ffffff;
+  padding: 14px 18px;
+  font-weight: bold;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
 }
 
-/* Remove white margins around the dashboard container */
-main, #dashboard, #games {
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 20px;
-  background: transparent !important;
+/* Card body text */
+.card-body {
+  background: #0d1326;
+  padding: 16px 20px;
+  color: #f2f5ff;
 }
 
-/* Headline styling */
-h1, h2, h3 {
+/* -------------------------------
+   TABLE VISIBILITY IMPROVEMENTS
+----------------------------------*/
+table.lines-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  margin-top: 12px;
+}
+
+table.lines-table th {
+  text-align: left;
+  color: #9eb7ff;
+  padding: 8px 6px;
+  border-bottom: 2px solid #24345c;
+  font-weight: 600;
+}
+
+table.lines-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid #1b253f;
+  color: #e5e9f3;
+}
+
+/* Zebra-strip rows for readability */
+table.lines-table tr:nth-child(even) td {
+  background: rgba(255,255,255,0.02);
+}
+
+/* -------------------------------
+   BUTTON FIX (Barely visible before)
+----------------------------------*/
+button.add-leg {
+  background: #1d2949;
+  color: #f1f4ff;
+  border: 1px solid #3d527c;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin: 3px 0;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+button.add-leg:hover {
+  background: #284070;
+  border-color: #5a80d7;
+}
+
+/* Props load button */
+button {
+  background: #233152;
+  color: #fff;
+  border: 1px solid #3c4f79;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+button:hover {
+  background: #2e4473;
+}
+
+/* -------------------------------
+   BEST PARLAY SECTION
+----------------------------------*/
+#bestParlay {
+  background: #0d1326;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  border: 1px solid #24345c;
   color: #fff;
 }
 
-/* Fix top header bar */
-.header, .dashboard-header {
-  background: #0f162e;
-  padding: 20px;
-  width: 100%;
-  text-align: center;
-  border-bottom: 2px solid #1c2546;
-  color: #fff;
-}
-
-.card {
-  background: #10182f;
-  border: 1px solid #1c2546;
-  border-radius: 10px;
-  margin: 20px auto;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-}
-
-/* Remove accidental white blocks coming from user agent */
-* {
-  background-color: transparent;
+#bestParlay h2 {
+  color: #ffd86b;
+  margin-top: 0;
 }

@@ -20,6 +20,7 @@
 
     { "src": "/dashboard.js", "dest": "/dashboard.js" },
     { "src": "/script.js", "dest": "/script.js" },
+    { "src": "/parlay.js", "dest": "/parlay.js" },
     { "src": "/teams.js", "dest": "/teams.js" },
     { "src": "/token.js", "dest": "/token.js" },
     { "src": "/styles.css", "dest": "/styles.css" },

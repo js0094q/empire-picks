@@ -74,21 +74,26 @@ async function loadAll() {
 
 // HYBRID ODDS FETCHER
 async function fetchHybridOdds(eventId) {
-  // 1) Try ESPN hidden API
-  const espnUrl = `https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/${eventId}/competitions/${eventId}/odds`;
+  // Use proxy instead of direct ESPN URL
+  const proxyUrl = `/espn-odds/${encodeURIComponent(eventId)}`;
   try {
-    const r = await fetch(espnUrl);
+    const r = await fetch(proxyUrl);
     if (r.ok) {
       const data = await r.json();
       const parsed = parseEspnOdds(data);
       if (parsed) return parsed;
-      // else fallback
     } else {
-      throw new Error(`ESPN odds HTTP ${r.status}`);
+      throw new Error("Proxy returned status " + r.status);
     }
   } catch (err) {
-    console.warn("ESPN fetch failed:", err);
+    console.warn("ESPN-proxy fetch failed:", err);
   }
+
+  // fallback to original odds API
+  const backupRes = await fetch(`/api/odds?eventId=${encodeURIComponent(eventId)}`);
+  if (!backupRes.ok) throw new Error("Backup odds fetch failed");
+  return backupRes.json();
+}
 
   // 2) Fallback to your existing odds-API
   const backupRes = await fetch(`/api/odds?eventId=${encodeURIComponent(eventId)}`);

@@ -173,3 +173,24 @@ button {
   font-size: 1.6rem;
   font-weight: 700;
 }
+
+/* EMPIREPICKS GOLD PARLAY BUTTONS — FINAL OVERRIDE */
+button.add-leg,
+.card button.add-leg,
+.lines-table button.add-leg {
+  background: #ffd86b !important;
+  color: #1a1a1a !important;
+  border: 1px solid #e8c45a !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  font-size: 0.80rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+}
+
+button.add-leg:hover,
+.card button.add-leg:hover,
+.lines-table button.add-leg:hover {
+  background: #ffefbf !important;
+  border-color: #fff3c9 !important;
+}

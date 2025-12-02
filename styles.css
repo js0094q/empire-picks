@@ -1,67 +1,55 @@
-:root {
-  --card-bg: #0d1228;
-  --card-body-bg: #12182b;
-  --card-border: #444;
+/* ============================================================
+   GLOBAL DARK THEME (DraftKings-style dark UI)
+   ============================================================ */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0f22;          /* deep sportsbook navy */
+  color: #f0f0f0;
+  font-family: system-ui, sans-serif;
+  min-height: 100%;
 }
 
-/* Card base */
-.card {
-  background: var(--card-body-bg);
-  border: 2px solid var(--card-border);
-  border-radius: 10px;
-  margin-bottom: 1.4rem;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
-
-.card-header {
-  background: var(--team-primary, #111); /* set via JS per game */
-  color: #fff;
+body {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 12px;
 }
 
-.card-body {
-  background: var(--card-body-bg);
-  color: #eee;
-  padding: 12px;
-}
-
-/* Analytics block */
-.analytics-block {
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-  color: #ddd;
-}
-
-/* Lines table */
-table.lines-table {
+/* Remove white margins around the dashboard container */
+main, #dashboard, #games {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 8px;
-  color: #eee;
-  font-size: 0.88rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+  background: transparent !important;
 }
 
-table.lines-table th,
-table.lines-table td {
-  padding: 6px;
-  border-bottom: 1px solid #444;
-}
-
-button {
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid #fff;
-  border-radius: 4px;
+/* Headline styling */
+h1, h2, h3 {
   color: #fff;
-  padding: 4px 8px;
-  margin-top: 4px;
-  font-size: 0.85rem;
 }
 
-button:hover {
-  background: rgba(255,255,255,0.1);
+/* Fix top header bar */
+.header, .dashboard-header {
+  background: #0f162e;
+  padding: 20px;
+  width: 100%;
+  text-align: center;
+  border-bottom: 2px solid #1c2546;
+  color: #fff;
+}
+
+.card {
+  background: #10182f;
+  border: 1px solid #1c2546;
+  border-radius: 10px;
+  margin: 20px auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+}
+
+/* Remove accidental white blocks coming from user agent */
+* {
+  background-color: transparent;
 }

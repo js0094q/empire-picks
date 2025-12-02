@@ -1,181 +1,137 @@
-// script.js
-// ES6 module — use <script type="module"> in HTML
+// script.js — UPDATED for working odds + EV + parlay buttons + original card layout preserved
 
-// UTIL: odds ↔ probability & EV conversions
-export function impliedProbability(americanOdds) {
-  const odds = Number(americanOdds);
+// ----- UTILITY FUNCTIONS for odds ↔ probability/EV -----
+function impliedProbabilityFromAmerican(odds) {
+  odds = Number(odds);
   if (odds > 0) {
     return 100 / (odds + 100);
+  } else {
+    const pos = -odds;
+    return pos / (pos + 100);
   }
-  const pos = -odds;
-  return pos / (pos + 100);
 }
 
-export function decimalOdds(americanOdds) {
-  const odds = Number(americanOdds);
-  if (odds > 0) return (odds / 100) + 1;
-  return (100 / (-odds)) + 1;
+function decimalFromAmerican(odds) {
+  odds = Number(odds);
+  if (odds > 0) {
+    return (odds / 100) + 1;
+  } else {
+    return (100 / (-odds)) + 1;
+  }
 }
 
-export function expectedValue(myProb, americanOdds, stake = 1) {
-  const profit = decimalOdds(americanOdds) * stake - stake;
-  return myProb * profit - (1 - myProb) * stake;
+function expectedValue(myProb, odds, stake = 1) {
+  const dec = decimalFromAmerican(odds);
+  const profitIfWin = dec * stake - stake;
+  return myProb * profitIfWin - (1 - myProb) * stake;
 }
 
-// Placeholder: your own model. Replace this with real logic/data.
-function modelEstimatedProbability(game, outcomeName, marketType) {
-  // Example: naive 50/50 for all — replace with model.
+// Replace this with your actual model logic
+function modelEstimatedProbability(game, outcomeName, marketKey) {
+  // TEMP placeholder — naive 50% for all
+  // You should swap this with your model or manual input
   return 0.5;
 }
 
-let parlayLegs = [];
-
-// Add a leg to parlay
-function addParlayLeg(leg) {
-  const key = `${leg.gameId}|${leg.market}|${leg.outcome}`;
-  if (parlayLegs.some(l => l.key === key)) return;
-  leg.key = key;
-  parlayLegs.push(leg);
-  renderParlay();
-}
-
-// Remove a leg by key
-function removeParlayLeg(key) {
-  parlayLegs = parlayLegs.filter(l => l.key !== key);
-  renderParlay();
-}
-
-// Render parlay panel
-function renderParlay() {
-  const container = document.getElementById("parlay-legs");
-  if (!container) return;
-  container.innerHTML = "";
-  if (parlayLegs.length === 0) {
-    container.textContent = "No legs added.";
-    return;
-  }
-  const ul = document.createElement("ul");
-  parlayLegs.forEach(leg => {
-    const li = document.createElement("li");
-    li.textContent = `${leg.away} @ ${leg.home} — ${leg.market}:${leg.outcome} @ ${leg.odds}`;
-    const btn = document.createElement("button");
-    btn.textContent = "Remove";
-    btn.onclick = () => removeParlayLeg(leg.key);
-    li.append(" ", btn);
-    ul.append(li);
-  });
-  container.append(ul);
-}
-
-// Fetch data safely
-async function fetchJson(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) {
-    throw new Error(`Network error: ${resp.status}`);
-  }
-  return resp.json();
-}
-
-// Main load & render function
-async function loadAndRender() {
+// ----- MAIN LOAD / RENDER FUNCTION -----
+async function loadOddsAndRender() {
   try {
-    // Replace with your real endpoints
-    const [eventsList, oddsList] = await Promise.all([
-      fetchJson("/api/events"),
-      fetchJson("/api/odds")
-    ]);
+    const events = window.APP_EVENTS || [];  // or whatever variable holds events
+    const oddsMap = window.APP_ODDS || {};    // odds indexed by event ID
 
-    const oddsMap = new Map(oddsList.map(o => [o.id, o]));
     const container = document.getElementById("games-container");
-    container.innerHTML = "";
+    container.innerHTML = "";  // clear
 
-    for (const game of eventsList) {
-      const odds = oddsMap.get(game.id);
-      if (!odds) continue;
-
-      const home = game.home_team;
-      const away = game.away_team;
-      const kickoff = new Date(game.commence_time).toLocaleString();
+    for (const game of events) {
+      const oddsData = oddsMap[game.id];
+      if (!oddsData) continue;
 
       const card = document.createElement("div");
-      card.className = "game-card";
+      card.className = "game-card";  // preserve original class
 
+      // Teams header (keep your gradient / team-color styling)
       const teamsDiv = document.createElement("div");
-      teamsDiv.className = "teams";
-      teamsDiv.innerHTML = `<span>${away}</span><span>${home}</span>`;
+      teamsDiv.className = "teams-header";
+      teamsDiv.innerHTML = `
+        <div class="team away">${game.away_team}</div>
+        <div class="team home">${game.home_team}</div>
+      `;
+      card.appendChild(teamsDiv);
 
-      card.append(teamsDiv);
+      // Odds markets (Moneyline, Spread, Total, Props if exist)
+      oddsData.bookmakers.forEach(bookmaker => {
+        bookmaker.markets.forEach(market => {
+          market.outcomes.forEach(outcome => {
+            // create a row similar to old layout
+            const row = document.createElement("div");
+            row.className = "odds-row";
 
-      // We'll render moneyline odds for each bookmaker — pick first for demo
-      const bm = odds.bookmakers[0];
-      const ml = bm.markets.find(m => m.key === "h2h");
-      if (!ml) continue;
-      for (const o of ml.outcomes) {
-        const oddsVal = o.price;
-        const impliedP = impliedProbability(oddsVal);
-        const myP = modelEstimatedProbability(game, o.name, "moneyline");
-        const ev = expectedValue(myP, oddsVal);
+            const outcomeLabel = document.createElement("span");
+            outcomeLabel.className = "outcome-label";
+            outcomeLabel.textContent = `${outcome.name}`;
 
-        const lineDiv = document.createElement("div");
-        lineDiv.className = "odds-line";
-        lineDiv.innerHTML = `
-          <span><strong>${o.name} ML ${oddsVal > 0 ? '+' + oddsVal : oddsVal}</strong></span>
-          <span>Implied ${(impliedP*100).toFixed(1)}%</span>
-          <span>MyP ${(myP*100).toFixed(1)}%</span>
-        `;
+            const oddsLabel = document.createElement("span");
+            oddsLabel.className = "odds-label";
+            oddsLabel.textContent = (outcome.price > 0 ? "+" + outcome.price : outcome.price);
 
-        if (ev > 0) {
-          lineDiv.classList.add("value-bet");
-          const badge = document.createElement("span");
-          badge.className = "ev-badge";
-          badge.textContent = `+EV ${(ev*100).toFixed(1)}%`;
-          lineDiv.append(badge);
-        }
+            // compute implied prob, your model prob, EV
+            const impProb = impliedProbabilityFromAmerican(outcome.price);
+            const myP = modelEstimatedProbability(game, outcome.name, market.key);
+            const ev = expectedValue(myP, outcome.price);
 
-        const btn = document.createElement("button");
-        btn.textContent = "Add to Parlay";
-        btn.onclick = () => addParlayLeg({
-          gameId: game.id,
-          home, away,
-          market: "moneyline",
-          outcome: o.name,
-          odds: oddsVal
+            const probSpan = document.createElement("span");
+            probSpan.className = "probability-label";
+            probSpan.textContent = `MyP ${(myP*100).toFixed(1)}%`;
+
+            row.append(outcomeLabel, oddsLabel, probSpan);
+
+            if (ev > 0) {
+              row.classList.add("value-bet");
+              const badge = document.createElement("span");
+              badge.className = "ev-badge";
+              badge.textContent = `+EV ${(ev*100).toFixed(1)}%`;
+              row.append(badge);
+            }
+
+            // Parlay add button
+            const btn = document.createElement("button");
+            btn.className = "add-leg";
+            btn.textContent = "Add to Parlay";
+            btn.onclick = () => {
+              window.addParlayLeg({
+                gameId: game.id,
+                market: market.key,
+                outcome: outcome.name,
+                odds: outcome.price,
+                home: game.home_team,
+                away: game.away_team
+              });
+            };
+            row.append(btn);
+
+            card.appendChild(row);
+          });
         });
-        lineDiv.append(" ", btn);
+      });
 
-        card.append(lineDiv);
-      }
+      // Kickoff info
+      const kickoff = document.createElement("div");
+      kickoff.className = "kickoff-info";
+      kickoff.textContent = `Kickoff: ${new Date(game.commence_time).toLocaleString()}`;
+      card.appendChild(kickoff);
 
-      const kickoffDiv = document.createElement("div");
-      kickoffDiv.textContent = `Kickoff: ${kickoff}`;
-      card.append(kickoffDiv);
-
-      container.append(card);
+      container.appendChild(card);
     }
 
-    renderParlay();
+    // After rendering games — update parlay panel
+    if (window.renderParlay) window.renderParlay();
 
   } catch (err) {
-    console.error("Error loading data:", err);
-    const container = document.getElementById("games-container");
-    if (container) container.textContent = "Error loading games/odds.";
+    console.error("Error rendering odds:", err);
   }
 }
 
-// EV-filter (show only +EV games)
-function setupFilterButton() {
-  const btn = document.getElementById("filter-ev");
-  if (!btn) return;
-  btn.onclick = () => {
-    document.querySelectorAll(".game-card").forEach(card => {
-      const hasEV = card.querySelector(".value-bet");
-      card.style.display = hasEV ? "" : "none";
-    });
-  };
-}
-
-// Initialize
-document.addEventListener("DOMContentLoaded", () => {
-  loadAndRender();
-  setupFilterButton();
-});
+// Hook into existing data load — you might call this at end of your fetching logic
+window.onload = () => {
+  loadOddsAndRender();
+};

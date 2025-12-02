@@ -18,6 +18,25 @@
   </header>
 
   <main id="games" class="games"></main>
+  <div id="parlayMaker" style="
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 350px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #141a33;
+  border-left: 2px solid var(--gold);
+  border-top: 2px solid var(--gold);
+  padding: 12px;
+  border-radius: 12px 0 0 0;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.45);
+  z-index: 999;">
+  <h3 style="margin-top:0;color:var(--gold);">🎰 Parlay Maker</h3>
+  <div id="parlayLegs"></div>
+  <div id="parlayCalc" style="margin-top:12px;font-size:0.9rem;color:var(--muted);">
+    Add legs to calculate EV…
+  </div>
 
   <footer class="footer">
     Data from The Odds API | Built for EmpirePicks.com

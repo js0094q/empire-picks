@@ -6,6 +6,7 @@
 
     { "src": "styles.css", "use": "@vercel/static" },
     { "src": "script.js", "use": "@vercel/static" },
+    { "src": "parlay.js", "use": "@vercel/static" },       // <-- ADD THIS
     { "src": "dashboard.js", "use": "@vercel/static" },
     { "src": "teams.js", "use": "@vercel/static" },
     { "src": "token.js", "use": "@vercel/static" },
@@ -20,7 +21,7 @@
 
     { "src": "/dashboard.js", "dest": "/dashboard.js" },
     { "src": "/script.js", "dest": "/script.js" },
-    { "src": "/parlay.js", "dest": "/parlay.js" },
+    { "src": "/parlay.js", "dest": "/parlay.js" },          // <-- ADD THIS
     { "src": "/teams.js", "dest": "/teams.js" },
     { "src": "/token.js", "dest": "/token.js" },
     { "src": "/styles.css", "dest": "/styles.css" },

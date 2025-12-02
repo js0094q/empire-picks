@@ -20,11 +20,11 @@
     { "src": "/dashboard", "dest": "/dashboard.html" },
 
     { "src": "/script.js", "dest": "/script.js" },
-    { "src": "/teams.js", "dest": "/teams.js" },
     { "src": "/parlay.js", "dest": "/parlay.js" },
-    { "src": "/styles.css", "dest": "/styles.css" },
+    { "src": "/teams.js", "dest": "/teams.js" },
     { "src": "/token.js", "dest": "/token.js" },
     { "src": "/dashboard.js", "dest": "/dashboard.js" },
+    { "src": "/styles.css", "dest": "/styles.css" },
 
     { "src": "/(.*)", "dest": "/index.html" }
   ]

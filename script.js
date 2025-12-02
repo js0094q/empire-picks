@@ -9,7 +9,7 @@ import { NFL_TEAMS } from "./teams.js";
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-const money = o => o > 0 ? `+${o}` : o;
+const money = o => (o > 0 ? `+${o}` : o);
 
 function prob(odds) {
   return odds > 0
@@ -87,7 +87,6 @@ async function loadAll() {
 
     gamesEl.innerHTML = "";
     validGames.forEach(ev => gamesEl.appendChild(renderGame(ev, byId[ev.id])));
-
   } catch (err) {
     console.error(err);
     gamesEl.textContent = "Failed to load NFL data. Try refreshing.";
@@ -251,8 +250,12 @@ function computeGameAnalytics(game, away, home) {
 //  ANALYTICS HTML BLOCK
 // ========================================================
 function analyticsHTML(a) {
-  const [spreadTeam, spreadLine] = a.bestSpread ? a.bestSpread.split(":") : ["", ""];
-  const [totalSide, totalLine] = a.bestTotal ? a.bestTotal.split(":") : ["", ""];
+  const [spreadTeam, spreadLine] = a.bestSpread
+    ? a.bestSpread.split(":")
+    : ["", ""];
+  const [totalSide, totalLine] = a.bestTotal
+    ? a.bestTotal.split(":")
+    : ["", ""];
 
   return `
     <div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(0,0,0,0.25);">
@@ -277,7 +280,7 @@ function analyticsHTML(a) {
 }
 
 // ========================================================
-//  LINES + EV BEST BET
+//  LINES + EV BEST BET + PARLAY BUTTONS
 // ========================================================
 function renderLines(container, game, analytics) {
   const rows = [];
@@ -288,7 +291,9 @@ function renderLines(container, game, analytics) {
       moneyline: "–",
       spread: "–",
       total: "–",
-      edge: null
+      edge: null,
+      mlAway: null,
+      mlHome: null
     };
 
     let rowEdge = null;
@@ -307,6 +312,9 @@ function renderLines(container, game, analytics) {
             analytics.nvAway - pA,
             analytics.nvHome - pH
           );
+
+          rec.mlAway = a.price;
+          rec.mlHome = h.price;
         }
       }
 
@@ -317,7 +325,9 @@ function renderLines(container, game, analytics) {
           const ln = Number(line);
           best = m.outcomes
             .slice()
-            .sort((x, y) => Math.abs(x.point - ln) - Math.abs(y.point - ln))[0];
+            .sort(
+              (x, y) => Math.abs(x.point - ln) - Math.abs(y.point - ln)
+            )[0];
         }
         if (!best) {
           best = m.outcomes
@@ -330,8 +340,12 @@ function renderLines(container, game, analytics) {
       }
 
       if (m.key === "totals") {
-        const over = m.outcomes.find(o => o.name.toLowerCase() === "over");
-        const under = m.outcomes.find(o => o.name.toLowerCase() === "under");
+        const over = m.outcomes.find(
+          o => o.name.toLowerCase() === "over"
+        );
+        const under = m.outcomes.find(
+          o => o.name.toLowerCase() === "under"
+        );
         if (over && under) {
           rec.total = `O${over.point} / U${under.point}`;
         }
@@ -352,6 +366,8 @@ function renderLines(container, game, analytics) {
     }
   });
 
+  const gameLabel = `${analytics.away} @ ${analytics.home}`;
+
   container.innerHTML = `
     <table class="table">
       <thead>
@@ -369,7 +385,39 @@ function renderLines(container, game, analytics) {
             (r, i) => `
           <tr>
             <td>${r.book}</td>
-            <td>${r.moneyline}</td>
+            <td>
+              ${r.moneyline}
+              ${
+                r.mlAway != null && r.mlHome != null
+                  ? `
+                <div style="margin-top:4px;font-size:0.78rem;display:flex;gap:4px;flex-wrap:wrap;">
+                  <button
+                    class="add-leg"
+                    data-market="ML"
+                    data-team="${analytics.away}"
+                    data-price="${r.mlAway}"
+                    data-trueprob="${analytics.nvAway}"
+                    data-game="${gameLabel}"
+                    style="padding:2px 6px;border-radius:6px;font-size:0.75rem;"
+                  >
+                    ➕ ${analytics.away}
+                  </button>
+                  <button
+                    class="add-leg"
+                    data-market="ML"
+                    data-team="${analytics.home}"
+                    data-price="${r.mlHome}"
+                    data-trueprob="${analytics.nvHome}"
+                    data-game="${gameLabel}"
+                    style="padding:2px 6px;border-radius:6px;font-size:0.75rem;"
+                  >
+                    ➕ ${analytics.home}
+                  </button>
+                </div>
+              `
+                  : ""
+              }
+            </td>
             <td>${r.spread}</td>
             <td>${r.total}</td>
             <td>
@@ -394,7 +442,7 @@ function renderLines(container, game, analytics) {
 }
 
 // ========================================================
-//  PLAYER PROPS
+//  PLAYER PROPS + PARLAY BUTTONS
 // ========================================================
 async function loadProps(id, container) {
   container.dataset.loaded = "1";
@@ -408,6 +456,8 @@ async function loadProps(id, container) {
       container.textContent = "No props available.";
       return;
     }
+
+    const gameLabel = `${props.away_team} @ ${props.home_team}`;
 
     const groups = {};
 
@@ -424,6 +474,28 @@ async function loadProps(id, container) {
             p: prob(o.price)
           });
         });
+      });
+    });
+
+    // Build no-vig map per player/point/side for Over/Under style props
+    const nvMap = {};
+    Object.values(groups).forEach(arr => {
+      const byLine = {};
+      arr.forEach(r => {
+        const lineKey = `${r.player}:${r.point}`;
+        if (!byLine[lineKey]) byLine[lineKey] = { over: [], under: [] };
+        const side = r.name.toLowerCase();
+        if (side === "over") byLine[lineKey].over.push(r.p);
+        if (side === "under") byLine[lineKey].under.push(r.p);
+      });
+
+      Object.entries(byLine).forEach(([lineKey, v]) => {
+        const avgO = avg(v.over);
+        const avgU = avg(v.under);
+        if (!avgO && !avgU) return;
+        const [nvO, nvU] = noVig(avgO, avgU);
+        nvMap[`${lineKey}:Over`] = nvO;
+        nvMap[`${lineKey}:Under`] = nvU;
       });
     });
 
@@ -449,7 +521,9 @@ async function loadProps(id, container) {
       summary.slice(0, 8).forEach(s => {
         html += `
           <div>
-            ⭐ <strong>${s.player}</strong> ${s.favorite} ${s.point ?? ""} 
+            ⭐ <strong>${s.player}</strong> ${s.favorite} ${
+          s.point ?? ""
+        } 
             (${(s.bestProb * 100).toFixed(1)}% consensus)
           </div>
         `;
@@ -467,13 +541,24 @@ async function loadProps(id, container) {
               <th>Line</th>
               <th>Price</th>
               <th>Implied Prob</th>
+              <th>Parlay</th>
             </tr>
           </thead>
           <tbody>
             ${arr
               .slice(0, 60)
-              .map(
-                r => `
+              .map(r => {
+                const sideLabel =
+                  r.name.toLowerCase() === "over"
+                    ? "Over"
+                    : r.name.toLowerCase() === "under"
+                    ? "Under"
+                    : r.name;
+                const nvKey = `${r.player}:${r.point}:${sideLabel}`;
+                const trueProb =
+                  nvMap[nvKey] !== undefined ? nvMap[nvKey] : r.p;
+
+                return `
               <tr>
                 <td>${r.book}</td>
                 <td>${r.player}</td>
@@ -481,9 +566,25 @@ async function loadProps(id, container) {
                 <td>${r.point ?? "–"}</td>
                 <td>${money(r.price)}</td>
                 <td>${(r.p * 100).toFixed(1)}%</td>
+                <td>
+                  <button
+                    class="add-leg"
+                    data-market="PROP"
+                    data-player="${r.player}"
+                    data-type="${key}"
+                    data-side="${sideLabel}"
+                    data-point="${r.point ?? ""}"
+                    data-price="${r.price}"
+                    data-trueprob="${trueProb}"
+                    data-game="${gameLabel}"
+                    style="padding:2px 6px;border-radius:6px;font-size:0.75rem;"
+                  >
+                    ➕ Add
+                  </button>
+                </td>
               </tr>
-            `
-              )
+            `;
+              })
               .join("")}
           </tbody>
         </table>

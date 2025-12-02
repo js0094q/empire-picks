@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <div id="games-container"></div>
-  <meta charset="UTF-8" />
-  <title>EmpirePicks — NFL Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <title>NFL Odds & Parlay Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header style="padding:16px; text-align:center; background:#0d1228; color:#fff;">
-    <h1>EmpirePicks NFL Dashboard</h1>
-    <button id="refreshBtn" style="padding:8px 16px; font-size:1rem;">Refresh Games</button>
-  </header>
+  <div id="parlay-panel" class="parlay-panel">
+    <h2>Parlay Builder</h2>
+    <div id="parlay-legs"></div>
+    <div id="parlay-summary">No legs selected</div>
+    <label>
+      Stake: $ <input type="number" id="parlay-stake" value="100" min="1" />
+    </label>
+    <div id="parlay-payout"></div>
+  </div>
 
-  <main style="max-width:960px; margin:24px auto; padding:0 12px;">
-    <section id="bestParlay"></section>
-    <div id="games"></div>
-  </main>
+  <div id="games-container"></div>
 
   <script type="module" src="script.js"></script>
 </body>

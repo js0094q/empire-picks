@@ -12,7 +12,22 @@ if (typeof window.addParlayLeg !== "function") {
 // ============================================================
 // Utility Functions
 // ============================================================
+// Countdown
+const countdown = getCountdownString(ev.commence_time);
 
+// FIXED EST kickoff time
+const kickoffLocal = getKickoffEST(ev.commence_time);
+
+const card = document.createElement("div");
+card.className = "game-card";
+
+card.innerHTML = `
+  <div class="game-header">
+      <div class="teams">${ev.away_team} @ ${ev.home_team}</div>
+      <div class="kickoff">Kickoff (EST): ${kickoffLocal}</div>
+      <div class="countdown">⏳ ${countdown}</div>
+  </div>
+`;
 // Convert American odds to implied probability
 function impliedProb(odds) {
   return odds > 0

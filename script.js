@@ -391,15 +391,21 @@ function renderLines(container, game, analytics) {
                 r.mlAway != null && r.mlHome != null
                   ? `
                 <div style="margin-top:4px;font-size:0.78rem;display:flex;gap:4px;flex-wrap:wrap;">
-                  <button
-                    class="add-leg"
-                    data-market="ML"
-                    data-team="${analytics.away}"
-                    data-price="${r.mlAway}"
-                    data-trueprob="${analytics.nvAway}"
-                    data-game="${gameLabel}"
-                    style="padding:2px 6px;border-radius:6px;font-size:0.75rem;"
-                  >
+                 <button
+                   class="add-leg"
+                   data-market="PROP"
+                   data-name="${r.player} ${sideLabel} ${r.point ?? ""} (${label(key)})"
+                   data-player="${r.player}"
+                   data-type="${key}"
+                   data-side="${sideLabel}"
+                   data-point="${r.point ?? ""}"
+                   data-price="${r.price}"
+                   data-trueprob="${trueProb}"
+                   data-game="${gameLabel}"
+                   style="padding:2px 6px;border-radius:6px;font-size:0.75rem;"
+>
+  ➕ Add
+</button>
                     ➕ ${analytics.away}
                   </button>
                   <button

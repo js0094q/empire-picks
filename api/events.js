@@ -19,29 +19,39 @@ export default async function handler(req, res) {
     // EMPIREPICKS WEEK WINDOW (Tuesday → Monday)
     // --------------------------------------------------
 
-    const now = new Date();
+   const now = new Date();
 
-    // Most recent Tuesday
-    const weekStart = new Date(now);
-    const today = now.getDay();      // Sun = 0, Mon = 1, Tue = 2...
-    const offset = (today >= 2) ? today - 2 : today + 5;
-    weekStart.setDate(now.getDate() - offset);
-    weekStart.setHours(0, 0, 0, 0);
+// Normalize to UTC midnight
+const todayUTC = new Date(Date.UTC(
+  now.getUTCFullYear(),
+  now.getUTCMonth(),
+  now.getUTCDate()
+));
 
-    // Following Monday
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
+const todayUTCDay = todayUTC.getUTCDay();
+const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
 
-    // Filter events correctly
-    const filtered = events.filter(ev => {
-      const d = new Date(ev.commence_time);
-      return d >= weekStart && d <= weekEnd;
-    });
+// === Start of THIS NFL WEEK (Thursday 00:00 UTC) ===
+const weekStart = new Date(todayUTC);
+weekStart.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
 
-    return res.status(200).json(filtered);
-  } catch (error) {
-    console.error("EVENT API ERROR:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-}
+// === End of THIS WEEK (Tuesday 11:00 UTC) ===
+const weekEnd = new Date(weekStart);
+weekEnd.setUTCDate(weekStart.getUTCDate() + 5);
+weekEnd.setUTCHours(11, 0, 0, 0);
+
+// === Start of NEXT WEEK (same Tuesday 11:00 UTC) ===
+const nextWeekStart = new Date(weekEnd);
+
+// === End of NEXT WEEK (following Thursday night) ===
+const nextWeekEnd = new Date(nextWeekStart);
+nextWeekEnd.setUTCDate(nextWeekStart.getUTCDate() + 3);
+nextWeekEnd.setUTCHours(23, 59, 59, 999);
+
+// === NEW FILTER: TWO-WEEK WINDOW ===
+const weekGames = events.filter(ev => {
+  const kickoff = new Date(ev.commence_time);
+  return kickoff >= weekStart && kickoff <= nextWeekEnd;
+});
+
+res.status(200).json(weekGames);

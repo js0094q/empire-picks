@@ -12,22 +12,80 @@ if (typeof window.addParlayLeg !== "function") {
 // ============================================================
 // Utility Functions
 // ============================================================
-// Countdown
-const countdown = getCountdownString(ev.commence_time);
 
-// FIXED EST kickoff time
-const kickoffLocal = getKickoffEST(ev.commence_time);
+// Convert American odds to implied probability
+function impliedProb(odds) {
+  return odds > 0
+    ? 100 / (odds + 100)
+    : -odds / (-odds + 100);
+}
 
-const card = document.createElement("div");
-card.className = "game-card";
+// Countdown display text for a UTC kickoff time
+function getCountdownString(utc) {
+  const kickoff = new Date(utc);
+  const now = new Date();
+  const diff = kickoff - now;
 
-card.innerHTML = `
-  <div class="game-header">
+  if (diff <= 0) return "LIVE";
+
+  const hrs = Math.floor(diff / 1000 / 60 / 60);
+  const mins = Math.floor((diff / 1000 / 60) % 60);
+  return `${hrs}h ${mins}m`;
+}
+
+// Explicit EST kickoff time (string)
+function getKickoffEST(utc) {
+  return new Date(utc).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
+// Pick the best odds across books for each market
+function getBestOdds(bookmakers, marketKey, outcomeName) {
+  if (!Array.isArray(bookmakers)) return null;
+
+  let best = null;
+  for (const b of bookmakers) {
+    const m = (b.markets || []).find(m => m.key === marketKey);
+    if (!m) continue;
+
+    const o = (m.outcomes || []).find(o => o.name === outcomeName);
+    if (!o) continue;
+
+    if (!best || o.price > best.price) {
+      best = { ...o, book: b.key };
+    }
+  }
+  return best;
+}
+
+// ============================================================
+// Build Game Card
+// ============================================================
+
+function renderGameCard(ev, container) {
+  const countdown = getCountdownString(ev.commence_time);
+  const kickoffLocal = getKickoffEST(ev.commence_time);
+
+  const card = document.createElement("div");
+  card.className = "game-card";
+
+  card.innerHTML = `
+    <div class="game-header">
       <div class="teams">${ev.away_team} @ ${ev.home_team}</div>
       <div class="kickoff">Kickoff (EST): ${kickoffLocal}</div>
       <div class="countdown">⏳ ${countdown}</div>
-  </div>
-`;
+    </div>
+  `;
+
+  container.appendChild(card);
+}
 // Convert American odds to implied probability
 function impliedProb(odds) {
   return odds > 0

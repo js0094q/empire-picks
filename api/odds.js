@@ -5,9 +5,12 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing ODDS_API_KEY" });
     }
 
-    const url =
-      `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?` +
-      `apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
+    const base = "https://api.the-odds-api.com/v4";
+    const sport = "americanfootball_nfl";
+    const regions = "us";
+    const markets = "h2h,spreads,totals";
+
+    const url = `${base}/sports/${sport}/odds?apiKey=${apiKey}&regions=${regions}&markets=${markets}&oddsFormat=american`;
 
     const r = await fetch(url);
 
@@ -15,37 +18,52 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Failed fetching NFL odds" });
     }
 
-    const games = await r.json();
+    const data = await r.json();
+    const remaining = r.headers.get("x-requests-remaining");
 
     // --------------------------------------------------
-    // SAME WINDOW AS EVENTS
+    // EMPIREPICKS — TWO-WEEK VISIBILITY WINDOW
     // --------------------------------------------------
 
-   const now = new Date();
+    const now = new Date();
 
-const todayUTC = new Date(Date.UTC(
-  now.getUTCFullYear(),
-  now.getUTCMonth(),
-  now.getUTCDate()
-));
+    // Normalize to UTC midnight
+    const todayUTC = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    ));
 
-const todayUTCDay = todayUTC.getUTCDay();
-const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
+    const todayUTCDay = todayUTC.getUTCDay();
+    const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
 
-const weekStart = new Date(todayUTC);
-weekStart.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
+    // === Start of THIS NFL WEEK (Thursday 00:00 UTC) ===
+    const weekStart = new Date(todayUTC);
+    weekStart.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
 
-const weekEnd = new Date(weekStart);
-weekEnd.setUTCDate(weekStart.getUTCDate() + 5);
-weekEnd.setUTCHours(11, 0, 0, 0);
+    // === End of THIS WEEK (Tuesday 11:00 UTC) ===
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekStart.getUTCDate() + 5);
+    weekEnd.setUTCHours(11, 0, 0, 0);
 
-const nextWeekStart = new Date(weekEnd);
+    // === Start of NEXT WEEK (same Tuesday morning) ===
+    const nextWeekStart = new Date(weekEnd);
 
-const nextWeekEnd = new Date(nextWeekStart);
-nextWeekEnd.setUTCDate(nextWeekStart.getUTCDate() + 3);
-nextWeekEnd.setUTCHours(23, 59, 59, 999);
+    // === End of NEXT WEEK (following Thursday night) ===
+    const nextWeekEnd = new Date(nextWeekStart);
+    nextWeekEnd.setUTCDate(nextWeekStart.getUTCDate() + 3);
+    nextWeekEnd.setUTCHours(23, 59, 59, 999);
 
-const filtered = (data || []).filter(game => {
-  const kickoff = new Date(game.commence_time);
-  return kickoff >= weekStart && kickoff <= nextWeekEnd;
-});
+    // === Apply two-week filter to odds ===
+    const filtered = (data || []).filter(game => {
+      const kickoff = new Date(game.commence_time);
+      return kickoff >= weekStart && kickoff <= nextWeekEnd;
+    });
+
+    return res.status(200).json({ remaining, data: filtered });
+
+  } catch (err) {
+    console.error("API /odds error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+}

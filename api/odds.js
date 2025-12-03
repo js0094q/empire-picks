@@ -21,26 +21,31 @@ export default async function handler(req, res) {
     // SAME WINDOW AS EVENTS
     // --------------------------------------------------
 
-    const now = new Date();
-    const today = now.getDay();
+   const now = new Date();
 
-    const weekStart = new Date(now);
-    const offset = (today >= 2) ? today - 2 : today + 5;
-    weekStart.setDate(now.getDate() - offset);
-    weekStart.setHours(0, 0, 0, 0);
+const todayUTC = new Date(Date.UTC(
+  now.getUTCFullYear(),
+  now.getUTCMonth(),
+  now.getUTCDate()
+));
 
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
+const todayUTCDay = todayUTC.getUTCDay();
+const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
 
-    const filtered = games.filter(g => {
-      const d = new Date(g.commence_time);
-      return d >= weekStart && d <= weekEnd;
-    });
+const weekStart = new Date(todayUTC);
+weekStart.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
 
-    return res.status(200).json(filtered);
-  } catch (error) {
-    console.error("ODDS API ERROR:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-}
+const weekEnd = new Date(weekStart);
+weekEnd.setUTCDate(weekStart.getUTCDate() + 5);
+weekEnd.setUTCHours(11, 0, 0, 0);
+
+const nextWeekStart = new Date(weekEnd);
+
+const nextWeekEnd = new Date(nextWeekStart);
+nextWeekEnd.setUTCDate(nextWeekStart.getUTCDate() + 3);
+nextWeekEnd.setUTCHours(23, 59, 59, 999);
+
+const filtered = (data || []).filter(game => {
+  const kickoff = new Date(game.commence_time);
+  return kickoff >= weekStart && kickoff <= nextWeekEnd;
+});

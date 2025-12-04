@@ -1,90 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks | Analytics Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
+document.addEventListener("DOMContentLoaded", loadDashboard);
 
-  <!-- AUTH GUARD -->
+async function loadDashboard() {
+  const r = await fetch("/api/events");
+  const games = await r.json();
 
-  <style>
-    body { background:#0d1228; }
-    table.dashboard { width:100%; max-width:1100px; margin:2rem auto; }
-    table.dashboard th { cursor:pointer; }
-    tr:hover { background:rgba(255,255,255,0.05); }
-    .team-cell { display:flex; align-items:center; gap:8px; }
-    .team-cell img { height:24px; }
-  </style>
-</head>
-
-<body>
-  <header class="header">
-    <h1>📊 EmpirePicks Analytics</h1>
-    <a href="/" style="color:var(--gold);font-size:1rem;">← Back to Games</a>
-  </header>
-
-  <main>
-    <section id="top5" style="max-width:900px;margin:20px auto;"></section>
-
-    <section id="parlay-section"
-      style="max-width:900px;margin:0 auto 24px auto;padding:16px;
-             border-radius:12px;background:#141a33;border:1px solid var(--border);">
-
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div>
-          <h2 style="margin:0 0 4px 0;color:var(--gold);">🎰 Parlay EV Optimizer</h2>
-          <p style="margin:0;font-size:0.9rem;color:var(--muted);">
-            Uses EmpirePicks win probabilities to search for positive-edge 2-leg moneyline parlays.
-          </p>
-        </div>
-
-        <div style="display:flex;align-items:center;gap:8px;">
-          <label style="font-size:0.85rem;color:var(--muted);">
-            Min single-leg edge:
-            <select id="parlayEdgeFilter"
-              style="margin-left:4px;padding:2px 4px;border-radius:6px;
-                     border:1px solid var(--border);background:#0d1228;color:var(--text);">
-              <option value="0.01">1%</option>
-              <option value="0.02" selected>2%</option>
-              <option value="0.03">3%</option>
-              <option value="0.05">5%</option>
-            </select>
-          </label>
-
-          <button id="generateParlays" style="padding:6px 10px;">⚡ Generate</button>
-        </div>
-      </div>
-
-      <div id="parlayResults" style="margin-top:12px;font-size:0.9rem;"></div>
-    </section>
-
-    <table class="table dashboard" id="dash">
+  const table = document.getElementById("dashboard");
+  table.innerHTML = `
+    <table class="table">
       <thead>
         <tr>
-          <th data-sort="team">Game</th>
-          <th data-sort="win">Win %</th>
-          <th data-sort="spread">Spread</th>
-          <th data-sort="total">Total</th>
-          <th data-sort="ev">Best EV</th>
-          <th data-sort="kickoff">Kickoff</th>
+          <th>Matchup</th>
+          <th>EV Away</th>
+          <th>EV Home</th>
+          <th>Top EV</th>
+          <th>Kickoff</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
+  `;
 
-    <div style="text-align:center;margin-top:20px;">
-      <button id="refresh" style="padding:8px 14px;font-size:1rem;">⟳ Refresh</button>
-    </div>
+  const body = table.querySelector("tbody");
 
-  </main>
+  games.sort((a, b) => b.bestEV - a.bestEV);
 
-  <footer class="footer">
-    Data from The Odds API | EmpirePicks.com
-  </footer>
+  for (const g of games) {
+    const row = document.createElement("tr");
 
-  <!-- IMPORTANT: LOAD JS LAST -->
-  <script type="module" src="dashboard.js"></script>
+    row.innerHTML = `
+      <td>${g.away_team} @ ${g.home_team}</td>
+      <td>${(g.ev.awayML * 100).toFixed(1)}%</td>
+      <td>${(g.ev.homeML * 100).toFixed(1)}%</td>
+      <td><strong style="color:var(--green)">${(g.bestEV * 100).toFixed(1)}%</strong></td>
+      <td>${new Date(g.commence_time).toLocaleString()}</td>
+    `;
 
-</body>
-</html>
+    body.appendChild(row);
+  }
+}

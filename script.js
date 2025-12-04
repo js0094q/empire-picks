@@ -1,72 +1,98 @@
 import { NFL_TEAMS } from "./teams.js";
+import { addParlayLeg, getParlay, saveParlay } from "./parlay.js";
 
-function implied(odds){ return odds>0?100/(odds+100):-odds/(-odds+100); }
-function evPercent(val){ return (val*100).toFixed(1); }
+function valueGrade(ev) {
+  if (ev >= 0.10) return "A+";
+  if (ev >= 0.06) return "A";
+  if (ev >= 0.03) return "B+";
+  if (ev >= 0.01) return "B";
+  return "C";
+}
+
+function gradeClass(g) {
+  return {
+    "A+": "ev-Aplus",
+    "A":  "ev-A",
+    "B+": "ev-Bplus",
+    "B":  "ev-B"
+  }[g] || "";
+}
+
+function evPercent(val) {
+  return (val * 100).toFixed(1);
+}
+
+let allEvents = [];
 
 document.addEventListener("DOMContentLoaded", loadGames);
 
-async function loadGames(){
+async function loadGames() {
   const box = document.getElementById("games");
   box.innerHTML = "Loading...";
 
   const r = await fetch("/api/events");
-  if (!r.ok){
+  if (!r.ok) {
     box.innerHTML = "Failed loading events.";
     return;
   }
 
   const games = await r.json();
-  box.innerHTML = "";
+  window.__allEvents = games;  // store globally for modal lookup
+  allEvents = games;
 
-  games.sort((a,b)=>b.bestEV-a.bestEV);
+  box.innerHTML = "";
+  games.sort((a, b) => (b.bestEV || 0) - (a.bestEV || 0));
 
   games.forEach(g => renderGame(g, box));
+  updateParlayPill();
 }
 
-function renderGame(g, box){
-  const away = NFL_TEAMS[g.away_team];
-  const home = NFL_TEAMS[g.home_team];
+function renderGame(g, box) {
+  const away = NFL_TEAMS[g.away_team] || {};
+  const home = NFL_TEAMS[g.home_team] || {};
 
   const kickoff = new Date(g.commence_time)
-    .toLocaleString("en-US",{timeZone:"America/New_York"});
+    .toLocaleString("en-US", { timeZone: "America/New_York" });
+
+  const evDisplay = g.bestEV != null
+    ? `${evPercent(g.bestEV)}%` : "–";
+
+  const headerBg = `linear-gradient(45deg, ${away.primary||"#222"}, ${home.primary||"#222"})`;
 
   const card = document.createElement("div");
   card.className = "game-card";
-  card.style.borderColor = home.primary;
+  card.style.borderColor = home.primary || "#444";
 
   card.innerHTML = `
-    <div class="game-header" style="
-      background: linear-gradient(45deg, ${away.primary}, ${home.primary});
-    ">
+    <div class="game-header" style="background:${headerBg}">
       <div class="team-row">
-        <img class="team-logo" src="${away.logo}">
+        <img class="team-logo" src="${away.logo || ''}" alt="${g.away_team}">
         <span>${g.away_team}</span>
         <span>@</span>
-        <img class="team-logo" src="${home.logo}">
+        <img class="team-logo" src="${home.logo || ''}" alt="${g.home_team}">
         <span>${g.home_team}</span>
       </div>
 
-      <div class="ev-badge">
-        EV: ${evPercent(g.bestEV)}%
-      </div>
-
+      <div class="ev-badge">EV: ${evDisplay}</div>
       <div class="kickoff">Kickoff: ${kickoff}</div>
     </div>
 
-    <div class="ml-section">
-      ${renderMainlines(g)}
+    <div class="mainline-row">
+      <strong>Mainline EV:</strong>
+      <span>${g.away_team}: ${g.ev.away != null ? evPercent(g.ev.away)+"%" : "–" }</span>
+      <span>${g.home_team}: ${g.ev.home != null ? evPercent(g.ev.home)+"%" : "–" }</span>
     </div>
 
-    <div class="props-section">
-      ${renderProps(g.props)}
-    </div>
+    <button class="props-btn" onclick="openPropsModal('${g.id}')">
+      ➤ View Player Props
+    </button>
 
     <div class="parlay-section">
-      <button class="parlay-btn" onclick='addParlayLeg({
+      <button class="props-btn" onclick='addParlayLeg({
         gameId:"${g.id}",
         type:"BestEV",
         display:"${g.away_team} @ ${g.home_team}",
-        odds: ${g.bestEV}
+        odds: ${g.bestEV || 0}
       })'>Add Best-EV Pick</button>
     </div>
   `;
@@ -74,29 +100,60 @@ function renderGame(g, box){
   box.appendChild(card);
 }
 
-function renderMainlines(g){
-  const homeML = g.ev.home !== null ?
-    `${g.home_team}: ${evPercent(g.ev.home)}%` : "–";
-  const awayML = g.ev.away !== null ?
-    `${g.away_team}: ${evPercent(g.ev.away)}%` : "–";
+// ========== PROP MODAL LOGIC ==========
 
-  return `
-    <div class="mainline-row">
-      <strong>Mainline EV:</strong>
-      <span>${awayML}</span>
-      <span>${homeML}</span>
-    </div>
-  `;
+const modal = document.getElementById("props-modal");
+const closeModal = document.getElementById("close-props");
+const propsContainer = document.getElementById("props-container");
+const searchBox = document.getElementById("prop-search");
+
+let currentProps = [];
+
+window.openPropsModal = function(eventId) {
+  const game = window.__allEvents.find(ev => ev.id === eventId);
+  const props = game?.props || [];
+
+  if (!props.length) {
+    propsContainer.innerHTML = `<p>No props available.</p>`;
+  } else {
+    currentProps = props;
+    renderProps(props);
+  }
+
+  modal.classList.remove("hidden");
+};
+
+closeModal.onclick = () => modal.classList.add("hidden");
+
+searchBox.addEventListener("input", () => {
+  const q = searchBox.value.toLowerCase();
+  const filtered = currentProps.filter(p => p.player.toLowerCase().includes(q));
+  renderProps(filtered);
+});
+
+function renderProps(list) {
+  propsContainer.innerHTML = list.map(p => {
+    const g = valueGrade(p.bestEV);
+    const cls = gradeClass(g);
+    return `
+      <div class="prop-card">
+        <div class="prop-title">
+          ${p.player} — ${p.metric}
+          <span class="ev-badge ${cls}">${evPercent(p.bestEV)}% • ${g}</span>
+        </div>
+        <div class="prop-line">Line: ${p.point ?? "-"}</div>
+        <div style="margin-top:8px;">
+          <button onclick='addParlayLeg(${JSON.stringify(p.over || p.under)})' class="props-btn">
+            Add to Parlay
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
-function renderProps(props){
-  if (!props || !props.length) return `<div>No props available.</div>`;
-
-  return props.slice(0,7).map(p => `
-    <div class="prop-row">
-      <div class="prop-player">${p.player}</div>
-      <div class="prop-metric">${p.metric.replace("player_","").replace("_"," ")}</div>
-      <div class="prop-ev">EV: ${evPercent(p.bestEV)}%</div>
-    </div>
-  `).join("");
+function updateParlayPill() {
+  const count = getParlay().length;
+  const pill = document.getElementById("parlay-count");
+  pill.innerText = count;
 }

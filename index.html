@@ -1,46 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks | NFL Odds & Props</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EmpirePicks — NFL Odds & Analytics</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="header-bar">
-    <h1>🏈 EmpirePicks NFL</h1>
-    <a href="dashboard.html">EV Dashboard →</a>
-  </div>
+  <header class="site-header">
+    <div class="logo">EmpirePicks</div>
+    <nav>
+      <button id="nav-live" class="nav-btn active">Live Games</button>
+      <button id="nav-dashboard" class="nav-btn">Dashboard</button>
+    </nav>
+  </header>
 
-  <div class="control-bar">
-    <input type="search" id="global-prop-search" placeholder="Search props by player or metric…" aria-label="Prop search" />
-    <select id="prop-sort" aria-label="Sort props">
-      <option value="ev-desc">Sort props: Top EV</option>
-      <option value="player-asc">Sort props: Player A → Z</option>
-      <option value="line-asc">Sort props: Lowest line</option>
-    </select>
-    <button class="ghost-btn" id="clear-filters" type="button">Clear filters</button>
-    <div class="control-stats" id="prop-stats" aria-live="polite"></div>
-  </div>
+  <main>
+    <section id="live-games" class="page-section">
+      <div id="games-container" class="games-grid"></div>
+    </section>
 
-  <div id="games"></div>
+    <section id="dashboard" class="page-section hidden">
+      <div id="dashboard-container"></div>
+    </section>
+  </main>
 
-  <div class="parlay-pill" id="parlay-pill">
-    Parlay: <span id="parlay-count">0</span> picks
-  </div>
-
-  <!-- Props/Mobile modal -->
-  <div id="props-modal" class="modal hidden">
-    <div class="modal-content">
-      <button id="close-props" class="close-btn">✕</button>
-      <h2 id="modal-title">Player Props</h2>
-      <input type="text" id="prop-search" placeholder="Search players…" class="prop-search" />
-      <div id="props-container"></div>
-    </div>
-  </div>
-
-  <script type="module" src="teams.js"></script>
-  <script type="module" src="parlay.js"></script>
-  <script type="module" src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

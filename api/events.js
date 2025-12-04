@@ -1,4 +1,4 @@
-// /api/events.js — Unified Events + Odds + Props + Best-Line + EV + Deduping
+// EMPIREPICKS — Unified Events + Odds + Props + EV + Parlay Engine
 
 export default async function handler(req, res) {
   const apiKey = process.env.ODDS_API_KEY;
@@ -6,11 +6,6 @@ export default async function handler(req, res) {
 
   const base = "https://api.the-odds-api.com/v4";
   const sport = "americanfootball_nfl";
-
-  // Endpoints
-  const eventsURL = `${base}/sports/${sport}/events?apiKey=${apiKey}`;
-  const oddsURL =
-    `${base}/sports/${sport}/odds?apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 
   const propMarkets = [
     "player_pass_yds",
@@ -20,94 +15,88 @@ export default async function handler(req, res) {
     "player_anytime_td"
   ].join(",");
 
-  // Helpers
-  const impliedProb = o => (o > 0 ? 100 / (o + 100) : -o / (-o + 100));
+  const eventsURL = `${base}/sports/${sport}/events?apiKey=${apiKey}`;
+  const oddsURL = `${base}/sports/${sport}/odds?apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&oddsFormat=american}`;
 
-  // Convert American odds → decimal
-  const americanToDecimal = o =>
-    o > 0 ? 1 + o / 100 : 1 + 100 / -o;
+  const impliedProb = o => (o > 0 ? 100 / (o + 100) : -o / (-o + 100));
+  const americanToDecimal = o => (o > 0 ? 1 + o / 100 : 1 + 100 / -o);
 
   try {
-    const [evR, oddsR] = await Promise.all([fetch(eventsURL), fetch(oddsURL)]);
+    const [evR, oR] = await Promise.all([fetch(eventsURL), fetch(oddsURL)]);
     const events = await evR.json();
-    const oddsData = await oddsR.json();
+    const oddsData = await oR.json();
 
     const now = Date.now();
     const cutoff = now + 7 * 86400000;
 
-    // Index odds by ID
-    const oddsById = Object.fromEntries(
-      oddsData.map(g => [g.id, g])
-    );
+    const oddsById = Object.fromEntries(oddsData.map(g => [g.id, g]));
 
-    // Filter events
     const validEvents = events.filter(ev => {
-      const ko = new Date(ev.commence_time).getTime();
-      return ko >= now && ko <= cutoff;
+      const t = new Date(ev.commence_time).getTime();
+      return t >= now && t <= cutoff;
     });
 
-    // Fetch props for each valid game
-    const propPromises = validEvents.map(ev => {
+    // Fetch props for each event
+    const propsRequests = validEvents.map(ev => {
       const url =
         `${base}/sports/${sport}/events/${ev.id}/odds?apiKey=${apiKey}&regions=us&markets=${propMarkets}&oddsFormat=american`;
-      return fetch(url)
-        .then(r => r.json())
-        .catch(() => ({ props: [] }));
+      return fetch(url).then(r => r.json()).catch(() => ({ props: [] }));
     });
 
-    const propsResults = await Promise.all(propPromises);
+    const propsResults = await Promise.all(propsRequests);
 
-    // Build output
+    // Build the full dataset
     const final = validEvents.map((ev, i) => {
-      const gameOdds = oddsById[ev.id]?.bookmakers || [];
+      const odds = oddsById[ev.id]?.bookmakers || [];
+      const props = propsResults[i]?.props?.bookmakers || [];
 
-      // Normalize + dedupe bookmakers
-      const deduped = dedupeBooks(gameOdds);
-
-      // BEST LINES CALCULATED HERE
+      const deduped = dedupeBooks(odds);
       const bestLines = extractBestLines(deduped, ev.away_team, ev.home_team);
-
-      // EV CALCULATION
       const evCalc = computeEV(bestLines);
+
+      const bestOverall = findBestEV(evCalc);
+
+      const propsEV = computePropsEV(props);
+
+      const parlay = buildBestParlays(bestLines);
 
       return {
         ...ev,
         bookmakers: deduped,
-        props: propsResults[i]?.props?.bookmakers ?? [],
+        props: props,
         bestLines,
-        ev: evCalc
+        ev: evCalc,
+        bestMarket: bestOverall.market,
+        bestPick: bestOverall.pick,
+        bestEV: bestOverall.ev,
+        propsEV,
+        bestParlays: parlay
       };
     });
 
     res.status(200).json(final);
 
   } catch (err) {
-    console.error("EVENTS ERROR:", err);
+    console.error("EVENT API ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 
-  // ---------------------------------------------------------
-  // DEDUPE LOGIC
-  // ---------------------------------------------------------
-  function dedupeBooks(bookmakers) {
+  // ---------------- DEDUPE --------------------
+  function dedupeBooks(bms) {
     const seen = new Set();
     const out = [];
-
-    for (const bm of bookmakers) {
-      const key = bm.key || bm.title || "unknown";
-
+    for (const b of bms) {
+      const key = (b.key || b.title).toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push(bm);
+      out.push(b);
     }
     return out;
   }
 
-  // ---------------------------------------------------------
-  // BEST-LINE CALCULATOR
-  // ---------------------------------------------------------
+  // ---------------- Best-Line Engine --------------------
   function extractBestLines(bms, away, home) {
-    let out = {
+    const best = {
       moneyline: { away: null, home: null },
       spreads: { away: null, home: null },
       totals: { over: null, under: null }
@@ -116,65 +105,166 @@ export default async function handler(req, res) {
     for (const bm of bms) {
       for (const m of bm.markets || []) {
         if (m.key === "h2h") {
-          const a = m.outcomes.find(o => o.name === away);
-          const h = m.outcomes.find(o => o.name === home);
-          if (a && (!out.moneyline.away || a.price > out.moneyline.away.price))
-            out.moneyline.away = { ...a, book: bm.title };
-
-          if (h && (!out.moneyline.home || h.price > out.moneyline.home.price))
-            out.moneyline.home = { ...h, book: bm.title };
+          const A = m.outcomes.find(o => o.name === away);
+          const H = m.outcomes.find(o => o.name === home);
+          if (A && (!best.moneyline.away || A.price > best.moneyline.away.price))
+            best.moneyline.away = { ...A, book: bm.title };
+          if (H && (!best.moneyline.home || H.price > best.moneyline.home.price))
+            best.moneyline.home = { ...H, book: bm.title };
         }
 
         if (m.key === "spreads") {
           for (const o of m.outcomes) {
             if (o.name === away &&
-              (!out.spreads.away || o.price > out.spreads.away.price))
-              out.spreads.away = { ...o, book: bm.title };
+                (!best.spreads.away || o.price > best.spreads.away.price))
+              best.spreads.away = { ...o, book: bm.title };
 
             if (o.name === home &&
-              (!out.spreads.home || o.price > out.spreads.home.price))
-              out.spreads.home = { ...o, book: bm.title };
+                (!best.spreads.home || o.price > best.spreads.home.price))
+              best.spreads.home = { ...o, book: bm.title };
           }
         }
 
         if (m.key === "totals") {
           for (const o of m.outcomes) {
             if (o.name === "Over" &&
-              (!out.totals.over || o.price > out.totals.over.price))
-              out.totals.over = { ...o, book: bm.title };
+                (!best.totals.over || o.price > best.totals.over.price))
+              best.totals.over = { ...o, book: bm.title };
 
             if (o.name === "Under" &&
-              (!out.totals.under || o.price > out.totals.under.price))
-              out.totals.under = { ...o, book: bm.title };
+                (!best.totals.under || o.price > best.totals.under.price))
+              best.totals.under = { ...o, book: bm.title };
           }
         }
       }
     }
 
+    return best;
+  }
+
+  // ---------------- EV Engine --------------------
+  function computeEV(best) {
+    const out = {};
+
+    // ML EV
+    if (best.moneyline.away && best.moneyline.home) {
+      const pA = impliedProb(best.moneyline.away.price);
+      const pH = impliedProb(best.moneyline.home.price);
+
+      const nvA = pA / (pA + pH);
+      const nvH = pH / (pA + pH);
+
+      out.awayML = nvA - pA;
+      out.homeML = nvH - pH;
+    }
+
     return out;
   }
 
-  // ---------------------------------------------------------
-  // EV ENGINE
-  // ---------------------------------------------------------
-  function computeEV(best) {
-    let evOut = {};
+  // ---------------- Best Market Selector --------------------
+  function findBestEV(ev) {
+    let maxEV = -999, best = { market: null, pick: null, ev: null };
 
-    const mlAway = best.moneyline.away;
-    const mlHome = best.moneyline.home;
+    for (const [k, v] of Object.entries(ev)) {
+      if (v > maxEV) {
+        maxEV = v;
+        best = { market: k, pick: k, ev: v };
+      }
+    }
+    return best;
+  }
 
-    if (mlAway && mlHome) {
-      const pA = impliedProb(mlAway.price);
-      const pH = impliedProb(mlHome.price);
-      const total = pA + pH;
+  // ---------------- Player Props EV Engine --------------------
+  function computePropsEV(bookmakers) {
+    const results = [];
 
-      const nvA = pA / total;
-      const nvH = pH / total;
-
-      evOut.awayML = nvA - pA;
-      evOut.homeML = nvH - pH;
+    const buckets = {}; // group by player + point
+    for (const bm of bookmakers || []) {
+      for (const m of bm.markets || []) {
+        for (const o of m.outcomes || []) {
+          const key = `${o.description || o.player}:${o.point}`;
+          if (!buckets[key]) buckets[key] = { over: [], under: [], meta: o };
+          const side = o.name.toLowerCase();
+          if (side === "over") buckets[key].over.push({ ...o, book: bm.title });
+          if (side === "under") buckets[key].under.push({ ...o, book: bm.title });
+        }
+      }
     }
 
-    return evOut;
+    for (const [key, group] of Object.entries(buckets)) {
+      const { over, under, meta } = group;
+
+      const avg = arr =>
+        arr.length ? arr.reduce((s, x) => s + impliedProb(x.price), 0) / arr.length : 0;
+
+      const pO = avg(over);
+      const pU = avg(under);
+
+      const nvO = pO / (pO + pU);
+      const nvU = pU / (pO + pU);
+
+      const bestOver = over.sort((a, b) => b.price - a.price)[0];
+      const bestUnder = under.sort((a, b) => b.price - a.price)[0];
+
+      const evO = bestOver ? nvO - impliedProb(bestOver.price) : null;
+      const evU = bestUnder ? nvU - impliedProb(bestUnder.price) : null;
+
+      const winner = evO > evU ? "Over" : "Under";
+
+      results.push({
+        player: meta.description || meta.player,
+        type: meta.key,
+        point: meta.point,
+        over: {
+          ...bestOver,
+          impliedProb: impliedProb(bestOver?.price || 0),
+          trueProb: nvO,
+          EV: evO
+        },
+        under: {
+          ...bestUnder,
+          impliedProb: impliedProb(bestUnder?.price || 0),
+          trueProb: nvU,
+          EV: evU
+        },
+        bestSide: winner,
+        bestEV: Math.max(evO, evU)
+      });
+    }
+
+    return results.sort((a, b) => b.bestEV - a.bestEV);
+  }
+
+  // ---------------- Parlay Engine --------------------
+  function buildBestParlays(best) {
+    const legs = [];
+
+    // Only ML for now (cleanest)
+    if (best.moneyline.away)
+      legs.push({ team: "awayML", ...best.moneyline.away });
+
+    if (best.moneyline.home)
+      legs.push({ team: "homeML", ...best.moneyline.home });
+
+    const parlays = [];
+
+    for (let i = 0; i < legs.length; i++) {
+      for (let j = i + 1; j < legs.length; j++) {
+        const A = legs[i], B = legs[j];
+
+        const pTrue = impliedProb(A.price) * impliedProb(B.price);
+        const decP = americanToDecimal(A.price) * americanToDecimal(B.price);
+        const pImplied = 1 / decP;
+
+        parlays.push({
+          legs: [A, B],
+          trueProb: pTrue,
+          impliedProb: pImplied,
+          edge: pTrue - pImplied
+        });
+      }
+    }
+
+    return parlays.sort((a, b) => b.edge - a.edge).slice(0, 3);
   }
 }

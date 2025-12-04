@@ -183,6 +183,10 @@ function buildMockEvents() {
       home_team: "Philadelphia Eagles",
       away_team: "Dallas Cowboys",
       commence_time: kickoff,
+      ev: {
+        home: EV(-135),
+        away: EV(120),
+      },
       bestEV: 0.07,
       mainlines: makeMainlines(-135, 120, -2.5, -110, -105, 47.5, -108, -112),
       props: [
@@ -199,6 +203,10 @@ function buildMockEvents() {
       home_team: "Kansas City Chiefs",
       away_team: "Buffalo Bills",
       commence_time: later,
+      ev: {
+        home: EV(-150),
+        away: EV(130),
+      },
       bestEV: 0.11,
       mainlines: makeMainlines(-150, 130, -3.5, -105, -115, 49.5, -112, -108),
       props: [

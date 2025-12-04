@@ -6,14 +6,6 @@ import { renderParlaySlip } from "./ui.js";
 
 window.addLeg = function (_, eventId, label, value) {
   const id = `${eventId}-${label}-${value}`;
-
-  window.AppState.addParlayLeg({
-    id,
-    eventId,
-    label,
-    value
-  });
-
   renderParlaySlip();
 };
 

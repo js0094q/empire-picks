@@ -1,13 +1,16 @@
-import { toggleAccordion } from "./ui.js";
-import { LinesPanel } from "./linesPanel.js";
-import { PropsPanel } from "./propsPanel.js";
+// card.js — builds each accordion game card
 
-export const CardComponent = {
+const CardComponent = {
   create(event) {
-    const card = document.createElement("div");
-    card.className = "game-card";
+    const homeAssets = window.TeamAssets.get(event.home.name);
+    const awayAssets = window.TeamAssets.get(event.away.name);
+
+    const card = document.createElement('div');
+    card.className = 'game-card';
 
     card.innerHTML = `
+      <div class="team-bar" style="background:${homeAssets.color}"></div>
+
       <div class="game-header" onclick="toggleAccordion(this.parentElement)">
         <span>${event.away.name} @ ${event.home.name}</span>
         <span>${event.time}</span>
@@ -15,12 +18,22 @@ export const CardComponent = {
 
       <div class="team-row">
         <span class="team-name">${event.away.name}</span>
-        <span>${event.odds.away}</span>
+        <span class="score-area">-</span>
+        <div class="odds-group">
+          <button class="odd-btn" onclick="addLeg(null,'${event.id}','Away Spread','${event.odds.away}')">
+            ${event.odds.away}
+          </button>
+        </div>
       </div>
 
       <div class="team-row">
         <span class="team-name">${event.home.name}</span>
-        <span>${event.odds.home}</span>
+        <span class="score-area">-</span>
+        <div class="odds-group">
+          <button class="odd-btn" onclick="addLeg(null,'${event.id}','Home Spread','${event.odds.home}')">
+            ${event.odds.home}
+          </button>
+        </div>
       </div>
 
       <div class="card-expanded">
@@ -33,7 +46,7 @@ export const CardComponent = {
           <div class="loader">Loading lines...</div>
         </div>
 
-        <div class="tab-content" id="props-${event.id}" style="display:none">
+        <div class="tab-content" id="props-${event.id}" style="display:none;">
           <div class="loader">Loading props...</div>
         </div>
       </div>

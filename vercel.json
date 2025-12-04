@@ -1,96 +1,21 @@
 {
   "version": 2,
-  "name": "empirepicks",
+  "public": true,
   "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "dashboard.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "login.html",
-      "use": "@vercel/static"
-    },
+    { "src": "*.html", "use": "@vercel/static" },
+    { "src": "*.css", "use": "@vercel/static" },
+    { "src": "*.js", "use": "@vercel/static" },
 
-    {
-      "src": "styles.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "teams.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "helpers.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "state.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "ui.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "card.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "linesPanel.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "propsPanel.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "parlay.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "dashboard.js",
-      "use": "@vercel/static"
-    },
-
-    {
-      "src": "api/events.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/odds.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/props.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/history.js",
-      "use": "@vercel/node"
-    }
+    { "src": "api/*.js", "use": "@vercel/node" }
   ],
 
   "routes": [
-    {
-      "src": "^/api/(.*)$",
-      "dest": "/api/$1.js"
-    },
-    {
-      "src": "/dashboard",
-      "dest": "/dashboard.html"
-    },
-    {
-      "src": "/login",
-      "dest": "/login.html"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    }
+    { "src": "/api/(.*)", "dest": "/api/$1.js" },
+
+    { "src": "/dashboard", "dest": "/dashboard.html" },
+    { "src": "/login", "dest": "/login.html" },
+
+    { "src": "/(.*)", "dest": "/$1" }
   ],
 
   "env": {

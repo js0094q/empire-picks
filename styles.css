@@ -311,6 +311,7 @@ a {
   background: var(--dk-green);
   color: #000;
 }
+.chip.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #041226; border-color: transparent; }
 
 .ev-neutral {
   background: var(--dk-yellow);

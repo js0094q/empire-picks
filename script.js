@@ -1,80 +1,46 @@
 // script.js
+// Handles booking form interactions for Lauren Hart Trauma Recovery
+
 document.addEventListener('DOMContentLoaded', () => {
-  // If user is already logged in, redirect them to dashboard immediately
-  if (window.Auth && window.Auth.isLoggedIn()) {
-    window.location.href = '/dashboard.html';
-  }
-});
+  const form = document.getElementById('booking-form');
+  const status = document.getElementById('form-status');
+  const chipGroup = document.querySelectorAll('.chip');
+  const daysInput = document.getElementById('days');
 
-  // 1. Mock Data (This simulates what your api/events.js would return)
-  const mockEvents = [
-    {
-      id: 1,
-      league: 'NFL',
-      status: 'Live',
-      time: 'Q3 12:45',
-      home: { name: 'Kansas City Chiefs', score: 24 },
-      away: { name: 'Buffalo Bills', score: 21 },
-      odds: { home: '-140', away: '+120', spread: '-3.5' }
-    },
-    {
-      id: 2,
-      league: 'NBA',
-      status: 'Upcoming',
-      time: 'Tonight 8:00 PM',
-      home: { name: 'Lakers', score: '-' },
-      away: { name: 'Warriors', score: '-' },
-      odds: { home: '-110', away: '-110', spread: '-1.5' }
-    }
-  ];
+  // Toggle active state for preferred day chips
+  chipGroup.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('active');
+      const selected = Array.from(chipGroup)
+        .filter(btn => btn.classList.contains('active'))
+        .map(btn => btn.dataset.value);
+      daysInput.value = selected.join(', ');
+    });
+  });
 
-  // 2. Render Function
-  function renderEvents(events) {
-    if (!eventsContainer) return;
-    eventsContainer.innerHTML = '';
+  if (form) {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const values = Object.fromEntries(formData.entries());
 
-    events.forEach(event => {
-      const card = document.createElement('div');
-      card.className = 'game-card';
-      
-      card.innerHTML = `
-        <div class="game-header">
-          <span class="league-badge">${event.league}</span>
-          <span class="game-status">${event.time}</span>
-        </div>
-        
-        <div class="team-row">
-          <span class="team-name">${event.away.name}</span>
-          <div class="score-area">${event.away.score}</div>
-          <div class="odds-group">
-            <button class="odd-btn" onclick="toggleBet(this)">
-              <span class="odd-label">Spread</span>
-              <span class="odd-val">${event.odds.away}</span>
-            </button>
-          </div>
-        </div>
+      if (!values.days) {
+        status.textContent = 'Select at least one preferred day to continue.';
+        status.className = 'form-status error';
+        return;
+      }
 
-        <div class="team-row">
-          <span class="team-name">${event.home.name}</span>
-          <div class="score-area">${event.home.score}</div>
-          <div class="odds-group">
-            <button class="odd-btn" onclick="toggleBet(this)">
-              <span class="odd-label">Spread</span>
-              <span class="odd-val">${event.odds.home}</span>
-            </button>
-          </div>
-        </div>
-      `;
-      eventsContainer.appendChild(card);
+      // Simulate a secure submission
+      status.textContent = 'Submitting securely...';
+      status.className = 'form-status';
+
+      setTimeout(() => {
+        status.textContent = 'Thank you. Your request was received and encrypted. Expect a confirmation within one business day.';
+        status.className = 'form-status success';
+        form.reset();
+        chipGroup.forEach(btn => btn.classList.remove('active'));
+        daysInput.value = '';
+      }, 600);
     });
   }
-
-  // 3. Initial Load
-  renderEvents(mockEvents);
 });
-
-// 4. Simple toggle function for UI interaction
-window.toggleBet = function(btn) {
-  btn.classList.toggle('selected');
-  // In the future, this will call 'parlay.js' to add to the slip
-};

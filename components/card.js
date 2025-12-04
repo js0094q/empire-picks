@@ -1,53 +1,64 @@
-// card.js
-const CardComponent = {
+// ============================================================
+// card.js — EmpirePicks v1.0
+// Premium Accordion Game Cards with DraftKings Theme
+// ============================================================
+
+import { toggleAccordion } from "./ui.js";
+import { LinesPanel } from "./linesPanel.js";
+import { PropsPanel } from "./propsPanel.js";
+
+export const CardComponent = {
   create(event) {
-    const card = document.createElement('div');
-    card.className = 'game-card';
-    
-    // Determine if we have odds to display on the card
-    const homeSpread = event.odds?.home || '-';
-    const awaySpread = event.odds?.away || '-';
-    // In card.js, inside the create(event) function:
+    const homeAssets = window.TeamAssets.get(event.home.name);
+    const awayAssets = window.TeamAssets.get(event.away.name);
 
-const homeAssets = window.TeamAssets.get(event.home.name);
-const awayAssets = window.TeamAssets.get(event.away.name);
-
-// Now you can use homeAssets.color or homeAssets.logoUrl in your HTML template!
-// Example: <div style="border-left: 4px solid ${homeAssets.color}">...</div>
+    const card = document.createElement("div");
+    card.className = "game-card";
 
     card.innerHTML = `
-      <div class="game-header">
-        <span class="league-badge">${event.league}</span>
-        <span class="game-status">${event.time}</span>
+      <div class="team-bar" style="background:${homeAssets.color}"></div>
+
+      <div class="game-header" onclick="toggleAccordion(this.parentElement)">
+        <span>${event.away.name} @ ${event.home.name}</span>
+        <span>${event.time}</span>
       </div>
-      
+
       <div class="team-row">
         <span class="team-name">${event.away.name}</span>
-        <div class="score-area">${event.away.score}</div>
+        <span class="score-area">-</span>
         <div class="odds-group">
-          <button class="odd-btn" onclick="window.toggleBet(this, '${event.id}', '${event.away.name} Spread')">
-            <span class="odd-label">Spread</span>
-            <span class="odd-val">${awaySpread}</span>
+          <button class="odd-btn" 
+            onclick="window.addLeg(event,'${event.id}','Spread','${event.odds.away}')">
+            ${event.odds.away}
           </button>
         </div>
       </div>
 
       <div class="team-row">
         <span class="team-name">${event.home.name}</span>
-        <div class="score-area">${event.home.score}</div>
+        <span class="score-area">-</span>
         <div class="odds-group">
-          <button class="odd-btn" onclick="window.toggleBet(this, '${event.id}', '${event.home.name} Spread')">
-            <span class="odd-label">Spread</span>
-            <span class="odd-val">${homeSpread}</span>
+          <button class="odd-btn"
+            onclick="window.addLeg(event,'${event.id}','Spread','${event.odds.home}')">
+            ${event.odds.home}
           </button>
         </div>
       </div>
 
-      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-        <button class="button secondary full-width" 
-          onclick="window.LinesPanel.load('${event.id}', '${event.home.name}', '${event.away.name}')">
-          View All Wagers & Props >
-        </button>
+      <!-- EXPANDING CARD BODY -->
+      <div class="card-expanded">
+        <div class="panel-tabs">
+          <button class="tab-btn active" onclick="LinesPanel.show('${event.id}', this)">Lines</button>
+          <button class="tab-btn" onclick="PropsPanel.show('${event.id}', this)">Props</button>
+        </div>
+
+        <div class="tab-content" id="lines-${event.id}">
+          <div class="loader">Loading lines...</div>
+        </div>
+
+        <div class="tab-content" id="props-${event.id}" style="display:none;">
+          <div class="loader">Loading props...</div>
+        </div>
       </div>
     `;
 

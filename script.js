@@ -1,229 +1,157 @@
-// ============================================================
-//  EMPIREPICKS NFL FRONT-END SCRIPT (SAFARI-SAFE)
-//  Clean, unified, no-shadowing, two-week compatible
-// ============================================================
+// ===============================================
+//  EMPIREPICKS — FRONTEND SPORTSBOOK UI
+// ===============================================
 
-// ------------------------------------------------------------
-// GLOBAL PARLAY FALLBACK
-// ------------------------------------------------------------
-if (typeof window.addParlayLeg !== "function") {
-  window.addParlayLeg = function fallbackAddLeg(leg) {
-    console.warn("Parlay system not initialized yet. Queued leg:", leg);
-    window._pendingParlayLegs = window._pendingParlayLegs || [];
-    window._pendingParlayLegs.push(leg);
-  };
-}
+document.addEventListener("DOMContentLoaded", loadGames);
 
-// ------------------------------------------------------------
-//  UNIVERSAL HELPERS (NO SHADOWING)
-// ------------------------------------------------------------
-
-// Convert American odds to probability
-function impliedProbability(odds) {
-  return odds > 0
-    ? 100 / (odds + 100)
-    : -odds / (-odds + 100);
-}
-
-// Countdown text
-function getCountdownString(utc) {
-  const kickoff = new Date(utc);
-  const now = new Date();
-  const diff = kickoff - now;
-
-  if (diff <= 0) return "LIVE";
-
-  const hrs = Math.floor(diff / 3600000);
-  const mins = Math.floor((diff % 3600000) / 60000);
-  return `${hrs}h ${mins}m`;
-}
-
-// Get EST kickoff string
-function getKickoffEST(utc) {
-  return new Date(utc).toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true
-  });
-}
-
-// Best odds finder
-function getBestOdds(bookmakers, marketKey, outcomeName) {
-  if (!Array.isArray(bookmakers)) return null;
-
-  let best = null;
-  for (const b of bookmakers) {
-    const market = (b.markets || []).find(m => m.key === marketKey);
-    if (!market) continue;
-
-    const outcome = (market.outcomes || []).find(o => o.name === outcomeName);
-    if (!outcome) continue;
-
-    if (!best || outcome.price > best.price) {
-      best = { ...outcome, book: b.key };
-    }
-  }
-  return best;
-}
-
-// ------------------------------------------------------------
-//  FETCH NFL EVENTS (already filtered by backend two-week window)
-// ------------------------------------------------------------
-
+// Load all games with EV, props, parlays
 async function loadGames() {
   const container = document.getElementById("games");
-  if (!container) return;
-
   container.innerHTML = `<div class="loading">Loading games...</div>`;
 
   try {
     const r = await fetch("/api/events");
-    if (!r.ok) {
-      container.innerHTML = `<div class="error">Failed to load games</div>`;
-      return;
-    }
-
-    const events = await r.json();
-
-    if (!Array.isArray(events) || events.length === 0) {
-      container.innerHTML = `<div class="error">No games available</div>`;
-      return;
-    }
-
-    // Sort games by kickoff
-    events.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
+    const games = await r.json();
 
     container.innerHTML = "";
+    games.sort((a, b) => b.bestEV - a.bestEV);
 
-    for (const ev of events) {
-      renderGameCard(ev, container);
-    }
+    for (const ev of games) renderGameCard(ev, container);
 
-  } catch (err) {
-    console.error("Game load failed:", err);
-    container.innerHTML = `<div class="error">Failed to load games</div>`;
+  } catch (e) {
+    console.error(e);
+    container.innerHTML = `<div class="error">Failed to load.</div>`;
   }
 }
 
-// ------------------------------------------------------------
-// BUILD GAME CARD
-// ------------------------------------------------------------
-
+// Build game card
 function renderGameCard(ev, container) {
-  const countdown = getCountdownString(ev.commence_time);
-  const kickoffLocal = getKickoffEST(ev.commence_time);
-
-  // Get best ML / Spread / Totals
-  const bestMLAway = getBestOdds(ev.bookmakers, "h2h", ev.away_team);
-  const bestMLHome = getBestOdds(ev.bookmakers, "h2h", ev.home_team);
-
-  const bestSpreadAway = getBestOdds(ev.bookmakers, "spreads", ev.away_team);
-  const bestSpreadHome = getBestOdds(ev.bookmakers, "spreads", ev.home_team);
-
-  const bestOver = getBestOdds(ev.bookmakers, "totals", "Over");
-  const bestUnder = getBestOdds(ev.bookmakers, "totals", "Under");
+  const kickoff = new Date(ev.commence_time).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 
   const card = document.createElement("div");
   card.className = "game-card";
 
   card.innerHTML = `
     <div class="game-header">
-      <div class="teams">${ev.away_team} @ ${ev.home_team}</div>
-      <div class="kickoff">Kickoff (EST): ${kickoffLocal}</div>
-      <div class="countdown">⏳ ${countdown}</div>
+      <div class="teams">
+        ${ev.away_team} @ ${ev.home_team}
+        <span class="ev-badge">Top EV: ${(ev.bestEV * 100).toFixed(1)}%</span>
+      </div>
+      <div>Kickoff (EST): ${kickoff}</div>
     </div>
 
-    <div class="odds-section">
-
-      <div class="odds-row">
-        <div class="label">Moneyline</div>
-
-        <button class="bet-btn"
-          onclick="addParlayLeg({
-            type:'ML',
-            team:'${ev.away_team}',
-            gameId:'${ev.id}',
-            odds:${bestMLAway?.price ?? 0},
-            display:'${ev.away_team} ML (${bestMLAway?.price ?? "?"})'
-          })">
-          ${ev.away_team}: ${bestMLAway ? bestMLAway.price : "-"}
-        </button>
-
-        <button class="bet-btn"
-          onclick="addParlayLeg({
-            type:'ML',
-            team:'${ev.home_team}',
-            gameId:'${ev.id}',
-            odds:${bestMLHome?.price ?? 0},
-            display:'${ev.home_team} ML (${bestMLHome?.price ?? "?"})'
-          })">
-          ${ev.home_team}: ${bestMLHome ? bestMLHome.price : "-"}
-        </button>
-      </div>
-
-      <div class="odds-row">
-        <div class="label">Spread</div>
-
-        <button class="bet-btn"
-          onclick="addParlayLeg({
-            type:'Spread',
-            team:'${ev.away_team}',
-            gameId:'${ev.id}',
-            odds:${bestSpreadAway?.price ?? 0},
-            display:'${ev.away_team} ${bestSpreadAway?.point ?? ""} (${bestSpreadAway?.price ?? "?"})'
-          })">
-          ${bestSpreadAway ? `${bestSpreadAway.point} ${bestSpreadAway.price}` : "-"}
-        </button>
-
-        <button class="bet-btn"
-          onclick="addParlayLeg({
-            type:'Spread',
-            team:'${ev.home_team}',
-            gameId:'${ev.id}',
-            odds:${bestSpreadHome?.price ?? 0},
-            display:'${ev.home_team} ${bestSpreadHome?.point ?? ""} (${bestSpreadHome?.price ?? "?"})'
-          })">
-          ${bestSpreadHome ? `${bestSpreadHome.point} ${bestSpreadHome.price}` : "-"}
-        </button>
-      </div>
-
-      <div class="odds-row">
-        <div class="label">Totals</div>
-
-        <button class="bet-btn"
-          onclick="addParlayLeg({
-            type:'Total',
-            side:'Over',
-            gameId:'${ev.id}',
-            odds:${bestOver?.price ?? 0},
-            display:'Over ${bestOver?.point ?? ""} (${bestOver?.price ?? "?"})'
-          })">
-          Over: ${bestOver ? `${bestOver.point} ${bestOver.price}` : "-"}
-        </button>
-
-        <button class="bet-btn"
-          onclick="addParlayLeg({
-            type:'Total',
-            side:'Under',
-            gameId:'${ev.id}',
-            odds:${bestUnder?.price ?? 0},
-            display:'Under ${bestUnder?.point ?? ""} (${bestUnder?.price ?? "?"})'
-          })">
-          Under: ${bestUnder ? `${bestUnder.point} ${bestUnder.price}` : "-"}
-        </button>
-      </div>
-
-    </div>
+    <div id="odds-${ev.id}"></div>
+    <div id="parlay-${ev.id}" class="parlay-ev-box"></div>
+    <div id="props-${ev.id}"></div>
   `;
 
   container.appendChild(card);
+  renderMainMarkets(ev);
+  highlightBestEV(ev);
+  renderParlayEV(ev);
+  renderPropsEV(ev);
 }
 
-// ------------------------------------------------------------
-// STARTUP
-// ------------------------------------------------------------
-document.addEventListener("DOMContentLoaded", loadGames);
+// MAIN MARKETS
+function renderMainMarkets(ev) {
+  const box = document.getElementById(`odds-${ev.id}`);
+  const b = ev.bestLines;
+
+  box.innerHTML = `
+    <div class="market-header">Moneyline</div>
+    <div>
+      <span class="odds-pill" data-ev="${ev.ev.awayML}">
+        ${ev.away_team}: ${b.moneyline.away?.price ?? "-"}
+      </span>
+      <span class="odds-pill" data-ev="${ev.ev.homeML}">
+        ${ev.home_team}: ${b.moneyline.home?.price ?? "-"}
+      </span>
+    </div>
+
+    <div class="market-header">Spreads</div>
+    <div>
+      <span class="odds-pill">${b.spreads.away?.point} ${b.spreads.away?.price}</span>
+      <span class="odds-pill">${b.spreads.home?.point} ${b.spreads.home?.price}</span>
+    </div>
+
+    <div class="market-header">Totals</div>
+    <div>
+      <span class="odds-pill">Over ${b.totals.over?.point} (${b.totals.over?.price})</span>
+      <span class="odds-pill">Under ${b.totals.under?.point} (${b.totals.under?.price})</span>
+    </div>
+  `;
+}
+
+// Highlight highest EV pick
+function highlightBestEV(ev) {
+  const pills = document.querySelectorAll(`#odds-${ev.id} .odds-pill`);
+  const best = ev.bestEV;
+
+  pills.forEach(p => {
+    const val = Number(p.dataset.ev);
+    if (Math.abs(val - best) < 0.0001) {
+      p.classList.add("ev-highlight");
+    }
+  });
+}
+
+// Parlay EV UI
+function renderParlayEV(ev) {
+  const box = document.getElementById(`parlay-${ev.id}`);
+  const P = ev.bestParlays;
+
+  if (!P || P.length === 0) {
+    box.innerHTML = `<em>No +EV parlays detected.</em>`;
+    return;
+  }
+
+  let html = `<div class="market-header">Best Parlay Opportunities</div>`;
+
+  P.forEach(p => {
+    html += `
+      <div style="margin-bottom:10px;">
+        <strong style="color:var(--green);">Edge: ${(p.edge * 100).toFixed(2)}%</strong><br>
+        True: ${(p.trueProb * 100).toFixed(1)}% — Implied: ${(p.impliedProb * 100).toFixed(1)}%<br>
+        Legs:<br>
+        • ${p.legs[0].name ?? p.legs[0].team} (${p.legs[0].price})<br>
+        • ${p.legs[1].name ?? p.legs[1].team} (${p.legs[1].price})
+      </div>
+    `;
+  });
+
+  box.innerHTML = html;
+}
+
+// Props EV UI
+function renderPropsEV(ev) {
+  const box = document.getElementById(`props-${ev.id}`);
+  const props = ev.propsEV;
+
+  if (!props || props.length === 0) {
+    box.innerHTML = `<em>No props available.</em>`;
+    return;
+  }
+
+  let html = `<div class="market-header">Top Prop Value</div>`;
+
+  props.slice(0, 6).forEach(p => {
+    const glow = p.bestEV > 0 ? "ev-positive" : "";
+
+    html += `
+      <div class="prop-card ${glow}">
+        <div class="prop-title">${p.player} — ${p.type.replace("player_", "")}</div>
+        Line: ${p.point}<br>
+        Best Side: <strong>${p.bestSide}</strong><br>
+        EV: ${(p.bestEV * 100).toFixed(1)}%
+      </div>
+    `;
+  });
+
+  box.innerHTML = html;
+}

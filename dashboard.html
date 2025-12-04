@@ -1,68 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sports Aggregator Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EmpirePicks – Dashboard</title>
+
+  <link rel="stylesheet" href="styles.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
+
 <body>
 
+  <!-- HEADER -->
   <header class="site-header">
     <div class="brand">
-      <div class="brand-mark">SA</div>
-      <span class="brand-name">SportsAgg</span>
+      <div class="brand-mark">EP</div>
+      <span class="brand-name">EmpirePicks</span>
     </div>
-    <nav id="nav-menu" class="nav">
+
+    <nav class="nav">
+      <a href="index.html">Home</a>
       <a href="#" class="active">NFL</a>
-      <a href="#">NBA</a>
-      <a href="#">MLB</a>
-      <button class="button secondary" id="login-btn">Log In</button>
+      <button id="logout-btn" class="button secondary">Log Out</button>
     </nav>
-    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
-      <span class="bar"></span>
-      <span class="bar"></span>
-      <span class="bar"></span>
-    </button>
   </header>
 
-  <main class="dashboard-layout">
-    
-    <aside class="sidebar">
-      <div class="card">
-        <h3>Live Filters</h3>
-        <label class="checkbox">
-          <input type="checkbox" checked> In-Game Only
-        </label>
-        <label class="checkbox">
-          <input type="checkbox"> Moneyline
-        </label>
-        <label class="checkbox">
-          <input type="checkbox"> Spreads
-        </label>
-      </div>
-    </aside>
+  <!-- GAME FEED -->
+  <section class="game-feed" id="events-container">
+    <div class="loader">Loading NFL games...</div>
+  </section>
 
-    <section class="game-feed" id="events-container">
-      <div class="loader">Loading live odds...</div>
-    </section>
+  <!-- FLOATING PARLAY SLIP -->
+  <div class="parlay-slip" id="parlay-slip">
+    <h4>Your Parlay</h4>
+    <div id="parlay-items" class="muted">No picks added</div>
+    <br/>
+    <button class="button primary full-width" id="place-parlay">Place Parlay</button>
+  </div>
 
-    <aside class="bet-slip">
-      <div class="card">
-        <h3>Your Selection</h3>
-        <div id="slip-content" class="muted">No bets selected</div>
-        <button class="button primary full-width">Place Parlay</button>
-      </div>
-    </aside>
-
-  </main>
+  <!-- JS MODULES -->
+  <script src="helpers.js"></script>
+  <script src="state.js"></script>
+  <script src="ui.js"></script>
   <script src="teams.js"></script>
-  <script src="parlay.js"></script>
-  <script src="modal.js"></script>
+
   <script src="card.js"></script>
-  <script src="propsPanel.js"></script>
   <script src="linesPanel.js"></script>
+  <script src="propsPanel.js"></script>
+  <script src="parlay.js"></script>
+
   <script src="dashboard.js"></script>
 </body>
 </html>

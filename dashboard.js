@@ -30,9 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    events.forEach(event => {
-      const card = document.createElement('div');
-      card.className = 'game-card';
+   // New way:
+events.forEach(event => {
+   const cardElement = window.CardComponent.create(event);
+   eventsContainer.appendChild(cardElement);
+});
       
       card.innerHTML = `
         <div class="game-header">

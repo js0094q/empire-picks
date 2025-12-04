@@ -6,12 +6,6 @@
   <title>SportsAgg - Live Odds & Analytics</title>
   <link rel="stylesheet" href="styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    .hero { text-align: center; padding: 100px 20px; }
-    .hero h1 { font-size: 3.5rem; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px;}
-    .hero p { font-size: 1.2rem; color: var(--muted); max-width: 600px; margin: 0 auto 40px; }
-    .cta-group { display: flex; gap: 16px; justify-content: center; }
-  </style>
 </head>
 <body>
 
@@ -26,29 +20,41 @@
     </nav>
   </header>
 
-  <main>
+  <main class="container">
     <section class="hero">
+      <div class="pill">Built for confident bettors</div>
       <h1>Beat the Bookmakers.</h1>
-      <p>Real-time odds comparison, player prop analytics, and parlay building tools all in one dashboard.</p>
-      
+      <p>Real-time odds comparison, player prop analytics, and parlay building tools delivered in one streamlined dashboard.</p>
+
       <div class="cta-group">
         <a href="/login.html" class="button primary">Start Betting Smarter</a>
         <a href="#features" class="button secondary">View Features</a>
       </div>
     </section>
 
-    <section id="features" class="dashboard-layout" style="margin-top: 0;">
-      <div class="card">
-        <h3 style="color: var(--accent);">Live Odds</h3>
-        <p class="muted">Instant updates from major sportsbooks including DraftKings and FanDuel.</p>
+    <section id="features">
+      <div class="section-heading">
+        <h2>Everything you need to move faster</h2>
+        <p>Stay on top of the lines, react to market swings, and build parlays without juggling tabs.</p>
       </div>
-      <div class="card">
-        <h3 style="color: var(--accent);">Prop Analytics</h3>
-        <p class="muted">Deep dive into player stats like passing yards, touchdowns, and rebounds.</p>
-      </div>
-      <div class="card">
-        <h3 style="color: var(--accent);">Parlay Builder</h3>
-        <p class="muted">Construct complex parlays and calculate your potential payout instantly.</p>
+
+      <div class="dashboard-layout">
+        <div class="card">
+          <h3 style="color: var(--accent);">Live Odds</h3>
+          <p class="muted">Instant updates from major sportsbooks including DraftKings and FanDuel.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent);">Prop Analytics</h3>
+          <p class="muted">Deep dive into player stats like passing yards, touchdowns, and rebounds.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent);">Parlay Builder</h3>
+          <p class="muted">Construct complex parlays and calculate your potential payout instantly.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent);">Market Signals</h3>
+          <p class="muted">Get alerted when odds shift so you can lock in value before it moves.</p>
+        </div>
       </div>
     </section>
   </main>

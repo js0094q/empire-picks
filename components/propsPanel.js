@@ -1,7 +1,3 @@
-// ============================================================
-// propsPanel.js — EmpirePicks v1.0
-// ============================================================
-
 import { impliedProbability, expectedValue, sortPropsByEV } from "./helpers.js";
 import { evBadge } from "./ui.js";
 

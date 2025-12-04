@@ -4,7 +4,6 @@
 // ============================================================
 
 export const TeamAssets = {
-  nfl: {
     "Arizona Cardinals":        { abbr: "ARI", color: "#97233F" },
     "Atlanta Falcons":          { abbr: "ATL", color: "#A71930" },
     "Baltimore Ravens":         { abbr: "BAL", color: "#241773" },

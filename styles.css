@@ -135,3 +135,50 @@ body {
   color: var(--subtle);
   margin-top: 2rem;
 }
+
+/* ===============================================
+   EV BADGES + HIGHLIGHT COLORS
+   =============================================== */
+
+.ev-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: var(--green);
+  color: #000;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.ev-highlight {
+  background: rgba(40, 209, 108, 0.15);
+  border: 1px solid var(--green) !important;
+  color: var(--green) !important;
+  box-shadow: 0 0 8px rgba(40, 209, 108, 0.3);
+}
+
+/* PARLAY EV BLOCK */
+.parlay-ev-box {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  background: #0f1530;
+  box-shadow: var(--shadow);
+}
+
+/* PROP EV */
+.prop-ev-item {
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #10172f;
+}
+
+.prop-ev-glow {
+  border-color: var(--green) !important;
+  background: rgba(40, 209, 108, 0.12);
+  box-shadow: 0 0 12px rgba(40, 209, 108, 0.3);
+}

@@ -1,10 +1,4 @@
-// /api/events.js
-const SPORT = "americanfootball_nfl";
-const BASE = "https://api.the-odds-api.com/v4";
-
-const implied = odds => odds > 0 ? 100/(odds+100) : -odds/(-odds+100);
-const EV = (odds, tp = 0.5) => tp - implied(odds);
-
+@@ -8,84 +8,90 @@ const EV = (odds, tp = 0.5) => tp - implied(odds);
 export default async function handler(req, res) {
   const API_KEY = process.env.ODDS_API_KEY;
   if (!API_KEY) return res.status(500).json({ error: "Missing ODDS_API_KEY" });
@@ -32,17 +26,29 @@ export default async function handler(req, res) {
 
       const best = (team) => {
         let b = null;
+      const bestOutcome = (marketKey, outcomeName) => {
+        let best = null;
         for (const bk of books) {
           const m = bk.markets?.find(m => m.key === "h2h");
+          const m = bk.markets?.find(m => m.key === marketKey);
           if (!m) continue;
           const o = m.outcomes?.find(o => o.name === team);
           if (o && (!b || o.price > b.price)) b = { ...o, book: bk.key };
+          const o = m.outcomes?.find(o => o.name === outcomeName);
+          if (o && (!best || o.price > best.price)) best = { ...o, book: bk.key };
         }
         return b;
+        return best;
       };
 
       const bestHome = best(ev.home_team);
       const bestAway = best(ev.away_team);
+      const bestHome = bestOutcome("h2h", ev.home_team);
+      const bestAway = bestOutcome("h2h", ev.away_team);
+      const bestSpreadHome = bestOutcome("spreads", ev.home_team);
+      const bestSpreadAway = bestOutcome("spreads", ev.away_team);
+      const bestTotalOver = bestOutcome("totals", "Over");
+      const bestTotalUnder = bestOutcome("totals", "Under");
       const evHome = bestHome ? EV(bestHome.price) : null;
       const evAway = bestAway ? EV(bestAway.price) : null;
       const bestEV = Math.max(evHome ?? 0, evAway ?? 0);
@@ -63,6 +69,7 @@ export default async function handler(req, res) {
       let propBooks = [];
       if (propsResp.ok) {
         const pj = await propsResp.json();
+        propBooks = pj[0]?.bookmakers || [];
         // The single-event endpoint returns an object, not an array
         // so grab the bookmakers list directly to ensure props always populate.
         propBooks = pj?.bookmakers || [];
@@ -91,21 +98,7 @@ export default async function handler(req, res) {
       // Group props
       const groups = {};
       for (const p of parsed) {
-        const key = `${p.player}|${p.metric}`;
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(p);
-      }
-
-      const propsFinal = [];
-      for (const key in groups) {
-        const grp = groups[key];
-        const player = grp[0].player;
-        const metric = grp[0].metric;
-
-        const overs = grp.filter(x => x.side.toLowerCase() === "over");
-        const unders = grp.filter(x => x.side.toLowerCase() === "under");
-
-        const bestO = overs.sort((a,b)=>b.price-a.price)[0] || null;
+@@ -107,37 +113,50 @@ export default async function handler(req, res) {
         const bestU = unders.sort((a,b)=>b.price-a.price)[0] || null;
 
         const evO = bestO ? EV(bestO.price) : null;
@@ -132,6 +125,20 @@ export default async function handler(req, res) {
         ev: { home: evHome, away: evAway },
         bestEV,
         mainlines: books,
+        mainlines: {
+          moneyline: {
+            home: bestHome ? { ...bestHome, prob: implied(bestHome.price) } : null,
+            away: bestAway ? { ...bestAway, prob: implied(bestAway.price) } : null,
+          },
+          spread: {
+            home: bestSpreadHome ? { ...bestSpreadHome, prob: implied(bestSpreadHome.price) } : null,
+            away: bestSpreadAway ? { ...bestSpreadAway, prob: implied(bestSpreadAway.price) } : null,
+          },
+          total: {
+            over: bestTotalOver ? { ...bestTotalOver, prob: implied(bestTotalOver.price) } : null,
+            under: bestTotalUnder ? { ...bestTotalUnder, prob: implied(bestTotalUnder.price) } : null,
+          },
+        },
         props: propsFinal
       });
     }

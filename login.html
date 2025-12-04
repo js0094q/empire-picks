@@ -1,1 +1,48 @@
-<!-- Beta placeholder -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - SportsAgg</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--bg); }
+    .login-card { width: 100%; max-width: 400px; text-align: center; }
+    .brand-mark { font-size: 3rem; margin-bottom: 1rem; display: inline-block; }
+  </style>
+</head>
+<body>
+
+  <div class="card login-card">
+    <div class="brand-mark" style="color: var(--accent);">SA</div>
+    <h2 style="margin-top: 0;">Welcome Back</h2>
+    <p class="muted">Sign in to access live odds</p>
+    
+    <form id="login-form" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 16px;">
+      <input type="email" id="email" placeholder="Email" class="input-field" required 
+             style="padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+      
+      <input type="password" id="password" placeholder="Password" class="input-field" required 
+             style="padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+      
+      <button type="submit" class="button primary full-width">Log In</button>
+    </form>
+    
+    <p class="muted" style="font-size: 0.8rem; margin-top: 20px;">
+      Don't have an account? <a href="#" style="color: var(--accent);">Sign up</a>
+    </p>
+  </div>
+
+  <script src="token.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      // Simulate login success
+      window.Auth.login(email);
+      window.location.href = '/dashboard.html';
+    });
+  </script>
+</body>
+</html>

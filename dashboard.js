@@ -1,17 +1,36 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const eventsContainer = document.getElementById("events-container");
+// dashboard.js — main loader for dashboard
+
+document.addEventListener('DOMContentLoaded', () => {
+  const eventsContainer = document.getElementById('events-container');
 
   async function loadEvents() {
-    eventsContainer.innerHTML = `<div class="loader">Loading NFL games...</div>`;
+    eventsContainer.innerHTML = '<div class="loader">Loading NFL games...</div>';
 
-    const res = await fetch("/api/events");
-    const events = await res.json();
+    try {
+      const response = await fetch('/api/events');
+      if (!response.ok) throw new Error('API Error');
+      const events = await response.json();
 
-    eventsContainer.innerHTML = "";
+      window.AppState.setEvents(events);
+      renderEvents(events);
+    } catch (error) {
+      console.error(error);
+      eventsContainer.innerHTML =
+        '<div class="error">Failed to load games. Check API Key or quota.</div>';
+    }
+  }
 
-    events.forEach(ev => {
-      const card = window.CardComponent.create(ev);
-      eventsContainer.appendChild(card);
+  function renderEvents(events) {
+    eventsContainer.innerHTML = '';
+
+    if (!events || !events.length) {
+      eventsContainer.innerHTML = '<div class="muted">No active games found.</div>';
+      return;
+    }
+
+    events.forEach(event => {
+      const cardElement = window.CardComponent.create(event);
+      eventsContainer.appendChild(cardElement);
     });
   }
 

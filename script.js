@@ -1,5 +1,10 @@
+// script.js
 document.addEventListener('DOMContentLoaded', () => {
-  const eventsContainer = document.getElementById('events-container');
+  // If user is already logged in, redirect them to dashboard immediately
+  if (window.Auth && window.Auth.isLoggedIn()) {
+    window.location.href = '/dashboard.html';
+  }
+});
 
   // 1. Mock Data (This simulates what your api/events.js would return)
   const mockEvents = [

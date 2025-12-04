@@ -3,7 +3,7 @@
 const API_KEY = 'YOUR_ODDS_API_KEY_HERE';  // ← replace with your actual key
 const SPORT = 'americanfootball_nfl';
 const REGIONS = 'us';
-const MARKETS = ['h2h','spreads','totals'];
+const MARKETS = ['h2h','spreads','totals','player_props'];  // include props
 
 const gamesContainer = document.getElementById('games-container');
 const navLive = document.getElementById('nav-live');
@@ -32,7 +32,9 @@ async function fetchOdds() {
 
 async function loadGames() {
   try {
-    const data = await fetchOdds();
+    let data = await fetchOdds();
+    // sort games by chronological start time
+    data.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
     gamesContainer.innerHTML = '';
     data.forEach(game => {
       const analytics = computeAnalytics(game);
@@ -138,6 +140,12 @@ function buildGameCard(game, analytics) {
   renderLines(tableWrapper, game, analytics);
   body.appendChild(tableWrapper);
 
+  // Placeholder for props — top 10
+  const propsWrapper = document.createElement('div');
+  propsWrapper.className = 'props-wrapper';
+  renderProps(propsWrapper, game);
+  body.appendChild(propsWrapper);
+
   card.appendChild(hdr);
   card.appendChild(body);
   return card;
@@ -161,14 +169,14 @@ function renderLines(container, game, analytics) {
         if (a && h) {
           rec.mlOdds = `${money(a.price)} / ${money(h.price)}`;
 
-          // Away
+          // Away side
           const { impliedProb: impA } = computeEV(0, a.price);
           const evA = computeEV(analytics.nvAway, a.price);
           rec.mlImp = `Imp: ${(impA * 100).toFixed(1)}%`;
           rec.mlModel = `${analytics.away}: ${(analytics.nvAway * 100).toFixed(1)}%`;
           rec.mlEdge = `${(evA.edge * 100).toFixed(1)}%`;
 
-          // Could optionally show home side too by additional row or in same cell
+          // (Optionally could add home side similarly)
         }
       }
 
@@ -218,6 +226,39 @@ function renderLines(container, game, analytics) {
       </tbody>
     </table>
   `;
+}
+
+
+// Props rendering — top 10 props only
+async function renderProps(container, game) {
+  try {
+    const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${game.id}/odds?apiKey=${API_KEY}&regions=${REGIONS}&markets=player_props`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (!data || !data.length) return;
+
+    const props = data[0].bookmakers.flatMap(bm => bm.markets.flatMap(m => m.outcomes.map(o => ({
+      name: o.name,
+      price: o.price,
+      bookmaker: bm.title
+    }))));
+
+    // simplistic ranking — you can adjust to consensus or edge-based ranking
+    const top = props.slice(0, 10);
+
+    const html = top.map(p => {
+      const imp = impliedProbFromAmerican(p.price);
+      return `<div class="prop-row">
+        <span class="prop-name">${p.name} (${p.bookmaker})</span>
+        <span class="prop-odds">${money(p.price)}</span>
+        <span class="prop-imp">${(imp*100).toFixed(1)}% imp</span>
+      </div>`;
+    }).join('');
+    container.innerHTML = `<div class="props-list">${html}</div>`;
+
+  } catch (e) {
+    console.error('Error fetching props for game', game.id, e);
+  }
 }
 
 loadGames();

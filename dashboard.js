@@ -71,8 +71,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Simple toggle function for UI interaction
+// In dashboard.js
+
+// 4. Integrated Toggle Function
 window.toggleBet = function(btn, gameId, team) {
+  // 1. Visual Toggle
   btn.classList.toggle('selected');
-  console.log(`Bet toggled: Game ${gameId}, Team ${team}`);
-  // Future: Add logic here to call 'parlay.js' to add to slip
+  
+  // 2. Extract Data from DOM
+  // We look at the button's children to find the values
+  const label = btn.querySelector('.odd-label').innerText; // e.g., "Spread"
+  const val = btn.querySelector('.odd-val').innerText;     // e.g., "-110" or "+3.5"
+  
+  // Find the team name in the same row
+  const teamRow = btn.closest('.team-row');
+  const teamName = teamRow.querySelector('.team-name').innerText;
+
+  // 3. Create a unique ID for the button so ParlayManager can find it later if needed
+  const uniqueId = `${gameId}-${teamName}-${label}`;
+  btn.setAttribute('data-bet-id', uniqueId);
+
+  // 4. Send to Parlay Manager
+  if (window.ParlayManager) {
+    window.ParlayManager.toggle(gameId, teamName, label, val);
+  } else {
+    console.error("ParlayManager not loaded");
+  }
 };

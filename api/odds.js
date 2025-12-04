@@ -1,4 +1,4 @@
-// api/odds.js — Vercel Serverless Function (Node.js runtime)
+// api/odds.js
 
 import fetch from "node-fetch";
 
@@ -16,13 +16,14 @@ export default async function handler(req, res) {
   const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/odds?apiKey=${apiKey}&regions=${REGIONS}&markets=${MARKETS}`;
 
   try {
-    const r = await fetch(url);
-    if (!r.ok) {
-      const txt = await r.text();
-      return res.status(r.status).json({ error: txt });
+    const resp = await fetch(url);
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      return res.status(resp.status).json({ error: txt });
     }
 
-    const data = await r.json();
+    const data = await resp.json();
     return res.status(200).json(data);
 
   } catch (err) {

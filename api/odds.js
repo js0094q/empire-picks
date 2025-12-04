@@ -1,110 +1,63 @@
-// api/odds.js
-import https from 'https';
+// ============================================================
+// /api/odds.js — EmpirePicks v1.0
+// Provides ML, Spread, Totals for a specific game
+// ============================================================
+
+import https from "https";
 
 export default async function handler(req, res) {
   const apiKey = process.env.ODDS_API_KEY;
-  const sportKey = req.query.sport || 'americanfootball_nfl';
-  const eventId = req.query.eventId; // Optional: Fetch for specific game only
-  
-  // We fetch 'totals' (Over/Under) and 'h2h' (Moneyline) here
-  const markets = 'h2h,totals'; 
-  const regions = 'us';
-  const oddsFormat = 'american';
+  const sport = "americanfootball_nfl";
+  const regions = "us";
+  const oddsFormat = "american";
+  const eventId = req.query.eventId;
 
-  if (!apiKey) {
-    return res.status(500).json({ error: 'Missing ODDS_API_KEY' });
+  if (!apiKey || !eventId) {
+    return res.status(400).json({ error: "Missing apiKey or eventId" });
   }
 
-  // Build URL based on whether we want one event or all
-  let url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=${regions}&markets=${markets}&oddsFormat=${oddsFormat}`;
-  
-  if (eventId) {
-    url = `https://api.the-odds-api.com/v4/sports/${sportKey}/events/${eventId}/odds?apiKey=${apiKey}&regions=${regions}&markets=${markets}&oddsFormat=${oddsFormat}`;
-  }
+  const url = `https://api.the-odds-api.com/v4/sports/${sport}/events/${eventId}/odds?apiKey=${apiKey}&regions=${regions}&markets=h2h,totals&oddsFormat=${oddsFormat}`;
 
   try {
     const data = await new Promise((resolve, reject) => {
       https.get(url, (resp) => {
-        let data = '';
-        resp.on('data', (chunk) => (data += chunk));
-        resp.on('end', () => resolve(JSON.parse(data)));
-      }).on('error', (err) => reject(err));
+        let txt = "";
+        resp.on("data", ch => txt += ch);
+        resp.on("end", () => resolve(JSON.parse(txt)));
+      }).on("error", reject);
     });
 
-    if (data.message) {
-      return res.status(400).json({ error: data.message });
-    }
+    const book =
+      data.bookmakers?.find(b => b.key === "draftkings") ||
+      data.bookmakers?.find(b => b.key === "fanduel") ||
+      data.bookmakers?.[0];
 
-    // If fetching a single event, the API returns an object. If multiple, an array.
-    // We normalize to an array for easier processing.
-    const events = Array.isArray(data) ? data : [data];
+    const h2h = book?.markets.find(m => m.key === "h2h");
+    const totals = book?.markets.find(m => m.key === "totals");
 
-    const cleanedOdds = events.map((game) => {
-      const bookmaker = game.bookmakers.find(b => b.key === 'draftkings' || b.key === 'fanduel') || game.bookmakers[0];
-      
-      let markets = {
-        h2h: null,
-        totals: null
-      };
-
-      if (bookmaker) {
-        const h2hRaw = bookmaker.markets.find(m => m.key === 'h2h');
-        const totalsRaw = bookmaker.markets.find(m => m.key === 'totals');
-
-        if (h2hRaw) {
-          markets.h2h = {
-            home: h2hRaw.outcomes.find(o => o.name === game.home_team)?.price,
-            away: h2hRaw.outcomes.find(o => o.name === game.away_team)?.price
-          };
-        }
-
-        if (totalsRaw) {
-          // Usually takes the first available line
-          const over = totalsRaw.outcomes.find(o => o.name === 'Over');
-          const under = totalsRaw.outcomes.find(o => o.name === 'Under');
-          markets.totals = {
-            points: over?.point,
-            over: over?.price,
-            under: under?.price
-          };
+    const game = {
+      id: data.id,
+      home_team: data.home_team,
+      away_team: data.away_team,
+      odds: {
+        h2h: {
+          home: h2h?.outcomes.find(o => o.name === data.home_team)?.price || "-",
+          away: h2h?.outcomes.find(o => o.name === data.away_team)?.price || "-"
+        },
+        totals: {
+          points: totals?.outcomes.find(o => o.name === "Over")?.point || "-",
+          over: totals?.outcomes.find(o => o.name === "Over")?.price || "-",
+          under: totals?.outcomes.find(o => o.name === "Under")?.price || "-"
         }
       }
+    };
 
-      return {
-        id: game.id,
-        startTime: game.commence_time,
-        odds: markets
-      };
+    res.status(200).json([game]);
+
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to fetch odds",
+      details: err.message
     });
-// In dashboard.js
-
-// 4. Integrated Toggle Function
-window.toggleBet = function(btn, gameId, team) {
-  // 1. Visual Toggle
-  btn.classList.toggle('selected');
-  
-  // 2. Extract Data from DOM
-  // We look at the button's children to find the values
-  const label = btn.querySelector('.odd-label').innerText; // e.g., "Spread"
-  const val = btn.querySelector('.odd-val').innerText;     // e.g., "-110" or "+3.5"
-  
-  // Find the team name in the same row
-  const teamRow = btn.closest('.team-row');
-  const teamName = teamRow.querySelector('.team-name').innerText;
-
-  // 3. Create a unique ID for the button so ParlayManager can find it later if needed
-  const uniqueId = `${gameId}-${teamName}-${label}`;
-  btn.setAttribute('data-bet-id', uniqueId);
-
-  // 4. Send to Parlay Manager
-  if (window.ParlayManager) {
-    window.ParlayManager.toggle(gameId, teamName, label, val);
-  } else {
-    console.error("ParlayManager not loaded");
-  }
-};
-    res.status(200).json(cleanedOdds);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch odds', details: error.message });
   }
 }

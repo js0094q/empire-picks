@@ -1,24 +1,43 @@
 {
   "version": 2,
+
   "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "dashboard.html", "use": "@vercel/static" },
-    { "src": "login.html", "use": "@vercel/static" },
-    { "src": "styles.css", "use": "@vercel/static" },
-    { "src": "script.js", "use": "@vercel/static" },
-    { "src": "dashboard.js", "use": "@vercel/static" },
-    { "src": "teams.js", "use": "@vercel/static" },
-    { "src": "token.js", "use": "@vercel/static" },
-    { "src": "parlay.js", "use": "@vercel/static" },
-    { "src": "api/*.js", "use": "@vercel/node" }
+    { "src": "src/index.html", "use": "@vercel/static" },
+    { "src": "src/dashboard.html", "use": "@vercel/static" },
+    { "src": "src/login.html", "use": "@vercel/static" },
+
+    { "src": "src/styles.css", "use": "@vercel/static" },
+    { "src": "src/script.js", "use": "@vercel/static" },
+    { "src": "src/dashboard.js", "use": "@vercel/static" },
+    { "src": "src/parlay.js", "use": "@vercel/static" },
+    { "src": "src/token.js", "use": "@vercel/static" },
+    { "src": "src/teams.js", "use": "@vercel/static" },
+
+    { "src": "src/js/**/*.js", "use": "@vercel/static" },
+    { "src/js/components/**/*.js", "use": "@vercel/static" },
+
+    { "src/api/*.js", "use": "@vercel/node" }
   ],
 
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1.js" },
-    { "src": "/dashboard", "dest": "/dashboard.html" },
-    { "src": "/dashboard.html", "dest": "/dashboard.html" },
-    { "src": "/login", "dest": "/login.html" },
-    { "src": "/login.html", "dest": "/login.html" },
-    { "src": "/(.*)", "dest": "/$1" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/src/api/$1.js"
+    },
+
+    {
+      "src": "/js/(.*)",
+      "dest": "/src/js/$1"
+    },
+
+    {
+      "src": "/js/components/(.*)",
+      "dest": "/src/js/components/$1"
+    },
+
+    {
+      "src": "/(.*)",
+      "dest": "/src/$1"
+    }
   ]
 }

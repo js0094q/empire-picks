@@ -1,0 +1,1 @@
+// Beta props endpoint placeholder

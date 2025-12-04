@@ -1,4 +1,4 @@
-export const LinesPanel = {
+export const linesPanel = {
   async show(eventId, btn) {
     const parent = btn.parentElement.querySelectorAll(".tab-btn");
     parent.forEach(t => t.classList.remove("active"));
@@ -31,4 +31,4 @@ export const LinesPanel = {
   }
 };
 
-window.LinesPanel = LinesPanel;
+window.linesPanel = linesPanel;

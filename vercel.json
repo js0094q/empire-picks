@@ -13,5 +13,5 @@
     { "src": "^/login$", "dest": "/login.html" },
     { "src": "^/$", "dest": "/index.html" },
     { "src": "/(.*)", "dest": "/$1" }
-  ],
+  ]
 }

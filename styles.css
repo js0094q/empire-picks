@@ -1,59 +1,63 @@
+/* =====================================
+   SPORTSBOOK UI — GLOBAL REBUILD
+   ===================================== */
+
 :root {
-  --bg: #0d1228;
-  --card: #131a38;
-  --border: #2c3666;
-  --text: #eef3ff;
-  --subtle: #9ca7c8;
+  --bg: #0a0f24;
+  --card: #11182e;
+  --panel: #161e3c;
+  --border: #28325a;
+  --text: #e9ecf7;
+  --subtle: #9ba5c7;
   --gold: #ffcc33;
   --green: #28d16c;
   --red: #f45d67;
+  --blue: #3a7afe;
   --radius: 14px;
-  --shadow: 0 4px 14px rgba(0,0,0,0.45);
+  --shadow: 0 6px 16px rgba(0,0,0,0.45);
 }
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
   background: var(--bg);
+  font-family: system-ui, sans-serif;
   color: var(--text);
 }
 
-/* HEADER ------------------------------------------------- */
+/* HEADER */
 .header {
-  padding: 1rem;
+  padding: 1.2rem;
   text-align: center;
+  background: linear-gradient(145deg, #0a0f24, #0f162f 70%, #000);
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, #0d1228, #101530 65%, #000);
-  box-shadow: var(--shadow);
 }
 
 .header h1 {
-  margin: 0;
   color: var(--gold);
+  margin: 0;
   letter-spacing: 1px;
 }
 
-/* GAME GRID ------------------------------------------------ */
+/* GAME GRID */
 .games {
-  display: grid;
-  gap: 1.3rem;
-  padding: 1.3rem;
-  max-width: 950px;
+  max-width: 1100px;
   margin: 0 auto;
+  padding: 1.4rem;
+  display: grid;
+  gap: 1.4rem;
 }
 
-/* CARD --------------------------------------------------- */
+/* GAME CARD */
 .game-card {
   background: var(--card);
   border-radius: var(--radius);
-  padding: 1rem 1.2rem;
+  padding: 1.2rem 1.4rem;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow);
   position: relative;
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
-/* Team-colored top border (set via JS) */
 .game-card::before {
   content: "";
   position: absolute;
@@ -64,121 +68,91 @@ body {
   background: var(--team-color, var(--gold));
 }
 
-/* HEADER ------------------------------------------- */
+/* TEAM HEADER */
 .game-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 1rem;
 }
 
 .game-header .teams {
-  font-size: 1.3rem;
+  font-size: 1.45rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 
-.game-header img {
-  height: 44px;
-  width: auto;
-}
-
-/* ODDS SECTION --------------------------------------- */
-.odds-section {
-  border-top: 1px solid var(--border);
-  padding-top: 0.8rem;
-}
-
-.odds-row {
-  display: grid;
-  grid-template-columns: 120px 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 0.7rem;
-  align-items: center;
-}
-
-.label {
+.market-header {
   font-size: 0.9rem;
-  opacity: 0.75;
+  color: var(--subtle);
+  margin: 10px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* BET BUTTONS ------------------------------------------- */
-.bet-btn {
-  padding: 0.55rem 0.7rem;
-  background: #10172f;
-  border: 1px solid var(--border);
+/* ODDS PILL BUTTONS */
+.odds-pill {
+  display: inline-block;
+  padding: 8px 12px;
+  background: var(--panel);
   border-radius: var(--radius);
-  color: var(--text);
+  border: 1px solid var(--border);
   cursor: pointer;
-  transition: 0.15s ease;
-  font-size: 0.95rem;
-  text-align: center;
   font-weight: 600;
+  min-width: 110px;
+  text-align: center;
+  transition: 0.15s ease;
+  margin-right: 6px;
+  margin-bottom: 6px;
 }
 
-.bet-btn:hover {
-  background: #182040;
+.odds-pill:hover {
+  background: #1d2548;
   border-color: var(--gold);
   color: var(--gold);
   transform: translateY(-2px);
 }
 
-.bet-btn.best {
+.odds-pill.ev-highlight {
   border-color: var(--green);
-  color: var(--green);
-}
-
-/* FOOTER -------------------------------------------------- */
-.footer {
-  text-align: center;
-  padding: 1rem;
-  color: var(--subtle);
-  margin-top: 2rem;
-}
-
-/* ===============================================
-   EV BADGES + HIGHLIGHT COLORS
-   =============================================== */
-
-.ev-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  background: var(--green);
-  color: #000;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-left: 6px;
-}
-
-.ev-highlight {
   background: rgba(40, 209, 108, 0.15);
-  border: 1px solid var(--green) !important;
   color: var(--green) !important;
-  box-shadow: 0 0 8px rgba(40, 209, 108, 0.3);
+  box-shadow: 0 0 10px rgba(40,209,108,0.32);
 }
 
-/* PARLAY EV BLOCK */
+/* BADGE */
+.ev-badge {
+  background: var(--green);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #000;
+}
+
+/* PARLAY BLOCK */
 .parlay-ev-box {
-  margin-top: 12px;
-  padding: 10px;
+  background: #10172d;
   border: 1px solid var(--gold);
+  padding: 12px;
   border-radius: var(--radius);
-  background: #0f1530;
+  margin-top: 14px;
   box-shadow: var(--shadow);
 }
 
-/* PROP EV */
-.prop-ev-item {
-  padding: 6px 8px;
-  margin-bottom: 6px;
-  border-radius: 8px;
+/* PROP CARDS */
+.prop-card {
+  background: var(--panel);
+  padding: 10px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: #10172f;
+  margin-bottom: 8px;
 }
 
-.prop-ev-glow {
-  border-color: var(--green) !important;
-  background: rgba(40, 209, 108, 0.12);
-  box-shadow: 0 0 12px rgba(40, 209, 108, 0.3);
+.prop-card.ev-positive {
+  border-color: var(--green);
+  box-shadow: 0 0 12px rgba(40, 209, 108, 0.35);
+  background: rgba(40,209,108,0.12);
+}
+
+.prop-title {
+  font-weight: 700;
+  margin-bottom: 4px;
 }

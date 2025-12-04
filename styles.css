@@ -156,3 +156,88 @@ body {
   font-weight: 700;
   margin-bottom: 4px;
 }
+/* ==========================================================
+   PROP COMPARISON MODAL (Sportsbook-Style Drawer)
+   ========================================================== */
+
+.prop-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(3px);
+  z-index: 5000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.prop-modal {
+  width: 92%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #11182e;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  animation: modalFadeIn 0.22s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.prop-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.prop-modal-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.prop-close-btn {
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  color: var(--text);
+}
+
+.prop-row {
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.prop-row.ev-positive {
+  border-color: var(--green);
+  background: rgba(40,209,108,0.15);
+  box-shadow: 0 0 12px rgba(40,209,108,0.3);
+}
+
+.prop-title-large {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.book-line {
+  margin-top: 6px;
+  padding-left: 6px;
+  font-size: 0.9rem;
+}
+
+.book-line-best {
+  color: var(--green);
+  font-weight: 700;
+}

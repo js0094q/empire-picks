@@ -1,29 +1,35 @@
-// history.js
-const { apiClient } = require('./api.js');
+// ============================================================
+// /api/history.js — EmpirePicks v1.0
+// Historical lines for ATS / O-U / Moneyline trends
+// ============================================================
 
-/**
- * Returns a snapshot of odds at a given historical timestamp.
- * Endpoint: GET /v4/historical/sports/{sport}/odds [cite: 490]
- * * @param {string} sport - Sport key
- * @param {string} regions - Region code
- * @param {string} date - ISO8601 timestamp (e.g. '2023-10-01T12:00:00Z') [cite: 493]
- * @param {Object} options - markets, oddsFormat
- */
-async function getHistoricalOdds(sport, regions, date, options = {}) {
-    try {
-        const response = await apiClient.get(`/historical/sports/${sport}/odds`, {
-            params: {
-                regions: regions,
-                date: date, // Required parameter for history
-                markets: options.markets || 'h2h',
-                oddsFormat: options.oddsFormat || 'decimal'
-            }
-        });
-        return response.data;
-    } catch (error) {
-        console.error(`Error fetching historical odds:`, error.message);
-        throw error;
-    }
+import { apiClient } from "./api.js";
+
+export default async function handler(req, res) {
+  const apiKey = process.env.ODDS_API_KEY;
+  const date = req.query.date;
+  const sport = "americanfootball_nfl";
+
+  if (!apiKey || !date) {
+    return res.status(400).json({ error: "Missing API key or date" });
+  }
+
+  try {
+    const response = await apiClient.get(`/historical/sports/${sport}/odds`, {
+      params: {
+        regions: "us",
+        date,
+        markets: "h2h,spreads,totals",
+        oddsFormat: "american"
+      }
+    });
+
+    res.status(200).json(response.data);
+
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to fetch historical odds",
+      details: err.message
+    });
+  }
 }
-
-module.exports = { getHistoricalOdds };

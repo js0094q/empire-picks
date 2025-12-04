@@ -1,8 +1,3 @@
-// ============================================================
-// card.js — EmpirePicks v1.0
-// Premium Accordion Game Cards with DraftKings Theme
-// ============================================================
-
 import { toggleAccordion } from "./ui.js";
 import { LinesPanel } from "./linesPanel.js";
 import { PropsPanel } from "./propsPanel.js";

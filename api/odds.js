@@ -4,21 +4,25 @@ export default async function handler(req, res) {
 
   const base = "https://api.the-odds-api.com/v4";
   const sport = "americanfootball_nfl";
-  const url = `${base}/sports/${sport}/events?apiKey=${apiKey}`;
+  const regions = "us";
+  const markets = "h2h,spreads,totals";
+
+  const url = `${base}/sports/${sport}/odds?apiKey=${apiKey}&regions=${regions}&markets=${markets}&oddsFormat=american`;
 
   try {
     const r = await fetch(url);
-    const events = await r.json();
+    const data = await r.json();
+    const remaining = r.headers.get("x-requests-remaining");
 
     const now = Date.now();
-    const cutoff = now + 7 * 24 * 60 * 60 * 1000; // 7 days forward
+    const cutoff = now + 7 * 24 * 60 * 60 * 1000;
 
-    const filtered = events.filter(ev => {
-      const ko = new Date(ev.commence_time).getTime();
+    const filtered = (data || []).filter(game => {
+      const ko = new Date(game.commence_time).getTime();
       return ko >= now && ko <= cutoff;
     });
 
-    res.status(200).json(filtered);
+    res.status(200).json({ remaining, data: filtered });
 
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -24,25 +24,17 @@ export default async function handler(req, res) {
       const oddsJson = oddsResp.ok ? await oddsResp.json() : [];
       const books = oddsJson[0]?.bookmakers || [];
 
-      const best = (team) => {
-        let b = null;
       const bestOutcome = (marketKey, outcomeName) => {
         let best = null;
         for (const bk of books) {
-          const m = bk.markets?.find(m => m.key === "h2h");
           const m = bk.markets?.find(m => m.key === marketKey);
           if (!m) continue;
-          const o = m.outcomes?.find(o => o.name === team);
-          if (o && (!b || o.price > b.price)) b = { ...o, book: bk.key };
           const o = m.outcomes?.find(o => o.name === outcomeName);
           if (o && (!best || o.price > best.price)) best = { ...o, book: bk.key };
         }
-        return b;
         return best;
       };
 
-      const bestHome = best(ev.home_team);
-      const bestAway = best(ev.away_team);
       const bestHome = bestOutcome("h2h", ev.home_team);
       const bestAway = bestOutcome("h2h", ev.away_team);
       const bestSpreadHome = bestOutcome("spreads", ev.home_team);
@@ -69,7 +61,6 @@ export default async function handler(req, res) {
       let propBooks = [];
       if (propsResp.ok) {
         const pj = await propsResp.json();
-        propBooks = pj[0]?.bookmakers || [];
         // The single-event endpoint returns an object, not an array
         // so grab the bookmakers list directly to ensure props always populate.
         propBooks = pj?.bookmakers || [];

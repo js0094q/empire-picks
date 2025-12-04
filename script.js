@@ -82,6 +82,7 @@ async function loadGames() {
     gamesContainer.innerHTML = `<div class="error">Failed to load odds. Check console for details.</div>`;
     return;
   }
+}
 
   // Sort games by start time, ascending
   data.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));

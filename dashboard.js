@@ -66,7 +66,6 @@ events.forEach(event => {
       `;
       eventsContainer.appendChild(card);
     });
-  }
 
   // Initial Load
   loadEvents();

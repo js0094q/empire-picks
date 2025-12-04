@@ -1,32 +1,99 @@
 {
   "version": 2,
-
+  "name": "empirepicks",
   "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "dashboard.html", "use": "@vercel/static" },
-    { "src": "login.html", "use": "@vercel/static" },
-    { "src": "styles.css", "use": "@vercel/static" },
-    { "src": "script.js", "use": "@vercel/static" },
-    { "src": "dashboard.js", "use": "@vercel/static" },
-    { "src": "teams.js", "use": "@vercel/static" },
-    { "src": "parlay.js", "use": "@vercel/static" },
-    { "src": "token.js", "use": "@vercel/static" },
-    { "src": "assets/(.*)", "use": "@vercel/static" },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dashboard.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "login.html",
+      "use": "@vercel/static"
+    },
 
-    { "src": "api/events.js", "use": "@vercel/node" },
-    { "src": "api/odds.js", "use": "@vercel/node" },
-    { "src": "api/event-odds.js", "use": "@vercel/node" }
+    {
+      "src": "styles.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "teams.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "helpers.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "state.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ui.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "card.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "linesPanel.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "propsPanel.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "parlay.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dashboard.js",
+      "use": "@vercel/static"
+    },
+
+    {
+      "src": "api/events.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/odds.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/props.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/history.js",
+      "use": "@vercel/node"
+    }
   ],
 
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1.js" },
+    {
+      "src": "^/api/(.*)$",
+      "dest": "/api/$1.js"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "/dashboard.html"
+    },
+    {
+      "src": "/login",
+      "dest": "/login.html"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
+    }
+  ],
 
-    { "src": "/dashboard", "dest": "/dashboard.html" },
-    { "src": "/dashboard.html", "dest": "/dashboard.html" },
-
-    { "src": "/login", "dest": "/login.html" },
-    { "src": "/login.html", "dest": "/login.html" },
-
-    { "src": "/(.*)", "dest": "/$1" }
-  ]
+  "env": {
+    "ODDS_API_KEY": "@odds_api_key"
+  }
 }

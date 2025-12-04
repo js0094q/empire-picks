@@ -1,1 +1,75 @@
-<!-- Beta placeholder -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EmpirePicks | EV Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      background: #0d0d0e;
+      color: white;
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 22px;
+      background: #141416;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 14px;
+      border-bottom: 1px solid #2b2b2e;
+      text-align: left;
+    }
+    th {
+      background: #202024;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #d0d0d0;
+    }
+    tr:hover {
+      background: #1e1e22;
+    }
+    .high-ev {
+      color: #00e676;
+      font-weight: 700;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    a {
+      color: #f5d26d;
+      text-decoration: none;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 EmpirePicks EV Dashboard</h1>
+    <a href="index.html">← Back to Games</a>
+  </div>
+
+  <table id="dashboard">
+    <thead>
+      <tr>
+        <th>Matchup</th>
+        <th>EV Away</th>
+        <th>EV Home</th>
+        <th>Top EV</th>
+        <th>Kickoff</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

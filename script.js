@@ -1,6 +1,6 @@
 // script.js — core UI logic: load games, odds, render cards with ML, Spread, Total + probabilities + EV + props (top 10)
 
-const API_KEY = 'YOUR_ODDS_API_KEY_HERE';
+const API_KEY = 'YOUR_ODDS_API_KEY_HERE';  // ← replace with your actual key
 const SPORT = 'americanfootball_nfl';
 const REGIONS = 'us';
 const MARKETS = ['h2h','spreads','totals'];
@@ -44,23 +44,34 @@ async function loadGames() {
   }
 }
 
-function prob(odds) {
-  // American odds
-  if (odds > 0) return 100 / (odds + 100);
-  return Math.abs(odds) / (Math.abs(odds) + 100);
+function impliedProbFromAmerican(odds) {
+  if (odds > 0) {
+    return 100 / (odds + 100);
+  } else {
+    return Math.abs(odds) / (Math.abs(odds) + 100);
+  }
 }
+
+function computeEV(winProb, odds, stake = 1) {
+  const impProb = impliedProbFromAmerican(odds);
+  const payout = odds > 0 ? (odds / 100) * stake : (100 / Math.abs(odds)) * stake;
+  const profitIfWin = payout;
+  const lossIfLose = stake;
+  const ev = (winProb * profitIfWin) - ((1 - winProb) * lossIfLose);
+  const edge = ev / stake;
+  return { ev, edge, impliedProb: impProb };
+}
+
 function money(n) {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
 function computeAnalytics(game) {
-  // remove vig — simplistic proportional method
-  // assumes two-way market (ML); for more complex markets may need more advanced vig-removal
   let away = null, home = null;
   let bestSpread = null, bestSpreadProb = 0;
-  let bestTotalProb = 0;
+  let bestTotal = null, bestTotalProb = 0;
 
-  game.bookmakers.forEach(bm => {
+  (game.bookmakers || []).forEach(bm => {
     bm.markets.forEach(m => {
       if (m.key === 'h2h') {
         m.outcomes.forEach(o => {
@@ -70,7 +81,7 @@ function computeAnalytics(game) {
       }
       if (m.key === 'spreads') {
         m.outcomes.forEach(o => {
-          const p = prob(o.price);
+          const p = impliedProbFromAmerican(o.price);
           if (p > bestSpreadProb) {
             bestSpreadProb = p;
             bestSpread = o;
@@ -79,18 +90,18 @@ function computeAnalytics(game) {
       }
       if (m.key === 'totals') {
         m.outcomes.forEach(o => {
-          const p = prob(o.price);
+          const p = impliedProbFromAmerican(o.price);
           if (p > bestTotalProb) {
             bestTotalProb = p;
+            bestTotal = o;
           }
         });
       }
     });
   });
 
-  // no-vig baseline on ML
-  let impliedAway = prob(away);
-  let impliedHome = prob(home);
+  const impliedAway = impliedProbFromAmerican(away);
+  const impliedHome = impliedProbFromAmerican(home);
   const sum = impliedAway + impliedHome;
   const nvAway = impliedAway / sum;
   const nvHome = impliedHome / sum;
@@ -104,6 +115,7 @@ function computeAnalytics(game) {
     nvHome,
     bestSpread,
     bestSpreadProb,
+    bestTotal,
     bestTotalProb
   };
 }
@@ -137,69 +149,51 @@ function renderLines(container, game, analytics) {
   (game.bookmakers || []).forEach(bm => {
     const rec = {
       book: bm.title,
-      moneyline: "–",
-      moneylineProb: "",
-      spread: "–",
-      spreadProb: "",
-      total: "–",
-      totalProb: "",
-      edge: null
+      mlOdds: "-", mlImp: "", mlModel: "", mlEdge: "",
+      spreadLine: "-", spreadImp: "", spreadModel: "", spreadEdge: "",
+      totalLine: "-", totalImp: "", totalModel: "", totalEdge: ""
     };
 
-    let rowEdge = null;
-
-    (bm.markets || []).forEach(m => {
-      // MONEYLINE
-      if (m.key === "h2h") {
+    bm.markets.forEach(m => {
+      if (m.key === 'h2h') {
         const a = m.outcomes.find(o => o.name === analytics.away);
         const h = m.outcomes.find(o => o.name === analytics.home);
-
         if (a && h) {
-          rec.moneyline = `${money(a.price)} / ${money(h.price)}`;
-          rec.moneylineProb =
-            `${analytics.away}: ${(analytics.nvAway * 100).toFixed(1)}% • ` +
-            `${analytics.home}: ${(analytics.nvHome * 100).toFixed(1)}%`;
+          rec.mlOdds = `${money(a.price)} / ${money(h.price)}`;
 
-          const impliedA = prob(a.price);
-          const impliedH = prob(h.price);
-          rowEdge = Math.max(
-            analytics.nvAway - impliedA,
-            analytics.nvHome - impliedH
-          );
+          // Away
+          const { impliedProb: impA } = computeEV(0, a.price);
+          const evA = computeEV(analytics.nvAway, a.price);
+          rec.mlImp = `Imp: ${(impA * 100).toFixed(1)}%`;
+          rec.mlModel = `${analytics.away}: ${(analytics.nvAway * 100).toFixed(1)}%`;
+          rec.mlEdge = `${(evA.edge * 100).toFixed(1)}%`;
+
+          // Could optionally show home side too by additional row or in same cell
         }
       }
 
-      // SPREAD
-      if (m.key === "spreads") {
-        const best = analytics.bestSpread;
-        if (best) {
-          rec.spread = `${best.name} ${best.point} (${money(best.price)})`;
-          rec.spreadProb = `~${(analytics.bestSpreadProb * 100).toFixed(1)}%`;
-        }
+      if (m.key === 'spreads' && analytics.bestSpread) {
+        const o = analytics.bestSpread;
+        rec.spreadLine = `${o.name} ${o.point} (${money(o.price)})`;
+        const { impliedProb: impS } = computeEV(0, o.price);
+        const evS = computeEV(analytics.bestSpreadProb, o.price);
+        rec.spreadImp = `Imp: ${(impS * 100).toFixed(1)}%`;
+        rec.spreadModel = `Model: ${(analytics.bestSpreadProb * 100).toFixed(1)}%`;
+        rec.spreadEdge = `${(evS.edge * 100).toFixed(1)}%`;
       }
 
-      // TOTALS
-      if (m.key === "totals") {
-        const over = m.outcomes.find(o => o.name.toLowerCase() === "over");
-        const under = m.outcomes.find(o => o.name.toLowerCase() === "under");
-        if (over && under) {
-          rec.total = `O${over.point} / U${under.point}`;
-          rec.totalProb = `O ${(analytics.bestTotalProb * 100).toFixed(1)}%`;
-        }
+      if (m.key === 'totals' && analytics.bestTotal) {
+        const o = analytics.bestTotal;
+        rec.totalLine = `${o.name} ${o.point} (${money(o.price)})`;
+        const { impliedProb: impT } = computeEV(0, o.price);
+        const evT = computeEV(analytics.bestTotalProb, o.price);
+        rec.totalImp = `Imp: ${(impT * 100).toFixed(1)}%`;
+        rec.totalModel = `Model: ${(analytics.bestTotalProb * 100).toFixed(1)}%`;
+        rec.totalEdge = `${(evT.edge * 100).toFixed(1)}%`;
       }
     });
 
-    rec.edge = rowEdge;
     rows.push(rec);
-  });
-
-  let bestIndex = -1;
-  let bestEdge = 0;
-  rows.forEach((r, i) => {
-    if (typeof r.edge === "number" && r.edge > bestEdge + 0.01) {
-      bestEdge = r.edge;
-      bestIndex = i;
-    }
   });
 
   container.innerHTML = `
@@ -207,47 +201,24 @@ function renderLines(container, game, analytics) {
       <thead>
         <tr>
           <th>Book</th>
-          <th>ML</th>
-          <th>Prob</th>
-          <th>Spread</th>
-          <th>Prob</th>
-          <th>Total</th>
-          <th>Prob</th>
-          <th>Edge</th>
+          <th>ML (odds)</th><th>Imp %</th><th>Model %</th><th>Edge %</th>
+          <th>Spread (line)</th><th>Imp %</th><th>Model %</th><th>Edge %</th>
+          <th>Total (O/U)</th><th>Imp %</th><th>Model %</th><th>Edge %</th>
         </tr>
       </thead>
       <tbody>
-        ${rows
-          .map(
-            (r, i) => `
+        ${rows.map(r => `
           <tr>
             <td>${r.book}</td>
-            <td>${r.moneyline}</td>
-            <td>${r.moneylineProb}</td>
-            <td>${r.spread}</td>
-            <td>${r.spreadProb}</td>
-            <td>${r.total}</td>
-            <td>${r.totalProb}</td>
-            <td>
-              ${
-                typeof r.edge === "number"
-                  ? `${(r.edge * 100).toFixed(1)}%`
-                  : ""
-              }
-              ${
-                i === bestIndex && bestEdge > 0.01
-                  ? `<span class="ev-pos">⭐ Best</span>`
-                  : ""
-              }
-            </td>
+            <td>${r.mlOdds}</td><td>${r.mlImp}</td><td>${r.mlModel}</td><td class="ev-pos">${r.mlEdge}</td>
+            <td>${r.spreadLine}</td><td>${r.spreadImp}</td><td>${r.spreadModel}</td><td class="ev-pos">${r.spreadEdge}</td>
+            <td>${r.totalLine}</td><td>${r.totalImp}</td><td>${r.totalModel}</td><td class="ev-pos">${r.totalEdge}</td>
           </tr>
-        `
-          )
-          .join('')}
+        `).join('')}
       </tbody>
     </table>
   `;
 }
 
 loadGames();
-setInterval(loadGames, 5 * 60 * 1000);   // refresh every 5 minutes
+setInterval(loadGames, 5 * 60 * 1000);

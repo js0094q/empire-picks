@@ -1,3 +1,5 @@
+// /api/odds.js — rolling 7-day raw odds feed
+
 export default async function handler(req, res) {
   const apiKey = process.env.ODDS_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "Missing ODDS_API_KEY" });
@@ -25,6 +27,7 @@ export default async function handler(req, res) {
     res.status(200).json({ remaining, data: filtered });
 
   } catch (err) {
+    console.error("ODDS FETCH ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 }

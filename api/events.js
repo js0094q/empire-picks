@@ -1,78 +1,75 @@
-import fetch from "node-fetch";
-
-const SPORT = "americanfootball_nfl";
-const BASE = "https://api.the-odds-api.com/v4";
-
-// Helpers
-const implied = o => o > 0 ? 100 / (o + 100) : -o / (-o + 100);
-const EV = (odds, tp) => tp - implied(odds);
-
+// /api/events.js  
 export default async function handler(req, res) {
-  const apiKey = process.env.ODDS_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "Missing ODDS_API_KEY" });
+  const API_KEY = process.env.ODDS_API_KEY;
+  if (!API_KEY) {
+    res.status(500).json({ error: "Missing ODDS_API_KEY" });
+    return;
+  }
+
+  const SPORT = "americanfootball_nfl";
+  const BASE = "https://api.the-odds-api.com/v4";
+
+  const implied = odds => odds > 0 ? 100/(odds + 100) : -odds/(-odds + 100);
+  const evCalc  = odds => 0.5 - implied(odds);
 
   try {
-    // Fetch events
-    const eventsResp = await fetch(`${BASE}/sports/${SPORT}/events?apiKey=${apiKey}&regions=us`);
+    const eventsResp = await fetch(
+      `${BASE}/sports/${SPORT}/events?apiKey=${API_KEY}&regions=us`
+    );
     if (!eventsResp.ok) throw new Error("Failed to fetch events");
     const events = await eventsResp.json();
 
-    const out = [];
+    const result = await Promise.all(events.map(async ev => {
+      const id = ev.id;
 
-    for (const ev of events) {
-      const eventId = ev.id;
-
-      // Main odds
-      const oddsResp = await fetch(
-        `${BASE}/sports/${SPORT}/odds?apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&eventIds=${eventId}`
-      );
+      // --- Main odds ---
+      const oddsUrl = `${BASE}/sports/${SPORT}/odds?apiKey=${API_KEY}` +
+        `&regions=us&markets=h2h,spreads,totals&eventIds=${id}`;
+      const oddsResp = await fetch(oddsUrl);
       const oddsJson = oddsResp.ok ? await oddsResp.json() : [];
-      const bookmakers = oddsJson[0]?.bookmakers || [];
+      const bookies = oddsJson[0]?.bookmakers || [];
 
-      // Best ML EV
-      const findBest = (team) => {
+      // best ML EV
+      const findBest = team => {
         let best = null;
-        for (const b of bookmakers) {
-          const h2h = b.markets?.find(m => m.key === "h2h");
-          if (!h2h) continue;
-          const outcome = h2h.outcomes?.find(o => o.name === team);
-          if (!outcome) continue;
-          if (!best || outcome.price > best.price) best = { ...outcome, book: b.key };
+        for (const b of bookies) {
+          const m = b.markets?.find(m => m.key === "h2h");
+          const o = m?.outcomes?.find(o => o.name === team);
+          if (o && (!best || o.price > best.price)) best = o;
         }
         return best;
       };
 
-      const bestHome = findBest(ev.home_team);
-      const bestAway = findBest(ev.away_team);
-
-      const evHome = bestHome ? EV(bestHome.price, 0.5) : null;
-      const evAway = bestAway ? EV(bestAway.price, 0.5) : null;
+      const home = ev.home_team, away = ev.away_team;
+      const bestHome = findBest(home), bestAway = findBest(away);
+      const evHome = bestHome ? evCalc(bestHome.price) : null;
+      const evAway = bestAway ? evCalc(bestAway.price) : null;
       const bestEV = Math.max(evHome ?? 0, evAway ?? 0);
 
-      // Props
-      const propsResp = await fetch(
-        `${BASE}/sports/${SPORT}/events/${eventId}/odds?apiKey=${apiKey}&regions=us&markets=player_pass_yds,player_rush_yds,player_receptions,player_anytime_td`
-      );
-
+      // --- Props ---
+      const propsUrl = `${BASE}/sports/${SPORT}/events/${id}/odds?apiKey=${API_KEY}&regions=us` +
+        `&markets=player_pass_yds,player_rush_yds,player_receptions,player_anytime_td`;
+      const propsResp = await fetch(propsUrl);
       let props = [];
       if (propsResp.ok) {
-        const propsJson = await propsResp.json();
-        props = propsJson.bookmakers || [];
+        const pj = await propsResp.json();
+        if (Array.isArray(pj) && pj.length > 0) {
+          props = pj[0].bookmakers || [];
+        }
       }
 
-      out.push({
+      return {
         ...ev,
         bestEV,
         ev: { home: evHome, away: evAway },
-        bookmakers,
+        bookmakers: bookies,
         props
-      });
-    }
+      };
+    }));
 
-    return res.status(200).json(out);
-
+    res.status(200).json(result);
   } catch (err) {
-    console.error("EVENTS API ERROR:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("Events API error:", err);
+    res.status(500).json({ error: err.message });
   }
 }

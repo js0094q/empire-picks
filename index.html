@@ -1,36 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks | NFL Odds & Props</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SportsAgg - Live Odds & Analytics</title>
   <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    .hero { text-align: center; padding: 100px 20px; }
+    .hero h1 { font-size: 3.5rem; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px;}
+    .hero p { font-size: 1.2rem; color: var(--muted); max-width: 600px; margin: 0 auto 40px; }
+    .cta-group { display: flex; gap: 16px; justify-content: center; }
+  </style>
 </head>
 <body>
-  <div class="header-bar">
-    <h1>🏈 EmpirePicks NFL</h1>
-    <a href="dashboard.html">EV Dashboard →</a>
-  </div>
 
-  <div class="control-bar">
-    <input type="search" id="global-prop-search" placeholder="Search props by player or metric…" aria-label="Prop search" />
-    <select id="prop-sort" aria-label="Sort props">
-      <option value="ev-desc">Sort props: Top EV</option>
-      <option value="player-asc">Sort props: Player A → Z</option>
-      <option value="line-asc">Sort props: Lowest line</option>
-    </select>
-    <button class="ghost-btn" id="clear-filters" type="button">Clear filters</button>
-    <div class="control-stats" id="prop-stats" aria-live="polite"></div>
-  </div>
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark" style="color: var(--accent);">SA</div>
+      <span>SportsAgg</span>
+    </div>
+    <nav class="nav">
+      <a href="/login.html">Log In</a>
+      <a href="/login.html" class="button primary">Get Started</a>
+    </nav>
+  </header>
 
-  <div id="games"></div>
+  <main>
+    <section class="hero">
+      <h1>Beat the Bookmakers.</h1>
+      <p>Real-time odds comparison, player prop analytics, and parlay building tools all in one dashboard.</p>
+      
+      <div class="cta-group">
+        <a href="/login.html" class="button primary">Start Betting Smarter</a>
+        <a href="#features" class="button secondary">View Features</a>
+      </div>
+    </section>
 
-  <div class="parlay-pill" id="parlay-pill">
-    Parlay: <span id="parlay-count">0</span> picks
-  </div>
+    <section id="features" class="dashboard-layout" style="margin-top: 0;">
+      <div class="card">
+        <h3 style="color: var(--accent);">Live Odds</h3>
+        <p class="muted">Instant updates from major sportsbooks including DraftKings and FanDuel.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--accent);">Prop Analytics</h3>
+        <p class="muted">Deep dive into player stats like passing yards, touchdowns, and rebounds.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--accent);">Parlay Builder</h3>
+        <p class="muted">Construct complex parlays and calculate your potential payout instantly.</p>
+      </div>
+    </section>
+  </main>
 
-  <script type="module" src="teams.js"></script>
-  <script type="module" src="parlay.js"></script>
-  <script type="module" src="script.js"></script>
+  <script src="token.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

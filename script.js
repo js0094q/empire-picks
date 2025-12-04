@@ -1,48 +1,37 @@
-// script.js — core UI logic: load games, odds, render cards with ML, Spread, Total + probabilities + EV + props (top 10)
-
-const API_KEY = 'YOUR_ODDS_API_KEY_HERE';  // ← replace with your actual key
+const API_KEY = 'YOUR_ODDS_API_KEY_HERE';
 const SPORT = 'americanfootball_nfl';
 const REGIONS = 'us';
-const MARKETS = ['h2h','spreads','totals','player_props'];  // include props
+const MARKETS = ['h2h','spreads','totals','player_props'];
 
 const gamesContainer = document.getElementById('games-container');
-const navLive = document.getElementById('nav-live');
-const navDashboard = document.getElementById('nav-dashboard');
-const liveSection = document.getElementById('live-games');
-const dashboardSection = document.getElementById('dashboard');
-
-navLive.addEventListener('click', () => {
-  navLive.classList.add('active');
-  navDashboard.classList.remove('active');
-  liveSection.classList.remove('hidden');
-  dashboardSection.classList.add('hidden');
-});
-navDashboard.addEventListener('click', () => {
-  navDashboard.classList.add('active');
-  navLive.classList.remove('active');
-  dashboardSection.classList.remove('hidden');
-  liveSection.classList.add('hidden');
-});
 
 async function fetchOdds() {
   const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/odds?apiKey=${API_KEY}&regions=${REGIONS}&markets=${MARKETS.join(',')}`;
-  const resp = await fetch(url);
-  return resp.json();
-}
-
-async function loadGames() {
+  console.log('Fetching odds URL:', url);
+  let resp;
   try {
-    let data = await fetchOdds();
-    // sort games by chronological start time
-    data.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
-    gamesContainer.innerHTML = '';
-    data.forEach(game => {
-      const analytics = computeAnalytics(game);
-      const card = buildGameCard(game, analytics);
-      gamesContainer.appendChild(card);
-    });
-  } catch (e) {
-    console.error('Error fetching odds', e);
+    resp = await fetch(url);
+  } catch (err) {
+    console.error('Fetch error (network or CORS):', err);
+    return null;
+  }
+
+  if (!resp.ok) {
+    console.error('Odds API returned error status:', resp.status, resp.statusText);
+    try {
+      const text = await resp.text();
+      console.error('Error response:', text);
+    } catch (_) { }
+    return null;
+  }
+
+  try {
+    const json = await resp.json();
+    console.log('Odds API data:', json);
+    return json;
+  } catch (err) {
+    console.error('Failed to parse JSON from odds API:', err);
+    return null;
   }
 }
 
@@ -57,9 +46,7 @@ function impliedProbFromAmerican(odds) {
 function computeEV(winProb, odds, stake = 1) {
   const impProb = impliedProbFromAmerican(odds);
   const payout = odds > 0 ? (odds / 100) * stake : (100 / Math.abs(odds)) * stake;
-  const profitIfWin = payout;
-  const lossIfLose = stake;
-  const ev = (winProb * profitIfWin) - ((1 - winProb) * lossIfLose);
+  const ev = (winProb * payout) - ((1 - winProb) * stake);
   const edge = ev / stake;
   return { ev, edge, impliedProb: impProb };
 }
@@ -68,17 +55,39 @@ function money(n) {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
+async function loadGames() {
+  const data = await fetchOdds();
+  if (!data) {
+    gamesContainer.innerHTML = `<div class="error">Failed to load odds. Check console for details.</div>`;
+    return;
+  }
+
+  // Sort chronologically
+  data.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
+
+  gamesContainer.innerHTML = '';
+  data.forEach(game => {
+    if (!game.bookmakers) {
+      console.warn('Game has no bookmakers, skipping:', game);
+      return;
+    }
+    const analytics = computeAnalytics(game);
+    const card = buildGameCard(game, analytics);
+    gamesContainer.appendChild(card);
+  });
+}
+
 function computeAnalytics(game) {
   let away = null, home = null;
   let bestSpread = null, bestSpreadProb = 0;
   let bestTotal = null, bestTotalProb = 0;
 
-  (game.bookmakers || []).forEach(bm => {
+  game.bookmakers.forEach(bm => {
     bm.markets.forEach(m => {
       if (m.key === 'h2h') {
         m.outcomes.forEach(o => {
-          if (!away && o.name === game.teams[0]) away = o.price;
-          if (!home && o.name === game.teams[1]) home = o.price;
+          if (o.name === game.teams[0]) away = o.price;
+          if (o.name === game.teams[1]) home = o.price;
         });
       }
       if (m.key === 'spreads') {
@@ -102,11 +111,15 @@ function computeAnalytics(game) {
     });
   });
 
-  const impliedAway = impliedProbFromAmerican(away);
-  const impliedHome = impliedProbFromAmerican(home);
+  if (away == null || home == null) {
+    console.warn('Missing ML odds for game:', game);
+  }
+
+  const impliedAway = away != null ? impliedProbFromAmerican(away) : 0.5;
+  const impliedHome = home != null ? impliedProbFromAmerican(home) : 0.5;
   const sum = impliedAway + impliedHome;
-  const nvAway = impliedAway / sum;
-  const nvHome = impliedHome / sum;
+  const nvAway = impliedAway / (sum || 1);
+  const nvHome = impliedHome / (sum || 1);
 
   return {
     away: game.teams[0],
@@ -140,12 +153,6 @@ function buildGameCard(game, analytics) {
   renderLines(tableWrapper, game, analytics);
   body.appendChild(tableWrapper);
 
-  // Placeholder for props — top 10
-  const propsWrapper = document.createElement('div');
-  propsWrapper.className = 'props-wrapper';
-  renderProps(propsWrapper, game);
-  body.appendChild(propsWrapper);
-
   card.appendChild(hdr);
   card.appendChild(body);
   return card;
@@ -154,7 +161,7 @@ function buildGameCard(game, analytics) {
 function renderLines(container, game, analytics) {
   const rows = [];
 
-  (game.bookmakers || []).forEach(bm => {
+  game.bookmakers.forEach(bm => {
     const rec = {
       book: bm.title,
       mlOdds: "-", mlImp: "", mlModel: "", mlEdge: "",
@@ -169,14 +176,11 @@ function renderLines(container, game, analytics) {
         if (a && h) {
           rec.mlOdds = `${money(a.price)} / ${money(h.price)}`;
 
-          // Away side
           const { impliedProb: impA } = computeEV(0, a.price);
           const evA = computeEV(analytics.nvAway, a.price);
           rec.mlImp = `Imp: ${(impA * 100).toFixed(1)}%`;
           rec.mlModel = `${analytics.away}: ${(analytics.nvAway * 100).toFixed(1)}%`;
           rec.mlEdge = `${(evA.edge * 100).toFixed(1)}%`;
-
-          // (Optionally could add home side similarly)
         }
       }
 
@@ -226,39 +230,6 @@ function renderLines(container, game, analytics) {
       </tbody>
     </table>
   `;
-}
-
-
-// Props rendering — top 10 props only
-async function renderProps(container, game) {
-  try {
-    const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${game.id}/odds?apiKey=${API_KEY}&regions=${REGIONS}&markets=player_props`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (!data || !data.length) return;
-
-    const props = data[0].bookmakers.flatMap(bm => bm.markets.flatMap(m => m.outcomes.map(o => ({
-      name: o.name,
-      price: o.price,
-      bookmaker: bm.title
-    }))));
-
-    // simplistic ranking — you can adjust to consensus or edge-based ranking
-    const top = props.slice(0, 10);
-
-    const html = top.map(p => {
-      const imp = impliedProbFromAmerican(p.price);
-      return `<div class="prop-row">
-        <span class="prop-name">${p.name} (${p.bookmaker})</span>
-        <span class="prop-odds">${money(p.price)}</span>
-        <span class="prop-imp">${(imp*100).toFixed(1)}% imp</span>
-      </div>`;
-    }).join('');
-    container.innerHTML = `<div class="props-list">${html}</div>`;
-
-  } catch (e) {
-    console.error('Error fetching props for game', game.id, e);
-  }
 }
 
 loadGames();

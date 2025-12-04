@@ -1,8 +1,9 @@
 body {
-  background: #0f0f10;
+  background: radial-gradient(circle at 20% 20%, #15161a, #0d0d0f 60%);
   color: white;
   font-family: system-ui, sans-serif;
   padding: 18px;
+  min-height: 100vh;
 }
 
 .header-bar {
@@ -18,10 +19,70 @@ body {
   text-decoration: none;
 }
 
+.control-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #1f1f24;
+  box-shadow: 0 0 18px rgba(0,0,0,0.28);
+}
+
+.control-bar input,
+.control-bar select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #161618;
+  color: white;
+  min-width: 240px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.control-bar input:focus,
+.control-bar select:focus {
+  border-color: #f5d26d;
+  box-shadow: 0 0 0 3px rgba(245, 210, 109, 0.18);
+}
+
+.ghost-btn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #2d2e33;
+  background: rgba(255,255,255,0.05);
+  color: #f5d26d;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.ghost-btn:hover {
+  border-color: #f5d26d;
+  box-shadow: 0 0 0 3px rgba(245,210,109,0.18);
+  transform: translateY(-1px);
+}
+
+.control-stats {
+  margin-left: auto;
+  font-weight: 600;
+  color: #d8d8de;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #24252d;
+  background: rgba(255,255,255,0.03);
+}
+
 #games {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  max-width: 1100px;
+  margin: 0 auto 40px auto;
 }
 
 .game-card {
@@ -29,7 +90,13 @@ body {
   border-radius: 12px;
   overflow: hidden;
   background: #121212;
-  box-shadow: 0 0 12px rgba(0,0,0,0.4);
+  box-shadow: 0 0 18px rgba(0,0,0,0.45);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
 }
 
 .game-header {
@@ -38,6 +105,14 @@ body {
   flex-direction: column;
   gap: 6px;
   color: white;
+}
+
+.header-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .team-row {
@@ -55,14 +130,23 @@ body {
   filter: drop-shadow(0 0 6px rgba(0,0,0,0.5));
 }
 
-.ev-badge {
-  padding: 4px 10px;
-  background: #00c853;
-  border-radius: 6px;
-  width: fit-content;
-  font-weight: 600;
-  box-shadow: 0 0 6px rgba(0,200,83,0.6);
+.ev-pill {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #222226;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid #333;
+  box-shadow: 0 0 8px rgba(0,0,0,0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+
+.ev-Aplus { background: linear-gradient(90deg, #3ee577, #16c172); color: #05130b; }
+.ev-A { background: linear-gradient(90deg, #33d69f, #14b87a); color: #04140d; }
+.ev-Bplus { background: linear-gradient(90deg, #8ee4af, #52c28f); color: #052013; }
+.ev-B { background: linear-gradient(90deg, #d9f0ff, #8fbfe0); color: #0a2439; }
 
 .mainline-row,
 .prop-row {
@@ -70,6 +154,61 @@ body {
   justify-content: space-between;
   padding: 6px 10px;
   border-bottom: 1px solid #333;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid #1e1f24;
+  background: rgba(255,255,255,0.02);
+}
+
+.market-card {
+  border: 1px solid #25262d;
+  border-radius: 10px;
+  padding: 10px;
+  background: #15161a;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.01);
+}
+
+.market-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #f5d26d;
+  letter-spacing: 0.2px;
+}
+
+.market-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.market-pill {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #2b2c34;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.06));
+  display: grid;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.market-pill.muted {
+  background: rgba(255,255,255,0.04);
+  color: #a3a3ad;
+}
+
+.market-label { font-weight: 700; }
+.market-line { color: #d8d8de; font-size: 0.95rem; }
+.market-meta { color: #b2b2ba; font-size: 0.9rem; }
+
+.ev-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .prop-player {
@@ -87,6 +226,13 @@ body {
   font-weight: 700;
   font-size: 0.9rem;
   box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.parlay-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.45);
 }
 
 .props-btn {
@@ -97,6 +243,7 @@ body {
   color: black;
   font-weight: 600;
   cursor: pointer;
+  border: none;
 }
 
 /* Modal styles */
@@ -159,4 +306,85 @@ body {
 
 .prop-line {
   margin-top: 4px;
+}
+
+.props-section {
+  padding: 12px;
+}
+
+.props-section-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: 0.01em;
+}
+
+.props-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.prop-chip {
+  background: #16171a;
+  border: 1px solid #2d2e32;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.3);
+}
+
+.prop-chip__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.prop-chip__player {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.prop-chip__metric {
+  color: #c7c7cc;
+  font-size: 0.95rem;
+}
+
+.prop-chip__actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.book-tag {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #22232a;
+  color: #d6d6dc;
+  border: 1px solid #34363e;
+  font-size: 0.9rem;
+}
+
+.muted {
+  color: #9b9ba1;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .control-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mainline-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .header-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

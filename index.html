@@ -12,20 +12,21 @@
     <a href="dashboard.html">EV Dashboard →</a>
   </div>
 
+  <div class="control-bar">
+    <input type="search" id="global-prop-search" placeholder="Search props by player or metric…" aria-label="Prop search" />
+    <select id="prop-sort" aria-label="Sort props">
+      <option value="ev-desc">Sort props: Top EV</option>
+      <option value="player-asc">Sort props: Player A → Z</option>
+      <option value="line-asc">Sort props: Lowest line</option>
+    </select>
+    <button class="ghost-btn" id="clear-filters" type="button">Clear filters</button>
+    <div class="control-stats" id="prop-stats" aria-live="polite"></div>
+  </div>
+
   <div id="games"></div>
 
   <div class="parlay-pill" id="parlay-pill">
     Parlay: <span id="parlay-count">0</span> picks
-  </div>
-
-  <!-- Props/Mobile modal -->
-  <div id="props-modal" class="modal hidden">
-    <div class="modal-content">
-      <button id="close-props" class="close-btn">✕</button>
-      <h2 id="modal-title">Player Props</h2>
-      <input type="text" id="prop-search" placeholder="Search players…" class="prop-search" />
-      <div id="props-container"></div>
-    </div>
   </div>
 
   <script type="module" src="teams.js"></script>

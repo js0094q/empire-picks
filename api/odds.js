@@ -1,36 +1,31 @@
-// api/odds.js
+// api/odds.js — Vercel Serverless Function (Node.js runtime)
 
-/** Vercel serverless function: proxies calls to The Odds API, using backend-stored API key */
+import fetch from "node-fetch";
 
-export async function GET(request) {
-  const SPORT = 'americanfootball_nfl';
-  const REGIONS = 'us';
-  const MARKETS = ['h2h','spreads','totals'];  // add props separately if needed
-  const apiKey = process.env.ODDS_API_KEY;    // must be set via Vercel env var
+export default async function handler(req, res) {
+  const SPORT = "americanfootball_nfl";
+  const REGIONS = "us";
+  const MARKETS = "h2h,spreads,totals";
+
+  const apiKey = process.env.ODDS_API_KEY;
 
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'Missing API key' }),
-      { status: 500 }
-    );
+    return res.status(500).json({ error: "Missing ODDS_API_KEY" });
   }
 
-  const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/odds?apiKey=${apiKey}&regions=${REGIONS}&markets=${MARKETS.join(',')}`;
+  const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/odds?apiKey=${apiKey}&regions=${REGIONS}&markets=${MARKETS}`;
+
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return new Response(
-        JSON.stringify({ error: 'Odds API error', status: resp.status, details: txt }),
-        { status: resp.status }
-      );
+    const r = await fetch(url);
+    if (!r.ok) {
+      const txt = await r.text();
+      return res.status(r.status).json({ error: txt });
     }
-    const data = await resp.json();
-    return Response.json(data);
+
+    const data = await r.json();
+    return res.status(200).json(data);
+
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Fetch failed', message: err.message }),
-      { status: 500 }
-    );
+    return res.status(500).json({ error: err.message });
   }
 }

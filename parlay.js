@@ -1,7 +1,3 @@
-// ============================================================
-// parlay.js — EmpirePicks v1.0
-// ============================================================
-
 import { renderParlaySlip } from "./ui.js";
 
 window.addLeg = function (_, eventId, label, value) {

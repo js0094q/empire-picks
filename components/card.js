@@ -7,6 +7,13 @@ const CardComponent = {
     // Determine if we have odds to display on the card
     const homeSpread = event.odds?.home || '-';
     const awaySpread = event.odds?.away || '-';
+    // In card.js, inside the create(event) function:
+
+const homeAssets = window.TeamAssets.get(event.home.name);
+const awayAssets = window.TeamAssets.get(event.away.name);
+
+// Now you can use homeAssets.color or homeAssets.logoUrl in your HTML template!
+// Example: <div style="border-left: 4px solid ${homeAssets.color}">...</div>
 
     card.innerHTML = `
       <div class="game-header">

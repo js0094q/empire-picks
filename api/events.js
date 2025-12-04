@@ -63,7 +63,9 @@ export default async function handler(req, res) {
       let propBooks = [];
       if (propsResp.ok) {
         const pj = await propsResp.json();
-        propBooks = pj[0]?.bookmakers || [];
+        // The single-event endpoint returns an object, not an array
+        // so grab the bookmakers list directly to ensure props always populate.
+        propBooks = pj?.bookmakers || [];
       }
 
       // ---- PARSE PROPS ----------------------------------

@@ -1,10 +1,4 @@
-// /api/events.js
-const SPORT = "americanfootball_nfl";
-const BASE = "https://api.the-odds-api.com/v4";
-
-const implied = odds => odds > 0 ? 100/(odds+100) : -odds/(-odds+100);
-const EV = (odds, tp = 0.5) => tp - implied(odds);
-
+@@ -8,84 +8,90 @@ const EV = (odds, tp = 0.5) => tp - implied(odds);
 export default async function handler(req, res) {
   const API_KEY = process.env.ODDS_API_KEY;
   if (!API_KEY) return res.status(500).json({ error: "Missing ODDS_API_KEY" });
@@ -95,21 +89,7 @@ export default async function handler(req, res) {
       // Group props
       const groups = {};
       for (const p of parsed) {
-        const key = `${p.player}|${p.metric}`;
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(p);
-      }
-
-      const propsFinal = [];
-      for (const key in groups) {
-        const grp = groups[key];
-        const player = grp[0].player;
-        const metric = grp[0].metric;
-
-        const overs = grp.filter(x => x.side.toLowerCase() === "over");
-        const unders = grp.filter(x => x.side.toLowerCase() === "under");
-
-        const bestO = overs.sort((a,b)=>b.price-a.price)[0] || null;
+@@ -107,37 +113,50 @@ export default async function handler(req, res) {
         const bestU = unders.sort((a,b)=>b.price-a.price)[0] || null;
 
         const evO = bestO ? EV(bestO.price) : null;
@@ -135,6 +115,7 @@ export default async function handler(req, res) {
         ...ev,
         ev: { home: evHome, away: evAway },
         bestEV,
+        mainlines: books,
         mainlines: {
           moneyline: {
             home: bestHome ? { ...bestHome, prob: implied(bestHome.price) } : null,

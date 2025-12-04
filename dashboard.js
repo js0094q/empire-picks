@@ -82,7 +82,12 @@ window.toggleBet = function(btn, gameId, team) {
   // We look at the button's children to find the values
   const label = btn.querySelector('.odd-label').innerText; // e.g., "Spread"
   const val = btn.querySelector('.odd-val').innerText;     // e.g., "-110" or "+3.5"
-  
+  // Inside dashboard.js -> renderEvents loop
+// Add this button somewhere in the card HTML, e.g., after the team rows
+<button class="button secondary full-width" 
+  onclick="window.LinesPanel.load('${event.id}', '${event.home.name}', '${event.away.name}')">
+  View All Wagers & Props >
+</button>
   // Find the team name in the same row
   const teamRow = btn.closest('.team-row');
   const teamName = teamRow.querySelector('.team-name').innerText;

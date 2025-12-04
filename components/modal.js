@@ -4,6 +4,16 @@ const Modal = {
   content: null,
   closeBtn: null,
 
+  // ============================================================
+// modal.js — Minimal for Layout 2
+// ============================================================
+
+window.Modal = {
+  alert(msg) {
+    alert(msg);
+  }
+};
+
   init() {
     // Create Modal HTML dynamically if it doesn't exist
     if (!document.querySelector('.modal-overlay')) {

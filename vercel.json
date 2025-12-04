@@ -14,7 +14,5 @@
     { "src": "^/$", "dest": "/index.html" },
     { "src": "/(.*)", "dest": "/$1" }
   ],
-  "env": {
-    "ODDS_API_KEY": "@odds_api_key"
   }
 }

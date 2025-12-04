@@ -124,3 +124,18 @@ a {
 .dashboard-table tbody tr:nth-child(even) {
   background: #23232e;
 }
+
+/* EV Explainer */
+.ev-explainer {
+  background: #272732;
+  margin: 1rem;
+  padding: 1rem;
+  border-radius: 6px;
+  color: #ccc;
+}
+.ev-explainer pre {
+  background: #1a1a26;
+  padding: 0.5rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}

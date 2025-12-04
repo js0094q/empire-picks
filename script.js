@@ -1,40 +1,28 @@
-const API_KEY = 'YOUR_ODDS_API_KEY_HERE';
-const SPORT = 'americanfootball_nfl';
-const REGIONS = 'us';
-const MARKETS = ['h2h','spreads','totals','player_props'];
+// public/script.js — front-end odds + props + EV/edge logic, using Vercel API proxy
 
 const gamesContainer = document.getElementById('games-container');
+const navLive = document.getElementById('nav-live');
+const navDashboard = document.getElementById('nav-dashboard');
+const liveSection = document.getElementById('live-games');
+const dashboardSection = document.getElementById('dashboard');
 
-async function fetchOdds() {
-  const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/odds?apiKey=${API_KEY}&regions=${REGIONS}&markets=${MARKETS.join(',')}`;
-  console.log('Fetching odds URL:', url);
-  let resp;
-  try {
-    resp = await fetch(url);
-  } catch (err) {
-    console.error('Fetch error (network or CORS):', err);
-    return null;
-  }
+const SPORT = 'americanfootball_nfl';  // for props endpoint when needed
 
-  if (!resp.ok) {
-    console.error('Odds API returned error status:', resp.status, resp.statusText);
-    try {
-      const text = await resp.text();
-      console.error('Error response:', text);
-    } catch (_) { }
-    return null;
-  }
+// Navigation toggles
+navLive.addEventListener('click', () => {
+  navLive.classList.add('active');
+  navDashboard.classList.remove('active');
+  liveSection.classList.remove('hidden');
+  dashboardSection.classList.add('hidden');
+});
+navDashboard.addEventListener('click', () => {
+  navDashboard.classList.add('active');
+  navLive.classList.remove('active');
+  dashboardSection.classList.remove('hidden');
+  liveSection.classList.add('hidden');
+});
 
-  try {
-    const json = await resp.json();
-    console.log('Odds API data:', json);
-    return json;
-  } catch (err) {
-    console.error('Failed to parse JSON from odds API:', err);
-    return null;
-  }
-}
-
+// Utility: convert American odds to implied probability (decimal)
 function impliedProbFromAmerican(odds) {
   if (odds > 0) {
     return 100 / (odds + 100);
@@ -43,6 +31,7 @@ function impliedProbFromAmerican(odds) {
   }
 }
 
+// Compute EV / edge given a win probability and American odds (stake = 1 unit)
 function computeEV(winProb, odds, stake = 1) {
   const impProb = impliedProbFromAmerican(odds);
   const payout = odds > 0 ? (odds / 100) * stake : (100 / Math.abs(odds)) * stake;
@@ -55,6 +44,38 @@ function money(n) {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
+// Fetch odds via your backend proxy
+async function fetchOdds() {
+  try {
+    const resp = await fetch('/api/odds');
+    if (!resp.ok) {
+      console.error('Backend odds fetch failed', resp.status, await resp.text());
+      return null;
+    }
+    const data = await resp.json();
+    return data;
+  } catch (err) {
+    console.error('Odds fetch error', err);
+    return null;
+  }
+}
+
+// Fetch props for a specific event via backend proxy
+async function fetchProps(eventId) {
+  try {
+    const resp = await fetch(`/api/props?eventId=${encodeURIComponent(eventId)}`);
+    if (!resp.ok) {
+      console.warn(`Props fetch failed for event ${eventId}`, resp.status);
+      return null;
+    }
+    const data = await resp.json();
+    return data;
+  } catch (err) {
+    console.error('Props fetch error', err);
+    return null;
+  }
+}
+
 async function loadGames() {
   const data = await fetchOdds();
   if (!data) {
@@ -62,64 +83,61 @@ async function loadGames() {
     return;
   }
 
-  // Sort chronologically
+  // Sort games by start time, ascending
   data.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
 
   gamesContainer.innerHTML = '';
-  data.forEach(game => {
-    if (!game.bookmakers) {
-      console.warn('Game has no bookmakers, skipping:', game);
-      return;
-    }
+  for (const game of data) {
+    if (!game.bookmakers) continue;
     const analytics = computeAnalytics(game);
-    const card = buildGameCard(game, analytics);
+    const card = await buildGameCard(game, analytics);
     gamesContainer.appendChild(card);
-  });
+  }
 }
 
+// Compute baseline analytics (no-vig normalized win probabilities, best spread & total)
 function computeAnalytics(game) {
   let away = null, home = null;
   let bestSpread = null, bestSpreadProb = 0;
   let bestTotal = null, bestTotalProb = 0;
 
-  game.bookmakers.forEach(bm => {
-    bm.markets.forEach(m => {
+  for (const bm of game.bookmakers) {
+    for (const m of bm.markets) {
       if (m.key === 'h2h') {
-        m.outcomes.forEach(o => {
+        for (const o of m.outcomes) {
           if (o.name === game.teams[0]) away = o.price;
           if (o.name === game.teams[1]) home = o.price;
-        });
+        }
       }
       if (m.key === 'spreads') {
-        m.outcomes.forEach(o => {
+        for (const o of m.outcomes) {
           const p = impliedProbFromAmerican(o.price);
           if (p > bestSpreadProb) {
             bestSpreadProb = p;
             bestSpread = o;
           }
-        });
+        }
       }
       if (m.key === 'totals') {
-        m.outcomes.forEach(o => {
+        for (const o of m.outcomes) {
           const p = impliedProbFromAmerican(o.price);
           if (p > bestTotalProb) {
             bestTotalProb = p;
             bestTotal = o;
           }
-        });
+        }
       }
-    });
-  });
-
-  if (away == null || home == null) {
-    console.warn('Missing ML odds for game:', game);
+    }
   }
 
-  const impliedAway = away != null ? impliedProbFromAmerican(away) : 0.5;
-  const impliedHome = home != null ? impliedProbFromAmerican(home) : 0.5;
-  const sum = impliedAway + impliedHome;
-  const nvAway = impliedAway / (sum || 1);
-  const nvHome = impliedHome / (sum || 1);
+  let nvAway = 0.5, nvHome = 0.5;
+  if (away != null && home != null) {
+    const impAway = impliedProbFromAmerican(away);
+    const impHome = impliedProbFromAmerican(home);
+    const sum = impAway + impHome;
+    nvAway = impAway / sum;
+    nvHome = impHome / sum;
+  }
 
   return {
     away: game.teams[0],
@@ -135,7 +153,8 @@ function computeAnalytics(game) {
   };
 }
 
-function buildGameCard(game, analytics) {
+// Build a full game card: lines + props
+async function buildGameCard(game, analytics) {
   const card = document.createElement('div');
   card.className = 'game-card';
 
@@ -145,6 +164,7 @@ function buildGameCard(game, analytics) {
     <div class="teams">${analytics.away} @ ${analytics.home}</div>
     <div class="start-time">${new Date(game.commence_time).toLocaleString()}</div>
   `;
+  card.appendChild(hdr);
 
   const body = document.createElement('div');
   body.className = 'game-body';
@@ -153,15 +173,20 @@ function buildGameCard(game, analytics) {
   renderLines(tableWrapper, game, analytics);
   body.appendChild(tableWrapper);
 
-  card.appendChild(hdr);
+  const propsWrapper = document.createElement('div');
+  propsWrapper.className = 'props-wrapper';
+  await renderProps(propsWrapper, game);
+  body.appendChild(propsWrapper);
+
   card.appendChild(body);
   return card;
 }
 
+// Render moneyline / spread / total table with implied %, model %, edge %
 function renderLines(container, game, analytics) {
   const rows = [];
 
-  game.bookmakers.forEach(bm => {
+  for (const bm of game.bookmakers) {
     const rec = {
       book: bm.title,
       mlOdds: "-", mlImp: "", mlModel: "", mlEdge: "",
@@ -169,7 +194,7 @@ function renderLines(container, game, analytics) {
       totalLine: "-", totalImp: "", totalModel: "", totalEdge: ""
     };
 
-    bm.markets.forEach(m => {
+    for (const m of bm.markets) {
       if (m.key === 'h2h') {
         const a = m.outcomes.find(o => o.name === analytics.away);
         const h = m.outcomes.find(o => o.name === analytics.home);
@@ -203,10 +228,10 @@ function renderLines(container, game, analytics) {
         rec.totalModel = `Model: ${(analytics.bestTotalProb * 100).toFixed(1)}%`;
         rec.totalEdge = `${(evT.edge * 100).toFixed(1)}%`;
       }
-    });
+    }
 
     rows.push(rec);
-  });
+  }
 
   container.innerHTML = `
     <table class="table">
@@ -230,6 +255,40 @@ function renderLines(container, game, analytics) {
       </tbody>
     </table>
   `;
+}
+
+// Render top 10 props (if available)
+async function renderProps(container, game) {
+  const propsData = await fetchProps(game.id);
+  if (!propsData || !propsData.length) {
+    return;
+  }
+
+  // flatten props across bookmakers/markets/outcomes
+  const props = propsData[0].bookmakers.flatMap(bm =>
+    bm.markets.flatMap(m =>
+      m.outcomes.map(o => ({
+        name: o.name,
+        price: o.price,
+        bookmaker: bm.title
+      }))
+    )
+  );
+
+  const topProps = props.slice(0, 10);
+
+  const html = topProps.map(p => {
+    const imp = impliedProbFromAmerican(p.price);
+    return `<div class="prop-row">
+      <span class="prop-name">${p.name} (${p.bookmaker})</span>
+      <span class="prop-odds">${money(p.price)}</span>
+      <span class="prop-imp">${(imp*100).toFixed(1)}% imp</span>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = topProps.length
+    ? `<div class="props-list">${html}</div>`
+    : '';
 }
 
 loadGames();

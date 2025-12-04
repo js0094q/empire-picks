@@ -1,157 +1,102 @@
-// ===============================================
-//  EMPIREPICKS — FRONTEND SPORTSBOOK UI
-// ===============================================
+import { NFL_TEAMS } from "./teams.js";
+
+function implied(odds){ return odds>0?100/(odds+100):-odds/(-odds+100); }
+function evPercent(val){ return (val*100).toFixed(1); }
 
 document.addEventListener("DOMContentLoaded", loadGames);
 
-// Load all games with EV, props, parlays
-async function loadGames() {
-  const container = document.getElementById("games");
-  container.innerHTML = `<div class="loading">Loading games...</div>`;
+async function loadGames(){
+  const box = document.getElementById("games");
+  box.innerHTML = "Loading...";
 
-  try {
-    const r = await fetch("/api/events");
-    const games = await r.json();
-
-    container.innerHTML = "";
-    games.sort((a, b) => b.bestEV - a.bestEV);
-
-    for (const ev of games) renderGameCard(ev, container);
-
-  } catch (e) {
-    console.error(e);
-    container.innerHTML = `<div class="error">Failed to load.</div>`;
+  const r = await fetch("/api/events");
+  if (!r.ok){
+    box.innerHTML = "Failed loading events.";
+    return;
   }
+
+  const games = await r.json();
+  box.innerHTML = "";
+
+  games.sort((a,b)=>b.bestEV-a.bestEV);
+
+  games.forEach(g => renderGame(g, box));
 }
 
-// Build game card
-function renderGameCard(ev, container) {
-  const kickoff = new Date(ev.commence_time).toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+function renderGame(g, box){
+  const away = NFL_TEAMS[g.away_team];
+  const home = NFL_TEAMS[g.home_team];
+
+  const kickoff = new Date(g.commence_time)
+    .toLocaleString("en-US",{timeZone:"America/New_York"});
 
   const card = document.createElement("div");
   card.className = "game-card";
+  card.style.borderColor = home.primary;
 
   card.innerHTML = `
-    <div class="game-header">
-      <div class="teams">
-        ${ev.away_team} @ ${ev.home_team}
-        <span class="ev-badge">Top EV: ${(ev.bestEV * 100).toFixed(1)}%</span>
+    <div class="game-header" style="
+      background: linear-gradient(45deg, ${away.primary}, ${home.primary});
+    ">
+      <div class="team-row">
+        <img class="team-logo" src="${away.logo}">
+        <span>${g.away_team}</span>
+        <span>@</span>
+        <img class="team-logo" src="${home.logo}">
+        <span>${g.home_team}</span>
       </div>
-      <div>Kickoff (EST): ${kickoff}</div>
+
+      <div class="ev-badge">
+        EV: ${evPercent(g.bestEV)}%
+      </div>
+
+      <div class="kickoff">Kickoff: ${kickoff}</div>
     </div>
 
-    <div id="odds-${ev.id}"></div>
-    <div id="parlay-${ev.id}" class="parlay-ev-box"></div>
-    <div id="props-${ev.id}"></div>
+    <div class="ml-section">
+      ${renderMainlines(g)}
+    </div>
+
+    <div class="props-section">
+      ${renderProps(g.props)}
+    </div>
+
+    <div class="parlay-section">
+      <button class="parlay-btn" onclick='addParlayLeg({
+        gameId:"${g.id}",
+        type:"BestEV",
+        display:"${g.away_team} @ ${g.home_team}",
+        odds: ${g.bestEV}
+      })'>Add Best-EV Pick</button>
+    </div>
   `;
 
-  container.appendChild(card);
-  renderMainMarkets(ev);
-  highlightBestEV(ev);
-  renderParlayEV(ev);
-  renderPropsEV(ev);
+  box.appendChild(card);
 }
 
-// MAIN MARKETS
-function renderMainMarkets(ev) {
-  const box = document.getElementById(`odds-${ev.id}`);
-  const b = ev.bestLines;
+function renderMainlines(g){
+  const homeML = g.ev.home !== null ?
+    `${g.home_team}: ${evPercent(g.ev.home)}%` : "–";
+  const awayML = g.ev.away !== null ?
+    `${g.away_team}: ${evPercent(g.ev.away)}%` : "–";
 
-  box.innerHTML = `
-    <div class="market-header">Moneyline</div>
-    <div>
-      <span class="odds-pill" data-ev="${ev.ev.awayML}">
-        ${ev.away_team}: ${b.moneyline.away?.price ?? "-"}
-      </span>
-      <span class="odds-pill" data-ev="${ev.ev.homeML}">
-        ${ev.home_team}: ${b.moneyline.home?.price ?? "-"}
-      </span>
-    </div>
-
-    <div class="market-header">Spreads</div>
-    <div>
-      <span class="odds-pill">${b.spreads.away?.point} ${b.spreads.away?.price}</span>
-      <span class="odds-pill">${b.spreads.home?.point} ${b.spreads.home?.price}</span>
-    </div>
-
-    <div class="market-header">Totals</div>
-    <div>
-      <span class="odds-pill">Over ${b.totals.over?.point} (${b.totals.over?.price})</span>
-      <span class="odds-pill">Under ${b.totals.under?.point} (${b.totals.under?.price})</span>
+  return `
+    <div class="mainline-row">
+      <strong>Mainline EV:</strong>
+      <span>${awayML}</span>
+      <span>${homeML}</span>
     </div>
   `;
 }
 
-// Highlight highest EV pick
-function highlightBestEV(ev) {
-  const pills = document.querySelectorAll(`#odds-${ev.id} .odds-pill`);
-  const best = ev.bestEV;
+function renderProps(props){
+  if (!props || !props.length) return `<div>No props available.</div>`;
 
-  pills.forEach(p => {
-    const val = Number(p.dataset.ev);
-    if (Math.abs(val - best) < 0.0001) {
-      p.classList.add("ev-highlight");
-    }
-  });
-}
-
-// Parlay EV UI
-function renderParlayEV(ev) {
-  const box = document.getElementById(`parlay-${ev.id}`);
-  const P = ev.bestParlays;
-
-  if (!P || P.length === 0) {
-    box.innerHTML = `<em>No +EV parlays detected.</em>`;
-    return;
-  }
-
-  let html = `<div class="market-header">Best Parlay Opportunities</div>`;
-
-  P.forEach(p => {
-    html += `
-      <div style="margin-bottom:10px;">
-        <strong style="color:var(--green);">Edge: ${(p.edge * 100).toFixed(2)}%</strong><br>
-        True: ${(p.trueProb * 100).toFixed(1)}% — Implied: ${(p.impliedProb * 100).toFixed(1)}%<br>
-        Legs:<br>
-        • ${p.legs[0].name ?? p.legs[0].team} (${p.legs[0].price})<br>
-        • ${p.legs[1].name ?? p.legs[1].team} (${p.legs[1].price})
-      </div>
-    `;
-  });
-
-  box.innerHTML = html;
-}
-
-// Props EV UI
-function renderPropsEV(ev) {
-  const box = document.getElementById(`props-${ev.id}`);
-  const props = ev.propsEV;
-
-  if (!props || props.length === 0) {
-    box.innerHTML = `<em>No props available.</em>`;
-    return;
-  }
-
-  let html = `<div class="market-header">Top Prop Value</div>`;
-
-  props.slice(0, 6).forEach(p => {
-    const glow = p.bestEV > 0 ? "ev-positive" : "";
-
-    html += `
-      <div class="prop-card ${glow}">
-        <div class="prop-title">${p.player} — ${p.type.replace("player_", "")}</div>
-        Line: ${p.point}<br>
-        Best Side: <strong>${p.bestSide}</strong><br>
-        EV: ${(p.bestEV * 100).toFixed(1)}%
-      </div>
-    `;
-  });
-
-  box.innerHTML = html;
+  return props.slice(0,7).map(p => `
+    <div class="prop-row">
+      <div class="prop-player">${p.player}</div>
+      <div class="prop-metric">${p.metric.replace("player_","").replace("_"," ")}</div>
+      <div class="prop-ev">EV: ${evPercent(p.bestEV)}%</div>
+    </div>
+  `).join("");
 }

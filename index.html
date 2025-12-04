@@ -2,75 +2,72 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>EmpirePicks | NFL Odds + Props + EV</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+  <title>EmpirePicks | NFL Odds</title>
 
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- TEAM LOGOS + COLORS -->
-  <script type="module" src="teams.js"></script>
+  <style>
+    body {
+      background: #0f0f10;
+      color: white;
+      font-family: system-ui, sans-serif;
+      padding: 18px;
+    }
 
+    #games {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .header-bar a {
+      color: #f5d26d;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .parlay-pill {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      background: #f5d26d;
+      padding: 10px 16px;
+      border-radius: 22px;
+      color: black;
+      font-weight: 700;
+      font-size: 0.9rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+  </style>
 </head>
 
 <body>
 
-  <header class="header">
-    <h1>🏛 EmpirePicks</h1>
-    <p style="color:var(--subtle);margin-top:4px;">NFL Odds • Props • EV • Parlays</p>
-    <button id="refreshBtn" class="odds-pill" onclick="location.reload()">⟳ Refresh</button>
-    <a href="/dashboard" style="color:var(--gold);margin-left:1rem;">📊 Dashboard</a>
-  </header>
-
-  <!-- MAIN GAME GRID -->
-  <main id="games" class="games"></main>
-
-  <!-- PARLAY MAKER (fixed sidebar) -->
-  <div id="parlayMaker"
-    style="
-      position: fixed;
-      bottom: 0;
-      right: 0;
-      width: 350px;
-      max-height: 72vh;
-      overflow-y: auto;
-      background: #141a33;
-      border-left: 2px solid var(--gold);
-      border-top: 2px solid var(--gold);
-      padding: 14px;
-      border-radius: 12px 0 0 0;
-      box-shadow: 0 -2px 12px rgba(0,0,0,0.45);
-      z-index: 9999;">
-      
-      <h3 style="margin-top:0;color:var(--gold);font-size:1.1rem;">🎰 Parlay Builder</h3>
-      <div id="parlayLegs"></div>
-
-      <div id="parlayCalc"
-        style="margin-top:12px;font-size:0.9rem;color:var(--subtle);">
-        Add legs to calculate EV…
-      </div>
-
-      <div style="margin-top:12px;display:flex;gap:8px;">
-        <button id="clearParlay"
-          style="
-            flex:1;
-            padding:6px;
-            border-radius:8px;
-            background:#0d1228;
-            border:1px solid var(--border);
-            color:#f55;">
-          Clear
-        </button>
-      </div>
+  <div class="header-bar">
+    <h1>🏈 EmpirePicks NFL</h1>
+    <a href="dashboard.html">EV Dashboard →</a>
   </div>
 
-  <footer class="footer">
-    Data from The Odds API • EmpirePicks.com
-  </footer>
+  <div id="games"></div>
 
-  <!-- FRONTEND SCRIPTS -->
-  <script type="module" src="script.js"></script>
+  <div class="parlay-pill" id="parlay-pill">
+    Parlay: <span id="parlay-count">0</span> picks
+  </div>
+
+  <script type="module" src="teams.js"></script>
   <script type="module" src="parlay.js"></script>
+  <script type="module" src="script.js"></script>
 
 </body>
 </html>

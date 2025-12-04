@@ -1,0 +1,1 @@
+// Beta card component placeholder

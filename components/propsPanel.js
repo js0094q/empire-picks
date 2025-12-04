@@ -1,0 +1,1 @@
+// Beta propsPanel placeholder

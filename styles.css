@@ -1,103 +1,137 @@
 :root {
   --bg: #0d1228;
-  --card: #171c36;
-  --border: #2a3360;
-  --text: #eaf1ff;
-  --muted: #9ca7c8;
+  --card: #131a38;
+  --border: #2c3666;
+  --text: #eef3ff;
+  --subtle: #9ca7c8;
   --gold: #ffcc33;
   --green: #28d16c;
   --red: #f45d67;
-  --radius: 12px;
+  --radius: 14px;
+  --shadow: 0 4px 14px rgba(0,0,0,0.45);
 }
 
 body {
   margin: 0;
+  font-family: system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, sans-serif;
 }
 
+/* HEADER ------------------------------------------------- */
 .header {
-  text-align: center;
   padding: 1rem;
+  text-align: center;
   border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #0d1228, #101530 65%, #000);
+  box-shadow: var(--shadow);
 }
 
-button {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
+.header h1 {
+  margin: 0;
+  color: var(--gold);
+  letter-spacing: 1px;
 }
-button:hover { filter: brightness(1.2); }
 
+/* GAME GRID ------------------------------------------------ */
 .games {
   display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  max-width: 900px;
+  gap: 1.3rem;
+  padding: 1.3rem;
+  max-width: 950px;
   margin: 0 auto;
 }
 
-.card {
-  color: #f4f7ff;
+/* CARD --------------------------------------------------- */
+.game-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
 }
 
-.card-header small {
-  opacity: 0.85;
-}
-
-.card h2 {
-  color: #ffffff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-}
-
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-}
-
-.tab {
-  flex: 1;
-  padding: 0.6rem;
-  text-align: center;
-  cursor: pointer;
-  background: #10152e;
-  border-right: 1px solid var(--border);
-}
-.tab.active {
-  background: #192045;
-  color: var(--gold);
-}
-
-.tab-content {
-  display: none;
-  padding: 0.8rem;
-}
-.tab-content.active { display: block; }
-
-.table {
+/* Team-colored top border (set via JS) */
+.game-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 6px;
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+  background: var(--team-color, var(--gold));
 }
-.table th, .table td {
-  border-bottom: 1px solid var(--border);
-  padding: 0.4rem;
-}
-.table th {
-  text-align: left;
-  color: var(--muted);
-}
-.ev-pos { color: var(--green); }
-.ev-neg { color: var(--red); }
 
+/* HEADER ------------------------------------------- */
+.game-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.game-header .teams {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.game-header img {
+  height: 44px;
+  width: auto;
+}
+
+/* ODDS SECTION --------------------------------------- */
+.odds-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+}
+
+.odds-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 0.7rem;
+  align-items: center;
+}
+
+.label {
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+/* BET BUTTONS ------------------------------------------- */
+.bet-btn {
+  padding: 0.55rem 0.7rem;
+  background: #10172f;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  transition: 0.15s ease;
+  font-size: 0.95rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.bet-btn:hover {
+  background: #182040;
+  border-color: var(--gold);
+  color: var(--gold);
+  transform: translateY(-2px);
+}
+
+.bet-btn.best {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* FOOTER -------------------------------------------------- */
 .footer {
   text-align: center;
   padding: 1rem;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
+  color: var(--subtle);
   margin-top: 2rem;
 }

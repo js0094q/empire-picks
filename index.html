@@ -2,58 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1" />
-
-  <title>EmpirePicks | NFL Odds</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EmpirePicks | NFL Odds & Props</title>
   <link rel="stylesheet" href="styles.css" />
-
-  <style>
-    body {
-      background: #0f0f10;
-      color: white;
-      font-family: system-ui, sans-serif;
-      padding: 18px;
-    }
-
-    #games {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-
-    .header-bar a {
-      color: #f5d26d;
-      font-weight: 600;
-      text-decoration: none;
-    }
-
-    .parlay-pill {
-      position: fixed;
-      right: 14px;
-      bottom: 14px;
-      background: #f5d26d;
-      padding: 10px 16px;
-      border-radius: 22px;
-      color: black;
-      font-weight: 700;
-      font-size: 0.9rem;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
-    }
-  </style>
 </head>
-
 <body>
-
   <div class="header-bar">
     <h1>🏈 EmpirePicks NFL</h1>
     <a href="dashboard.html">EV Dashboard →</a>
@@ -65,9 +18,18 @@
     Parlay: <span id="parlay-count">0</span> picks
   </div>
 
+  <!-- Props/Mobile modal -->
+  <div id="props-modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="close-props" class="close-btn">✕</button>
+      <h2 id="modal-title">Player Props</h2>
+      <input type="text" id="prop-search" placeholder="Search players…" class="prop-search" />
+      <div id="props-container"></div>
+    </div>
+  </div>
+
   <script type="module" src="teams.js"></script>
   <script type="module" src="parlay.js"></script>
   <script type="module" src="script.js"></script>
-
 </body>
 </html>

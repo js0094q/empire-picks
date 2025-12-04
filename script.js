@@ -1,4 +1,5 @@
 import { NFL_TEAMS } from "./teams.js";
+import { addParlayLeg, getParlay, saveParlay } from "./parlay.js";
 import { addParlayLeg, getParlay } from "./parlay.js";
 
 const state = {
@@ -6,6 +7,8 @@ const state = {
   search: "",
   sort: "ev-desc",
 };
+
+const PROP_LIMIT = 6;
 
 document.addEventListener("DOMContentLoaded", () => {
   setupControls();
@@ -25,14 +28,28 @@ function gradeClass(g) {
     "A+": "ev-Aplus",
     "A":  "ev-A",
     "B+": "ev-Bplus",
+    "B":  "ev-B"
     "B":  "ev-B",
   }[g] || "";
 }
 
+function evPercent(val) {
 function evPercent(val = 0) {
   return (val * 100).toFixed(1);
 }
 
+let allEvents = [];
+function impliedPercent(prob = null) {
+  if (prob === null || prob === undefined) return "–";
+  return (prob * 100).toFixed(1);
+}
+
+function oddsLabel(price) {
+  if (price === null || price === undefined) return "–";
+  return price > 0 ? `+${price}` : `${price}`;
+}
+
+document.addEventListener("DOMContentLoaded", loadGames);
 function setupControls() {
   const searchInput = document.getElementById("global-prop-search");
   const sortSelect = document.getElementById("prop-sort");
@@ -67,6 +84,10 @@ async function loadGames() {
   const box = document.getElementById("games");
   box.innerHTML = "Loading...";
 
+  const r = await fetch("/api/events");
+  if (!r.ok) {
+    box.innerHTML = "Failed loading events.";
+    return;
   try {
     const r = await fetch("/api/events");
     if (!r.ok) throw new Error("Failed loading events");
@@ -84,6 +105,9 @@ async function loadGames() {
   }
 }
 
+  const games = await r.json();
+  window.__allEvents = games;  // store globally for modal lookup
+  allEvents = games;
 function renderGames() {
   const box = document.getElementById("games");
   if (!state.events.length) {
@@ -94,8 +118,11 @@ function renderGames() {
 
   let visibleProps = 0;
   box.innerHTML = "";
+  games.sort((a, b) => (b.bestEV || 0) - (a.bestEV || 0));
+
+  games.forEach(g => renderGame(g, box));
   state.events.forEach(game => {
-    const propsForCard = filterAndSortProps(game.props);
+    const propsForCard = filterAndSortProps(game.props).slice(0, PROP_LIMIT);
     visibleProps += propsForCard.length;
     box.appendChild(buildGameCard(game, propsForCard));
   });
@@ -103,6 +130,7 @@ function renderGames() {
   updateControlStats(visibleProps);
 }
 
+function renderGame(g, box) {
 function buildGameCard(g, propsForCard = []) {
   const away = NFL_TEAMS[g.away_team] || {};
   const home = NFL_TEAMS[g.home_team] || {};
@@ -110,8 +138,16 @@ function buildGameCard(g, propsForCard = []) {
   const kickoff = new Date(g.commence_time)
     .toLocaleString("en-US", { timeZone: "America/New_York" });
 
+  const evDisplay = g.bestEV != null
+    ? `${evPercent(g.bestEV)}%` : "–";
   const bestGrade = valueGrade(g.bestEV || 0);
   const bestClass = gradeClass(bestGrade);
+
+  const headerBg = `linear-gradient(45deg, ${away.primary||"#222"}, ${home.primary||"#222"})`;
+  const ml = g.mainlines || {};
+  const moneyline = ml.moneyline || {};
+  const spread = ml.spread || {};
+  const total = ml.total || {};
 
   const card = document.createElement("div");
   card.className = "game-card";
@@ -128,6 +164,9 @@ function buildGameCard(g, propsForCard = []) {
         <img class="team-logo" src="${home.logo || ''}" alt="${g.home_team}">
         <span>${g.home_team}</span>
       </div>
+
+      <div class="ev-badge">EV: ${evDisplay}</div>
+      <div class="kickoff">Kickoff: ${kickoff}</div>
       <div class="header-meta">
         <div class="ev-pill ${bestClass}">EV: ${evPercent(g.bestEV)}% • ${bestGrade}</div>
         <div class="kickoff">Kickoff: ${kickoff}</div>
@@ -135,31 +174,63 @@ function buildGameCard(g, propsForCard = []) {
     </div>
 
     <div class="mainline-row">
-      <div><strong>Mainline EV</strong></div>
-      <div class="ev-group">
-        <span class="ev-pill">${g.away_team}: ${g.ev?.away != null ? evPercent(g.ev.away)+"%" : "–"}</span>
-        <span class="ev-pill">${g.home_team}: ${g.ev?.home != null ? evPercent(g.ev.home)+"%" : "–"}</span>
+      <strong>Mainline EV:</strong>
+      <span>${g.away_team}: ${g.ev.away != null ? evPercent(g.ev.away)+"%" : "–" }</span>
+      <span>${g.home_team}: ${g.ev.home != null ? evPercent(g.ev.home)+"%" : "–" }</span>
+    <div class="market-grid">
+      <div class="market-card">
+        <div class="market-title">Spread</div>
+        <div class="market-options">
+          ${renderMainlineOutcome(spread.away, `${g.away_team}`)}
+          ${renderMainlineOutcome(spread.home, `${g.home_team}`)}
+        </div>
+      </div>
+      <div class="market-card">
+        <div class="market-title">Moneyline</div>
+        <div class="market-options">
+          ${renderMainlineOutcome(moneyline.away, `${g.away_team}`)}
+          ${renderMainlineOutcome(moneyline.home, `${g.home_team}`)}
+        </div>
+      </div>
+      <div class="market-card">
+        <div class="market-title">Total</div>
+        <div class="market-options">
+          ${renderMainlineOutcome(total.over, "Over", "Total")}
+          ${renderMainlineOutcome(total.under, "Under", "Total")}
+        </div>
       </div>
     </div>
+
+    <button class="props-btn" onclick="openPropsModal('${g.id}')">
+      ➤ View Player Props
+    </button>
 
     <div class="parlay-section">
       <button class="props-btn" onclick='addParlayLeg({
         gameId:"${g.id}",
         type:"BestEV",
         display:"${g.away_team} @ ${g.home_team}",
+        odds: ${g.bestEV || 0}
         odds:${g.bestEV || 0}
       })'>Add Best-EV Pick</button>
     </div>
 
     <div class="props-section">
-      <div class="props-section-title">Player Props <span class="muted">(${propsForCard.length || 0})</span></div>
+      <div class="props-section-title">Top Player Props <span class="muted">(${propsForCard.length || 0} shown, max ${PROP_LIMIT})</span></div>
       <div class="props-grid">${propsForCard.length ? propsForCard.map(p => renderProp(p, g)).join("") : `<p class="muted">No props match your filters yet.</p>`}</div>
     </div>
   `;
 
+  box.appendChild(card);
   return card;
 }
 
+// ========== PROP MODAL LOGIC ==========
+
+const modal = document.getElementById("props-modal");
+const closeModal = document.getElementById("close-props");
+const propsContainer = document.getElementById("props-container");
+const searchBox = document.getElementById("prop-search");
 function renderProp(p, game) {
   const grade = valueGrade(p.bestEV || 0);
   const cls = gradeClass(grade);
@@ -173,6 +244,7 @@ function renderProp(p, game) {
     display: `${p.player} ${bestLabel} ${formatMetric(p.metric)}`
   } : null;
 
+let currentProps = [];
   return `
     <div class="prop-chip">
       <div class="prop-chip__head">
@@ -190,6 +262,9 @@ function renderProp(p, game) {
   `;
 }
 
+window.openPropsModal = function(eventId) {
+  const game = window.__allEvents.find(ev => ev.id === eventId);
+  const props = game?.props || [];
 function selectBestOutcome(p) {
   if (!p) return null;
   if ((p.bestSide || "").toLowerCase() === "over") return p.over || null;
@@ -197,6 +272,36 @@ function selectBestOutcome(p) {
   return p.over || p.under || null;
 }
 
+  if (!props.length) {
+    propsContainer.innerHTML = `<p>No props available.</p>`;
+  } else {
+    currentProps = props;
+    renderProps(props);
+function renderMainlineOutcome(outcome, label, prefix = "") {
+  if (!outcome) {
+    return `<div class="market-pill muted">${label}: no line</div>`;
+  }
+
+  modal.classList.remove("hidden");
+};
+  const lineLabel = outcome.point != null ? `${prefix ? prefix + " " : ""}Line ${outcome.point}` : "Odds";
+  const probLabel = impliedPercent(outcome.prob);
+
+closeModal.onclick = () => modal.classList.add("hidden");
+  return `
+    <div class="market-pill">
+      <div class="market-label">${label}${outcome.book ? ` @ ${outcome.book}` : ""}</div>
+      <div class="market-line">${lineLabel}</div>
+      <div class="market-meta">${oddsLabel(outcome.price)} • Prob ${probLabel}%</div>
+    </div>
+  `;
+}
+
+searchBox.addEventListener("input", () => {
+  const q = searchBox.value.toLowerCase();
+  const filtered = currentProps.filter(p => p.player.toLowerCase().includes(q));
+  renderProps(filtered);
+});
 function filterAndSortProps(props = []) {
   const filtered = props.filter(p => {
     if (!state.search) return true;
@@ -204,6 +309,25 @@ function filterAndSortProps(props = []) {
     return text.includes(state.search);
   });
 
+function renderProps(list) {
+  propsContainer.innerHTML = list.map(p => {
+    const g = valueGrade(p.bestEV);
+    const cls = gradeClass(g);
+    return `
+      <div class="prop-card">
+        <div class="prop-title">
+          ${p.player} — ${p.metric}
+          <span class="ev-badge ${cls}">${evPercent(p.bestEV)}% • ${g}</span>
+        </div>
+        <div class="prop-line">Line: ${p.point ?? "-"}</div>
+        <div style="margin-top:8px;">
+          <button onclick='addParlayLeg(${JSON.stringify(p.over || p.under)})' class="props-btn">
+            Add to Parlay
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
   const sorter = {
     "ev-desc": (a, b) => (b.bestEV || 0) - (a.bestEV || 0),
     "player-asc": (a, b) => a.player.localeCompare(b.player),

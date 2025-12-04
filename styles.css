@@ -80,6 +80,10 @@ a {
 .game-header .teams {
   font-weight: 600;
 }
+.game-header .start-time {
+  font-size: 0.85rem;
+  color: #bbb;
+}
 .game-body {
   padding: 0.75rem;
   display: flex;
@@ -90,9 +94,10 @@ a {
   width: 100%;
   border-collapse: collapse;
   color: #ddd;
+  font-size: 0.9rem;
 }
 .table th, .table td {
-  padding: 0.5rem;
+  padding: 0.4rem;
   text-align: left;
 }
 .table thead {
@@ -103,6 +108,7 @@ a {
 }
 .ev-pos {
   color: #f0c14b;
+  font-weight: bold;
 }
 
 /* Dashboard */

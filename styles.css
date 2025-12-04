@@ -1,243 +1,53 @@
-/* =====================================
-   SPORTSBOOK UI — GLOBAL REBUILD
-   ===================================== */
-
-:root {
-  --bg: #0a0f24;
-  --card: #11182e;
-  --panel: #161e3c;
-  --border: #28325a;
-  --text: #e9ecf7;
-  --subtle: #9ba5c7;
-  --gold: #ffcc33;
-  --green: #28d16c;
-  --red: #f45d67;
-  --blue: #3a7afe;
-  --radius: 14px;
-  --shadow: 0 6px 16px rgba(0,0,0,0.45);
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  font-family: system-ui, sans-serif;
-  color: var(--text);
-}
-
-/* HEADER */
-.header {
-  padding: 1.2rem;
-  text-align: center;
-  background: linear-gradient(145deg, #0a0f24, #0f162f 70%, #000);
-  border-bottom: 1px solid var(--border);
-}
-
-.header h1 {
-  color: var(--gold);
-  margin: 0;
-  letter-spacing: 1px;
-}
-
-/* GAME GRID */
-.games {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 1.4rem;
-  display: grid;
-  gap: 1.4rem;
-}
-
-/* GAME CARD */
 .game-card {
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 1.2rem 1.4rem;
-  border: 1px solid var(--border);
-  position: relative;
-  box-shadow: var(--shadow);
+  border: 2px solid #444;
+  margin: 14px 0;
+  border-radius: 12px;
   overflow: hidden;
+  background: #121212;
+  color: white;
+  box-shadow: 0 0 12px rgba(0,0,0,0.4);
 }
 
-.game-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 6px;
-  width: 100%;
-  background: var(--team-color, var(--gold));
-}
-
-/* TEAM HEADER */
 .game-header {
-  margin-bottom: 1rem;
-}
-
-.game-header .teams {
-  font-size: 1.45rem;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.market-header {
-  font-size: 0.9rem;
-  color: var(--subtle);
-  margin: 10px 0 4px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* ODDS PILL BUTTONS */
-.odds-pill {
-  display: inline-block;
-  padding: 8px 12px;
-  background: var(--panel);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  font-weight: 600;
-  min-width: 110px;
-  text-align: center;
-  transition: 0.15s ease;
-  margin-right: 6px;
-  margin-bottom: 6px;
-}
-
-.odds-pill:hover {
-  background: #1d2548;
-  border-color: var(--gold);
-  color: var(--gold);
-  transform: translateY(-2px);
-}
-
-.odds-pill.ev-highlight {
-  border-color: var(--green);
-  background: rgba(40, 209, 108, 0.15);
-  color: var(--green) !important;
-  box-shadow: 0 0 10px rgba(40,209,108,0.32);
-}
-
-/* BADGE */
-.ev-badge {
-  background: var(--green);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #000;
-}
-
-/* PARLAY BLOCK */
-.parlay-ev-box {
-  background: #10172d;
-  border: 1px solid var(--gold);
   padding: 12px;
-  border-radius: var(--radius);
-  margin-top: 14px;
-  box-shadow: var(--shadow);
-}
-
-/* PROP CARDS */
-.prop-card {
-  background: var(--panel);
-  padding: 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  margin-bottom: 8px;
-}
-
-.prop-card.ev-positive {
-  border-color: var(--green);
-  box-shadow: 0 0 12px rgba(40, 209, 108, 0.35);
-  background: rgba(40,209,108,0.12);
-}
-
-.prop-title {
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-/* ==========================================================
-   PROP COMPARISON MODAL (Sportsbook-Style Drawer)
-   ========================================================== */
-
-.prop-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(3px);
-  z-index: 5000;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: white;
+}
+
+.team-row {
+  display: flex;
   align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
-.prop-modal {
-  width: 92%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-  background: #11182e;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  padding: 20px;
-  box-shadow: var(--shadow);
-  animation: modalFadeIn 0.22s ease-out;
+.team-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(0,0,0,0.5));
 }
 
-@keyframes modalFadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+.ev-badge {
+  padding: 4px 10px;
+  background: #00c853;
+  border-radius: 6px;
+  width: fit-content;
+  font-weight: 600;
+  box-shadow: 0 0 6px rgba(0,200,83,0.6);
 }
 
-.prop-modal-header {
+.mainline-row,
+.prop-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #333;
 }
 
-.prop-modal-header h2 {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--gold);
-}
-
-.prop-close-btn {
-  cursor: pointer;
-  background: none;
-  border: none;
-  font-size: 1.6rem;
-  color: var(--text);
-}
-
-.prop-row {
-  padding: 10px 12px;
-  background: var(--panel);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  margin-bottom: 10px;
-}
-
-.prop-row.ev-positive {
-  border-color: var(--green);
-  background: rgba(40,209,108,0.15);
-  box-shadow: 0 0 12px rgba(40,209,108,0.3);
-}
-
-.prop-title-large {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.book-line {
-  margin-top: 6px;
-  padding-left: 6px;
-  font-size: 0.9rem;
-}
-
-.book-line-best {
-  color: var(--green);
-  font-weight: 700;
+.prop-player {
+  font-weight: 600;
 }

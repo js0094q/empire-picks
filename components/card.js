@@ -1,6 +1,6 @@
 import { toggleAccordion } from "./ui.js";
-import { LinesPanel } from "./linesPanel.js";
-import { PropsPanel } from "./propsPanel.js";
+import { LinesPanel } from "./api/linesPanel.js";
+import { PropsPanel } from "./api/propsPanel.js";
 
 export const CardComponent = {
   create(event) {

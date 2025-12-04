@@ -1,32 +1,34 @@
-// api/props.js
+// ============================================================
+// /api/props.js — EmpirePicks v1.0
+// Returns player props for a specific event
+// ============================================================
 
-export async function GET(request) {
+export default async function handler(req, res) {
   const apiKey = process.env.ODDS_API_KEY;
-  const { eventId } = Object.fromEntries((new URL(request.url)).searchParams);
+  const eventId = req.query.eventId;
 
   if (!apiKey || !eventId) {
-    return new Response(
-      JSON.stringify({ error: 'Missing API key or eventId param' }),
-      { status: 400 }
-    );
+    return res.status(400).json({ error: "Missing API key or eventId" });
   }
 
-  const url = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events/${eventId}/odds?apiKey=${apiKey}&regions=us&markets=player_props`;
+  const url = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events/${eventId}/odds?apiKey=${apiKey}&regions=us&markets=player_props&oddsFormat=american`;
+
   try {
     const resp = await fetch(url);
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return new Response(
-        JSON.stringify({ error: 'Props API error', status: resp.status, details: txt }),
-        { status: resp.status }
-      );
-    }
     const data = await resp.json();
-    return Response.json(data);
+
+    if (!resp.ok) {
+      return res.status(500).json({
+        error: "Props API failure",
+        details: data
+      });
+    }
+    res.status(200).json(data);
+
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Fetch failed', message: err.message }),
-      { status: 500 }
-    );
+    res.status(500).json({
+      error: "Failed to fetch props",
+      details: err.message
+    });
   }
 }

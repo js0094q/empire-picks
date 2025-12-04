@@ -1,9 +1,7 @@
-// ============================================================
-// teams.js — EmpirePicks v1.0 Team Color + Logo Engine
-// Generates brand-colored team bars + logo avatars
-// ============================================================
+// teams.js — non-module global version
 
-export const TeamAssets = {
+const TeamAssets = {
+  nfl: {
     "Arizona Cardinals":        { abbr: "ARI", color: "#97233F" },
     "Atlanta Falcons":          { abbr: "ATL", color: "#A71930" },
     "Baltimore Ravens":         { abbr: "BAL", color: "#241773" },
@@ -38,30 +36,21 @@ export const TeamAssets = {
     "Washington Commanders":    { abbr: "WAS", color: "#5A1414" }
   },
 
-  // Default fallback for unknown teams
-  default: {
-    abbr: "GEN",
-    color: "#555555"
-  },
+  default: { abbr: "GEN", color: "#555555" },
 
-  // Normalized accessor
   get(name) {
     const data = this.nfl[name] || this.default;
     return {
       abbr: data.abbr,
       color: data.color,
-      logoUrl: this.generateLogo(data.abbr, data.color)
+      logoUrl:
+        "https://ui-avatars.com/api/?name=" +
+        data.abbr +
+        "&background=" +
+        data.color.replace("#", "") +
+        "&color=fff&size=64&font-size=0.4&length=3&rounded=true"
     };
-  },
-
-  // Avatar generator using ui-avatars
-  generateLogo(abbr, color) {
-    return `https://ui-avatars.com/api/?name=${abbr}&background=${color.replace(
-      "#",
-      ""
-    )}&color=fff&size=64&font-size=0.4&length=3&rounded=true`;
   }
 };
 
-// Expose globally
 window.TeamAssets = TeamAssets;

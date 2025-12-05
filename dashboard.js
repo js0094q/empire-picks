@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", loadPropsHub);
 
 async function loadPropsHub() {
   const container = document.getElementById("props-container");
-  container.innerHTML = `<div class="loader">Loading props...</div>`;
+  container.innerHTML = `<div class="loader">Summoning prop scrolls from the Empire...</div>`;
 
   try {
     const res = await fetch("/api/odds-events");
@@ -22,9 +22,18 @@ async function loadPropsHub() {
       container.innerHTML += `<hr class="market-divider">`;
     });
 
+    // Animate the scrolls in
+    setTimeout(() => {
+      document.querySelectorAll(".prop-card").forEach((card, i) => {
+        card.style.opacity = 1;
+        card.style.transform = "translateY(0)";
+        card.style.transitionDelay = `${i * 60}ms`;
+      });
+    }, 300);
+
   } catch (err) {
     console.error(err);
-    container.innerHTML = `<div class="error">Failed loading props data.</div>`;
+    container.innerHTML = `<div class="error">Failed loading scrolls from the archive.</div>`;
   }
 }
 
@@ -38,7 +47,7 @@ function extractPropsByMarket(game) {
       (m.outcomes || []).forEach(o => {
         if (typeof o.price !== "number") return;
         const implied = impliedProb(o.price);
-        const fair = 0.5; // placeholder
+        const fair = 0.5;
         const ev = fair - implied;
         map[m.key].push({
           market: m.key,
@@ -74,7 +83,7 @@ function renderGameHeader(game) {
   const away = TeamAssets.get(game.away_team).logoUrl;
   const home = TeamAssets.get(game.home_team).logoUrl;
   return `
-    <div class="game-card">
+    <div class="game-card scroll-intro">
       <div class="props-game-header">
         <div class="team"><img src="${away}" class="team-logo"> ${game.away_team}</div>
         <div style="color:var(--muted);">vs</div>
@@ -89,15 +98,15 @@ function renderMarketLabel(market) {
 }
 
 function getEVColor(ev) {
-  if (ev >= 0.1) return "limegreen";
-  if (ev >= 0.03) return "#FFD700";
-  return "#FF5555";
+  if (ev >= 0.1) return "#FFD700";     // Gold for the gods
+  if (ev >= 0.03) return "#D8BFD8";     // Lavender myst
+  return "#666";                        // Faded slate
 }
 
 function renderPropCard(p) {
   const evColor = getEVColor(p.ev);
   return `
-    <div class="prop-card">
+    <div class="prop-card scroll-intro">
       <div class="prop-top">
         <div>
           <div class="prop-player">${p.player}</div>

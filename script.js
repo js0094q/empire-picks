@@ -1,5 +1,5 @@
 // =============================================================
-// EMPIREPICKS — NFL ODDS AGGREGATOR (FanDuel Theme)
+// EMPIREPICKS — NFL ODDS AGGREGATOR (Minimalist + Team Styling)
 // =============================================================
 
 document.addEventListener("DOMContentLoaded", loadNFL);
@@ -9,18 +9,21 @@ async function loadNFL() {
   container.innerHTML = `<div class="loader">Loading NFL games...</div>`;
 
   try {
-    // 1. Fetch all events
+    // 1. Fetch events
     const eventsRes = await fetch("/api/events");
     const events = await eventsRes.json();
 
     container.innerHTML = "";
 
+    // 2. Render each event
     for (const ev of events) {
       const oddsRes = await fetch(`/api/odds?eventId=${ev.id}`);
       const data = await oddsRes.json();
       const game = data[0];
 
-      container.appendChild(renderGameCard(ev, game));
+      const card = renderGameCard(ev, game);
+      applyTeamStyles(card, ev);  // NEW
+      container.appendChild(card);
     }
 
   } catch (err) {
@@ -40,7 +43,6 @@ function renderGameCard(ev, game) {
   const away = TeamAssets.get(ev.away_team);
   const home = TeamAssets.get(ev.home_team);
 
-  // Compute aggregation + EV
   const ana = analyzeGame(game, ev.away_team, ev.home_team);
   const agg = computeAggregateOdds(game, ev.away_team, ev.home_team, ana);
 
@@ -53,13 +55,16 @@ function renderGameCard(ev, game) {
 
   card.innerHTML = `
     <div class="game-header">
+      <img class="team-logo" src="${away.helmetUrl}" alt="${ev.away_team} helmet" />
+
       <div class="teams">
-        <img src="${away.logoUrl}" class="team-logo">
         ${ev.away_team}
         <span style="margin:0 6px; color:var(--muted);">@</span>
-        <img src="${home.logoUrl}" class="team-logo">
         ${ev.home_team}
       </div>
+
+      <img class="team-logo" src="${home.helmetUrl}" alt="${ev.home_team} helmet" />
+
       <div class="kickoff">${kickoff}</div>
     </div>
 
@@ -94,6 +99,29 @@ function renderGameCard(ev, game) {
   `;
 
   return card;
+}
+
+// =============================================================
+// TEAM STYLING — gradient + helmets (NEW)
+// =============================================================
+
+function applyTeamStyles(card, ev) {
+  const home = TeamAssets.get(ev.home_team);
+  const away = TeamAssets.get(ev.away_team);
+
+  // Choose home team for gradient base (cleaner UX)
+  const primary = home.primary;
+  const secondary = home.secondary;
+
+  // Inject CSS variables
+  card.style.setProperty("--team-primary", primary);
+  card.style.setProperty("--team-secondary", secondary);
+
+  // Gradient background
+  card.style.background = `linear-gradient(135deg, ${primary}15, ${secondary}15)`;
+
+  // Left border accent
+  card.style.borderLeft = `4px solid ${primary}`;
 }
 
 // =============================================================
@@ -178,7 +206,7 @@ function computeAggregateOdds(game, away, home, ana) {
         m.outcomes?.forEach(o => spreads.push(o));
       }
 
-      // Totals
+      // Total
       if (m.key === "totals") {
         m.outcomes?.forEach(o => totals.push(o));
       }
@@ -186,13 +214,12 @@ function computeAggregateOdds(game, away, home, ana) {
   });
 
   const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
-
   const mlAvg = avg(mls);
 
   const bestSpread =
     spreads.length
       ? spreads.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0]
-      : {name: home, point: 0};
+      : { name: home, point: 0 };
 
   const totalAvg =
     totals.length

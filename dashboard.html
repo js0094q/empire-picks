@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>EmpirePicks • Props + EV Hub</title>
 
-  <link rel="stylesheet" href="styles.css?v=fanduel-props"/>
+  <link rel="stylesheet" href="styles.css?v=final-dashboard"/>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 
@@ -20,8 +20,10 @@
     </nav>
   </header>
 
-  <main id="props-container" class="props-container">
-    <div class="loader">Loading Props + EV Analytics...</div>
+  <main class="home-container">
+    <div id="props-container" class="games-container">
+      <div class="loader">Loading Props + EV Analytics...</div>
+    </div>
   </main>
 
   <div class="parlay-slip" id="parlay-slip">
@@ -31,9 +33,7 @@
   </div>
 
   <script src="auth.js"></script>
-  <script>
-    Auth.requireAuth();
-  </script>
+  <script>Auth.requireAuth();</script>
 
   <script src="teams.js"></script>
   <script src="parlay.js"></script>

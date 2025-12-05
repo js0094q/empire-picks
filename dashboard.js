@@ -88,7 +88,14 @@ function renderMarketLabel(market) {
   return `<div class="market-header">${marketLabel(market)}</div>`;
 }
 
+function getEVColor(ev) {
+  if (ev >= 0.1) return "limegreen";
+  if (ev >= 0.03) return "#FFD700";
+  return "#FF5555";
+}
+
 function renderPropCard(p) {
+  const evColor = getEVColor(p.ev);
   return `
     <div class="prop-card">
       <div class="prop-top">
@@ -101,7 +108,7 @@ function renderPropCard(p) {
       <div class="prop-stats">
         <div>Implied: ${(p.implied * 100).toFixed(1)}%</div>
         <div>Model: ${(p.fair * 100).toFixed(1)}%</div>
-        <div class="prop-ev">EV: ${(p.ev * 100).toFixed(1)}%</div>
+        <div class="prop-ev" style="color:${evColor};">EV: ${(p.ev * 100).toFixed(1)}%</div>
       </div>
       <button class="button small" onclick='Parlay.add(${JSON.stringify(p)})'>Add to Parlay</button>
     </div>

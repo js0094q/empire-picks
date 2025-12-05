@@ -1,327 +1,208 @@
-// script.js — main games engine (index + props)
+// ===========================
+// EmpirePicks DK Odds Engine
+// ===========================
 
-(function () {
-  const gamesContainer =
-    document.getElementById("games-container") ||
-    document.getElementById("events-container");
+// Pull all events
+document.addEventListener("DOMContentLoaded", loadGames);
 
-  // ---------- Helpers ----------
-  const money = o => (o > 0 ? `+${o}` : `${o}`);
-  const prob = o => (o > 0 ? 100 / (o + 100) : -o / (-o + 100));
-  const avg = arr =>
-    arr && arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-  const noVig = (p1, p2) => {
-    const t = p1 + p2;
-    return t ? [p1 / t, p2 / t] : [0.5, 0.5];
-  };
+async function loadGames() {
+  const container = document.getElementById("games-container");
+  container.innerHTML = `<div class="loader">Loading games...</div>`;
 
-  async function apiGET(url) {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`API FAILED ${url} status=${r.status}`);
-    return r.json();
+  try {
+    const r = await fetch("/api/events");
+    const games = await r.json();
+
+    container.innerHTML = "";
+    games.forEach(g => renderGameCard(g, container));
+
+  } catch (err) {
+    container.innerHTML = `<div class="error">Failed loading games.</div>`;
+  }
+}
+
+
+// ===========================
+// Game Card Builder
+// ===========================
+async function renderGameCard(ev, parent) {
+  const card = document.createElement("div");
+  card.className = "game-card";
+
+  // Get odds
+  const oddsRes = await fetch(`/api/odds?eventId=${ev.id}`);
+  const data = await oddsRes.json();
+  const game = data[0];
+
+  if (!game) {
+    card.innerHTML = `<div class="error">No odds yet</div>`;
+    parent.appendChild(card);
+    return;
   }
 
-  // ---------- Analytics ----------
-  function computeGameAnalytics(game, away, home) {
-    const books = game.bookmakers || [];
-    const pa = [];
-    const ph = [];
+  const ana = analyzeGame(game, ev.away_team, ev.home_team);
+  const line = computeAggregateOdds(game, ev.away_team, ev.home_team, ana);
 
-    books.forEach(b => {
-      (b.markets || []).forEach(m => {
-        if (m.key === "h2h") {
-          const a = m.outcomes.find(o => o.name === away);
-          const h = m.outcomes.find(o => o.name === home);
-          if (a && h) {
-            pa.push(prob(a.price));
-            ph.push(prob(h.price));
-          }
-        }
-      });
-    });
+  const kickoffLocal = new Date(ev.commence_time).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 
-    const avgA = avg(pa);
-    const avgH = avg(ph);
-    const [nvA, nvH] = noVig(avgA, avgH);
+  card.innerHTML = `
+    <div class="game-header">
+      <div class="teams">${ev.away_team} @ ${ev.home_team}</div>
+      <div class="kickoff">Kickoff: ${kickoffLocal}</div>
+    </div>
 
-    const winner = nvA > nvH ? away : home;
-    const winnerProb = Math.max(nvA, nvH);
+    ${renderAggregateRow(line)}
 
-    return { away, home, nvA, nvH, winner, winnerProb };
-  }
+    <div class="model-pick">
+      Model Pick: <span class="pick-team">${ana.winner}</span>
+      <span class="pick-prob">${(ana.winnerProb * 100).toFixed(1)}%</span>
+    </div>
+  `;
 
-  // ---------- Card UI ----------
-  function buildCard(ev, game) {
-    const card = document.createElement("div");
-    card.className = "game-card";
+  parent.appendChild(card);
+}
 
-    const kickoffLocal = new Date(ev.commence_time).toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      hour: "numeric",
-      minute: "2-digit",
-      month: "short",
-      day: "numeric"
-    });
 
-    const away = window.TeamAssets.get(ev.away_team);
-    const home = window.TeamAssets.get(ev.home_team);
-    const ana = computeGameAnalytics(game, ev.away_team, ev.home_team);
+// ===========================
+// Aggregate Odds Row (Display)
+// ===========================
+function renderAggregateRow(l) {
+  return `
+    <div class="betting-row">
 
-    card.innerHTML = `
-      <header class="game-header" style="border-color:${home.primary}">
-        <div class="team-row">
-          <img class="team-logo" src="${away.logoUrl}"/>
-          <div class="teams">
-            <div>${ev.away_team} @ ${ev.home_team}</div>
-            <div class="kickoff">Kickoff: ${kickoffLocal}</div>
-          </div>
-          <img class="team-logo" src="${home.logoUrl}"/>
-        </div>
-        <div class="forecast">
-          Market leans <strong>${ana.winner}</strong>
-          (${(ana.winnerProb * 100).toFixed(1)}% win)
-        </div>
-      </header>
-
-      <div class="accordion">
-        <button class="accordion-toggle">View Lines & Props</button>
-        <div class="accordion-body">
-          <div class="tabs">
-            <button class="tab active" data-tab="lines">Lines</button>
-            <button class="tab" data-tab="props">Props</button>
-          </div>
-          <div class="tab-pane active" data-pane="lines">
-            <div class="loader">Loading lines…</div>
-          </div>
-          <div class="tab-pane" data-pane="props">
-            <em>Click "Props" to load</em>
-          </div>
-        </div>
+      <div class="bet-block">
+        <div class="bet-label">Spread</div>
+        <div class="bet-value">${l.spreadTeam} ${l.spread} (${money(l.spreadOdds)})</div>
       </div>
-    `;
 
-    // Accordion
-    const accToggle = card.querySelector(".accordion-toggle");
-    const accBody = card.querySelector(".accordion-body");
-    accToggle.onclick = () => {
-      accBody.classList.toggle("open");
-    };
+      <div class="bet-block">
+        <div class="bet-label">Moneyline</div>
+        <div class="bet-value">${l.mlTeam} ${money(l.ml)}</div>
+      </div>
 
-    // Lines
-    const linesPane = card.querySelector('[data-pane="lines"]');
-    renderLines(linesPane, game, ev, ana);
+      <div class="bet-block">
+        <div class="bet-label">Total</div>
+        <div class="bet-value">O${l.total} / U${l.total}</div>
+      </div>
 
-    // Tabs
-    const propsPane = card.querySelector('[data-pane="props"]');
-    card.querySelectorAll(".tab").forEach(btn => {
-      btn.onclick = () => {
-        card.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
-        card
-          .querySelectorAll(".tab-pane")
-          .forEach(p => p.classList.remove("active"));
-        btn.classList.add("active");
-        const target = btn.dataset.tab;
-        card
-          .querySelector(`[data-pane="${target}"]`)
-          .classList.add("active");
+      <div class="bet-block best-ev">
+        <div class="bet-label">Best EV</div>
+        <div class="bet-value">${l.bestEV.team} ${money(l.bestEV.odds)}</div>
+        <div class="bet-ev">+${(l.bestEV.edge * 100).toFixed(1)}%</div>
+      </div>
 
-        if (target === "props" && !propsPane.dataset.loaded) {
-          loadProps(ev.id, propsPane);
-        }
-      };
-    });
+    </div>
+  `;
+}
 
-    return card;
-  }
 
-  function renderLines(pane, game, ev, ana) {
-    const rows = [];
+// ===========================
+// Aggregate Engine
+// ===========================
+function computeAggregateOdds(game, away, home, ana) {
+  const ml = [];
+  const spreads = [];
+  const totals = [];
+  let bestEV = { edge: -999 };
 
-    (game.bookmakers || []).forEach(bm => {
-      const row = { book: bm.title, ml: "-", spread: "-", total: "-" };
+  game.bookmakers.forEach(bm => {
+    bm.markets.forEach(m => {
 
-      (bm.markets || []).forEach(m => {
-        if (m.key === "h2h") {
-          const a = m.outcomes.find(o => o.name === ev.away_team);
-          const h = m.outcomes.find(o => o.name === ev.home_team);
-          if (a && h) {
-            row.ml = `${money(a.price)} / ${money(h.price)}`;
+      // --- MONEYLINE ---
+      if (m.key === "h2h") {
+        m.outcomes.forEach(o => {
+          if (o.name === away || o.name === home) ml.push(o.price);
+
+          // EV
+          const implied = prob(o.price);
+          const fv = o.name === away ? ana.nvA : ana.nvH;
+          const edge = fv - implied;
+
+          if (edge > bestEV.edge) {
+            bestEV = { team: o.name, odds: o.price, edge };
           }
-        }
-        if (m.key === "spreads") {
-          const best = m.outcomes
-            .slice()
-            .sort((x, y) => Math.abs(x.point) - Math.abs(y.point))[0];
-          if (best) {
-            row.spread = `${best.name} ${best.point} (${money(best.price)})`;
-          }
-        }
-        if (m.key === "totals") {
-          const over = m.outcomes.find(o => o.name.toLowerCase() === "over");
-          const under = m.outcomes.find(o => o.name.toLowerCase() === "under");
-          if (over && under) {
-            row.total = `O${over.point} / U${under.point}`;
-          }
-        }
-      });
-
-      rows.push(row);
-    });
-
-    pane.innerHTML = `
-      <table class="table">
-        <thead>
-          <tr><th>Book</th><th>Moneyline</th><th>Spread</th><th>Total</th><th>Add</th></tr>
-        </thead>
-        <tbody>
-          ${rows
-            .map(
-              r => `
-            <tr>
-              <td>${r.book}</td>
-              <td>${r.ml}</td>
-              <td>${r.spread}</td>
-              <td>${r.total}</td>
-              <td><button class="button tiny add-leg-btn">+</button></td>
-            </tr>`
-            )
-            .join("")}
-        </tbody>
-      </table>
-    `;
-
-    pane.querySelectorAll(".add-leg-btn").forEach((btn, idx) => {
-      btn.onclick = () => {
-        const r = rows[idx];
-        if (!window.Parlay) return;
-        window.Parlay.addLeg({
-          game: `${ev.away_team} @ ${ev.home_team}`,
-          label: `${r.book} line`,
-          odds: r.ml
         });
-      };
+      }
+
+      // --- SPREAD ---
+      if (m.key === "spreads") {
+        m.outcomes.forEach(o => spreads.push(o));
+      }
+
+      // --- TOTALS ---
+      if (m.key === "totals") {
+        m.outcomes.forEach(o => totals.push(o));
+      }
+
     });
-  }
+  });
 
-  async function loadProps(eventId, pane) {
-    pane.dataset.loaded = "1";
-    pane.innerHTML = `<div class="loader">Loading props…</div>`;
+  const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length || 0;
 
-    try {
-      const data = await apiGET(`/api/event-odds?eventId=${encodeURIComponent(eventId)}`);
-      const game = Array.isArray(data) ? data[0] : data;
+  const mlTeam = ana.nvA > ana.nvH ? away : home;
+  const avgML = avg(ml);
 
-      if (!game || !game.bookmakers || !game.bookmakers.length) {
-        pane.innerHTML = `<div class="muted">No props available.</div>`;
-        return;
-      }
+  const bestSpread = spreads.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0] || {name: mlTeam, point: 0, price: 0};
+  const total = totals[0]?.point || 0;
 
-      const rows = [];
-      game.bookmakers.forEach(bm => {
-        (bm.markets || []).forEach(m => {
-          (m.outcomes || []).forEach(o => {
-            rows.push({
-              book: bm.title,
-              market: m.key,
-              player: o.description || "-",
-              pick: o.name,
-              line: o.point ?? "-",
-              odds: money(o.price)
-            });
-          });
-        });
-      });
-
-      if (!rows.length) {
-        pane.innerHTML = `<div class="muted">No props available.</div>`;
-        return;
-      }
-
-      pane.innerHTML = `
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Book</th>
-              <th>Market</th>
-              <th>Player</th>
-              <th>Pick</th>
-              <th>Line</th>
-              <th>Odds</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows
-              .slice(0, 80)
-              .map(
-                r => `
-              <tr>
-                <td>${r.book}</td>
-                <td>${r.market}</td>
-                <td>${r.player}</td>
-                <td>${r.pick}</td>
-                <td>${r.line}</td>
-                <td>${r.odds}</td>
-              </tr>`
-              )
-              .join("")}
-          </tbody>
-        </table>
-      `;
-    } catch (err) {
-      console.error(err);
-      pane.innerHTML = `<div class="error">Failed to load props.</div>`;
-    }
-  }
-
-  // ---------- Main load ----------
-  async function loadGames() {
-    if (!gamesContainer) return;
-
-    gamesContainer.innerHTML = `<div class="loader">Loading NFL games...</div>`;
-
-    try {
-      const events = await apiGET("/api/events");
-      const oddsWrap = await apiGET("/api/odds");
-      const odds = oddsWrap.data ?? oddsWrap;
-
-      const byId = Object.fromEntries(odds.map(g => [g.id, g]));
-
-      const now = Date.now();
-      const cutoff = 4 * 60 * 60 * 1000;
-
-      const active = events.filter(ev => {
-        const g = byId[ev.id];
-        if (!g) return false;
-        const t = new Date(ev.commence_time).getTime();
-        return now <= t + cutoff;
-      });
-
-      if (!active.length) {
-        gamesContainer.innerHTML = `<div class="muted">No active games in this window.</div>`;
-        return;
-      }
-
-      gamesContainer.innerHTML = "";
-      active.forEach(ev => {
-        const game = byId[ev.id];
-        const card = buildCard(ev, game);
-        gamesContainer.appendChild(card);
-      });
-    } catch (e) {
-      console.error(e);
-      gamesContainer.innerHTML = `<div class="error">Failed to load NFL data.</div>`;
-    }
-  }
-
-  if (gamesContainer) {
-    loadGames();
-  }
-
-  // expose for dashboard.js
-  window.Empire = {
-    money,
-    prob,
-    computeGameAnalytics,
-    apiGET
+  return {
+    mlTeam,
+    ml: avgML,
+    spreadTeam: bestSpread.name,
+    spread: bestSpread.point,
+    spreadOdds: bestSpread.price,
+    total,
+    bestEV
   };
-})();
+}
+
+
+// ===========================
+// Game Analysis
+// ===========================
+function analyzeGame(game, away, home) {
+  let aOdds = [], hOdds = [];
+
+  game.bookmakers.forEach(bm => {
+    const h2h = bm.markets.find(m => m.key === "h2h");
+    if (!h2h) return;
+
+    h2h.outcomes.forEach(o => {
+      if (o.name === away) aOdds.push(prob(o.price));
+      if (o.name === home) hOdds.push(prob(o.price));
+    });
+  });
+
+  const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length || 0;
+
+  const pA = avg(aOdds);
+  const pH = avg(hOdds);
+
+  const nvA = pA / (pA + pH);
+  const nvH = pH / (pA + pH);
+
+  const winner = nvA > nvH ? away : home;
+
+  return {
+    nvA,
+    nvH,
+    winner,
+    winnerProb: Math.max(nvA, nvH)
+  };
+}
+
+
+// ===========================
+// Helpers
+// ===========================
+function prob(odds) {
+  return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
+}
+
+function money(v) {
+  return v > 0 ? `+${v}` : `${v}`;
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EmpirePicks – Home</title>
+
+  <link rel="stylesheet" href="styles.css?v=dk1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
+</head>
+
+<body>
+
+  <header class="header">
+    EmpirePicks ▸ Home
+    <button class="header-right button" onclick="Auth.logout(); window.location.href='login.html';">
+      Log Out
+    </button>
+  </header>
+
+  <main class="home-main">
+    <section class="home-hero">
+      <h1>EmpirePicks</h1>
+      <p>DraftKings-style analytics layer built for the common player.</p>
+    </section>
+
+    <section class="home-grid">
+      <a href="nfl.html" class="home-card">
+        <h2>NFL Odds & Picks</h2>
+        <p>Live lines, model pick, and best EV bet for each game.</p>
+      </a>
+
+      <a href="dashboard.html" class="home-card">
+        <h2>Analytics Dashboard</h2>
+        <p>Market edges, EV ranking, and parlay optimizer.</p>
+      </a>
+
+      <a href="feedback.html" class="home-card">
+        <h2>Beta Feedback</h2>
+        <p>Tell us what works, what sucks, and what you want next.</p>
+      </a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    EmpirePicks Beta • Data from The Odds API
+  </footer>
+
+  <script src="auth.js"></script>
+  <script>
+    Auth.requireAuth();
+  </script>
+</body>
+</html>

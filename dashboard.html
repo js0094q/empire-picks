@@ -10,7 +10,6 @@
 </head>
 
 <body>
-
   <!-- HEADER -->
   <header class="site-header">
     <div class="brand">
@@ -19,17 +18,53 @@
     </div>
 
     <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="dashboard.html" class="active">NFL Dashboard</a>
+      <a href="index.html">Games</a>
+      <a href="dashboard.html" class="active">Dashboard</a>
     </nav>
   </header>
 
-  <!-- GAME FEED -->
-  <section class="game-feed" id="events-container">
-    <div class="loader">Loading NFL games...</div>
-  </section>
+  <main class="dashboard-root">
+    <!-- Top edges -->
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h2>Weekly Edges</h2>
+        <button id="refresh" class="button secondary">Refresh</button>
+      </div>
+      <div id="top5" class="top5-panel">
+        <div class="muted">Loading…</div>
+      </div>
 
-  <!-- FLOATING PARLAY SLIP -->
+      <table id="dash-table" class="table">
+        <thead>
+          <tr>
+            <th>Game</th>
+            <th>Book</th>
+            <th>Market</th>
+            <th>Odds</th>
+            <th>Edge</th>
+            <th>Kickoff</th>
+          </tr>
+        </thead>
+        <tbody id="dash-body">
+          <tr><td colspan="6" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Parlay EV -->
+    <section class="dashboard-section">
+      <h2>Parlay EV Optimizer</h2>
+      <label>
+        Minimum edge per leg (0–1):
+        <input id="parlayEdgeFilter" type="number" min="0" max="1" step="0.01" value="0.02"/>
+      </label>
+      <button id="generateParlays" class="button primary">Generate Parlays</button>
+
+      <div id="parlayResults" class="parlay-results"></div>
+    </section>
+  </main>
+
+  <!-- OPTIONAL: same parlay slip UI on dashboard -->
   <div class="parlay-slip" id="parlay-slip">
     <h4>Your Parlay</h4>
     <div id="parlay-items" class="muted">No picks added</div>
@@ -37,47 +72,14 @@
     <button class="button primary full-width" id="place-parlay">Place Parlay</button>
   </div>
 
-  <!-- DASHBOARD ANALYTICS PANEL -->
-  <section class="dashboard-section">
-    <h2>Weekly EV Edges</h2>
-    <button id="refresh" class="button secondary">Refresh</button>
+  <footer class="footer">
+    EmpirePicks.com – Data from The Odds API
+  </footer>
 
-    <div id="top5" class="top5-panel"></div>
-
-    <table id="dash" class="table">
-      <thead>
-        <tr>
-          <th>Game</th>
-          <th>Book</th>
-          <th>Market</th>
-          <th>Odds</th>
-          <th>Edge</th>
-          <th>Kickoff</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- PARLAY ENGINE OUTPUT -->
-  <section class="dashboard-section">
-    <h2>Parlay EV Optimizer</h2>
-
-    <label>Minimum Edge:
-      <input id="parlayEdgeFilter" type="number" min="0" max="1" step="0.01" value="0.02"/>
-    </label>
-
-    <button id="generateParlays" class="button primary">Generate Parlays</button>
-
-    <div id="parlayResults" class="parlay-results"></div>
-  </section>
-
-  <!-- GLOBAL JS FILES -->
-  <!-- Order is CRITICAL. TeamAssets FIRST, then parlay, then script, then dashboard -->
+  <!-- JS ORDER -->
   <script src="teams.js"></script>
   <script src="parlay.js"></script>
-  <script src="script.js"></script>
+  <script src="script.js"></script>     <!-- exposes window.Empire -->
   <script src="dashboard.js"></script>
-
 </body>
 </html>

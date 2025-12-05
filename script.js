@@ -1,40 +1,31 @@
 // =============================================================
-// EMPIREPICKS — NFL ODDS AGGREGATOR (Minimalist + Team Styling)
+// EMPIREPICKS — NFL ODDS AGGREGATOR (Ethereal Theme)
 // =============================================================
 
 document.addEventListener("DOMContentLoaded", loadNFL);
 
 async function loadNFL() {
-  const container = document.getElementById("events-container");
+  const container = document.getElementById("games-container");
   container.innerHTML = `<div class="loader">Loading NFL games...</div>`;
 
   try {
-    // 1. Fetch events
     const eventsRes = await fetch("/api/events");
     const events = await eventsRes.json();
 
     container.innerHTML = "";
 
-    // 2. Render each event
     for (const ev of events) {
       const oddsRes = await fetch(`/api/odds?eventId=${ev.id}`);
       const data = await oddsRes.json();
       const game = data[0];
 
-      const card = renderGameCard(ev, game);
-      applyTeamStyles(card, ev);  // NEW
-      container.appendChild(card);
+      container.appendChild(renderGameCard(ev, game));
     }
-
   } catch (err) {
     console.error(err);
     container.innerHTML = `<div class="error">Failed to load NFL games.</div>`;
   }
 }
-
-// =============================================================
-// GAME CARD RENDERING
-// =============================================================
 
 function renderGameCard(ev, game) {
   const card = document.createElement("div");
@@ -53,41 +44,38 @@ function renderGameCard(ev, game) {
     weekday: "short"
   });
 
+  const evTeam = agg.bestEV.team || "-";
+  const evEdge = isFinite(agg.bestEV.edge) ? `${(agg.bestEV.edge * 100).toFixed(1)}%` : "-";
+
   card.innerHTML = `
     <div class="game-header">
-      <img class="team-logo" src="${away.helmetUrl}" alt="${ev.away_team} helmet" />
-
       <div class="teams">
-        ${ev.away_team}
+        <img src="${away.logoUrl}" class="team-logo">
+        <span>${ev.away_team}</span>
         <span style="margin:0 6px; color:var(--muted);">@</span>
-        ${ev.home_team}
+        <img src="${home.logoUrl}" class="team-logo">
+        <span>${ev.home_team}</span>
       </div>
-
-      <img class="team-logo" src="${home.helmetUrl}" alt="${ev.home_team} helmet" />
-
       <div class="kickoff">${kickoff}</div>
     </div>
 
     <div class="betting-row">
       <div class="bet-block">
         <div class="bet-label">Spread</div>
-        <div class="bet-value">${agg.spreadTeam === ev.away_team ? agg.spread : -agg.spread}</div>
+        <div class="bet-value">${agg.spread}</div>
       </div>
-
       <div class="bet-block">
         <div class="bet-label">Moneyline</div>
         <div class="bet-value">${fmtOdds(agg.ml)}</div>
       </div>
-
       <div class="bet-block">
         <div class="bet-label">Total</div>
         <div class="bet-value">${agg.total}</div>
       </div>
-
       <div class="bet-block best-ev">
         <div class="bet-label">Best EV</div>
-        <div class="bet-value">${agg.bestEV.team}</div>
-        <div class="bet-ev">${(agg.bestEV.edge * 100).toFixed(1)}%</div>
+        <div class="bet-value">${evTeam}</div>
+        <div class="bet-ev">${evEdge}</div>
       </div>
     </div>
 
@@ -101,40 +89,12 @@ function renderGameCard(ev, game) {
   return card;
 }
 
-// =============================================================
-// TEAM STYLING — gradient + helmets (NEW)
-// =============================================================
-
-function applyTeamStyles(card, ev) {
-  const home = TeamAssets.get(ev.home_team);
-  const away = TeamAssets.get(ev.away_team);
-
-  // Choose home team for gradient base (cleaner UX)
-  const primary = home.primary;
-  const secondary = home.secondary;
-
-  // Inject CSS variables
-  card.style.setProperty("--team-primary", primary);
-  card.style.setProperty("--team-secondary", secondary);
-
-  // Gradient background
-  card.style.background = `linear-gradient(135deg, ${primary}15, ${secondary}15)`;
-
-  // Left border accent
-  card.style.borderLeft = `4px solid ${primary}`;
-}
-
-// =============================================================
-// ANALYZE GAME — MONEYLINE PROBABILITIES
-// =============================================================
-
 function analyzeGame(game, away, home) {
   if (!game || !game.bookmakers) {
     return { nvA: 0.5, nvH: 0.5, winner: home, winnerProb: 0.5 };
   }
 
-  let arrA = [];
-  let arrH = [];
+  let arrA = [], arrH = [];
 
   game.bookmakers.forEach(bm => {
     const m = bm.markets?.find(x => x.key === "h2h");
@@ -163,14 +123,8 @@ function analyzeGame(game, away, home) {
   };
 }
 
-// =============================================================
-// AGGREGATE ODDS — Spread, ML, Total, Best EV
-// =============================================================
-
 function computeAggregateOdds(game, away, home, ana) {
-  let mls = [];
-  let spreads = [];
-  let totals = [];
+  let mls = [], spreads = [], totals = [];
   let bestEV = { team: null, odds: null, edge: -999 };
 
   if (!game || !game.bookmakers) {
@@ -185,8 +139,6 @@ function computeAggregateOdds(game, away, home, ana) {
 
   game.bookmakers.forEach(bm => {
     bm.markets?.forEach(m => {
-
-      // Moneyline
       if (m.key === "h2h") {
         m.outcomes?.forEach(o => {
           if (typeof o.price === "number") mls.push(o.price);
@@ -201,12 +153,10 @@ function computeAggregateOdds(game, away, home, ana) {
         });
       }
 
-      // Spread
       if (m.key === "spreads") {
         m.outcomes?.forEach(o => spreads.push(o));
       }
 
-      // Total
       if (m.key === "totals") {
         m.outcomes?.forEach(o => totals.push(o));
       }
@@ -214,17 +164,16 @@ function computeAggregateOdds(game, away, home, ana) {
   });
 
   const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
   const mlAvg = avg(mls);
 
-  const bestSpread =
-    spreads.length
-      ? spreads.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0]
-      : { name: home, point: 0 };
+  const bestSpread = spreads.length
+    ? spreads.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0]
+    : {name: home, point: 0};
 
-  const totalAvg =
-    totals.length
-      ? totals.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0].point
-      : 0;
+  const totalAvg = totals.length
+    ? totals.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0].point
+    : 0;
 
   return {
     mlTeam: ana.nvA > ana.nvH ? away : home,
@@ -236,13 +185,9 @@ function computeAggregateOdds(game, away, home, ana) {
   };
 }
 
-// =============================================================
-// HELPERS
-// =============================================================
-
 function implied(odds) {
-  if (odds > 0) return 100/(odds+100);
-  return -odds/(-odds+100);
+  if (odds > 0) return 100 / (odds + 100);
+  return -odds / (-odds + 100);
 }
 
 function fmtOdds(o) {

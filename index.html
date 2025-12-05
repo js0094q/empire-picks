@@ -5,38 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>EmpirePicks – NFL Odds</title>
 
-  <link rel="stylesheet" href="styles.css?v=dk1"/>
+  <link rel="stylesheet" href="styles.css?v=dk-final"/>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 
 <body>
-
-  <!-- HEADER -->
   <header class="header">
-    EmpirePicks ▸ NFL Odds
+    <div class="brand">EmpirePicks ▸ NFL</div>
+    <nav class="nav">
+      <a href="home.html">Home</a>
+      <a href="dashboard.html">Analytics</a>
+      <button onclick="Auth.logout();" class="button small">Logout</button>
+    </nav>
   </header>
 
-  <!-- GAME GRID -->
-  <main class="games" id="games-container">
-    <div class="loader">Loading NFL games...</div>
+  <main id="games-container" class="games-container">
+    <div class="loader">Loading games...</div>
   </main>
 
-  <!-- DK STYLE FLOATING PARLAY SLIP -->
-  <aside class="dk-parlay-slip" id="parlay-slip">
-    <h3>Your Parlay</h3>
-    <div id="parlay-items" class="muted">No picks added</div>
-    <button id="place-parlay" class="button">Place Parlay</button>
-  </aside>
-
-  <!-- FOOTER -->
-  <footer class="footer">
-    EmpirePicks • Live Odds Powered by The Odds API
-  </footer>
-
-  <!-- SCRIPTS (ORDER MATTERS) -->
+  <script src="auth.js"></script>
+  <script>
+    Auth.requireAuth();
+  </script>
   <script src="teams.js"></script>
-  <script src="parlay.js"></script>
   <script src="script.js"></script>
-
 </body>
 </html>

@@ -5,34 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>EmpirePicks – Dashboard</title>
 
-  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="styles.css?v=dk1"/>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 
 <body>
-  <!-- HEADER -->
-  <header class="site-header">
-    <div class="brand">
-      <div class="brand-mark">EP</div>
-      <span class="brand-name">EmpirePicks</span>
-    </div>
 
-    <nav class="nav">
-      <a href="index.html">Games</a>
-      <a href="dashboard.html" class="active">Dashboard</a>
-    </nav>
+  <header class="header">
+    EmpirePicks ▸ Analytics Dashboard
   </header>
 
   <main class="dashboard-root">
-    <!-- Top edges -->
+
     <section class="dashboard-section">
-      <div class="section-header">
-        <h2>Weekly Edges</h2>
-        <button id="refresh" class="button secondary">Refresh</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>Top Edges</h2>
+        <button id="refresh" class="button">Refresh</button>
       </div>
-      <div id="top5" class="top5-panel">
-        <div class="muted">Loading…</div>
-      </div>
+
+      <div id="top5" class="top5-panel muted">Loading…</div>
 
       <table id="dash-table" class="table">
         <thead>
@@ -51,35 +42,34 @@
       </table>
     </section>
 
-    <!-- Parlay EV -->
     <section class="dashboard-section">
-      <h2>Parlay EV Optimizer</h2>
+      <h2>Parlay EV Builder</h2>
+
       <label>
-        Minimum edge per leg (0–1):
-        <input id="parlayEdgeFilter" type="number" min="0" max="1" step="0.01" value="0.02"/>
+        Minimum Edge:
+        <input id="parlayEdgeFilter" type="number" value="0.02" step="0.01" min="0" max="1"/>
       </label>
-      <button id="generateParlays" class="button primary">Generate Parlays</button>
+      <button id="generateParlays" class="button">Generate</button>
 
       <div id="parlayResults" class="parlay-results"></div>
     </section>
   </main>
 
-  <!-- OPTIONAL: same parlay slip UI on dashboard -->
-  <div class="parlay-slip" id="parlay-slip">
-    <h4>Your Parlay</h4>
+  <!-- FLOATING PARLAY SLIP -->
+  <aside class="dk-parlay-slip" id="parlay-slip">
+    <h3>Your Parlay</h3>
     <div id="parlay-items" class="muted">No picks added</div>
-    <br/>
-    <button class="button primary full-width" id="place-parlay">Place Parlay</button>
-  </div>
+    <button id="place-parlay" class="button">Place Parlay</button>
+  </aside>
 
   <footer class="footer">
-    EmpirePicks.com – Data from The Odds API
+    EmpirePicks • Market Edges Powered by Odds API
   </footer>
 
-  <!-- JS ORDER -->
   <script src="teams.js"></script>
   <script src="parlay.js"></script>
-  <script src="script.js"></script>     <!-- exposes window.Empire -->
+  <script src="script.js"></script>
   <script src="dashboard.js"></script>
+
 </body>
 </html>

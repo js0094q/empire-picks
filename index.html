@@ -6,10 +6,10 @@
   <title>EmpirePicks – NFL Odds</title>
 
   <link rel="stylesheet" href="styles.css?v=final"/>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 </head>
+<body class="fade-in">
 
-<body>
   <header class="header">
     <div class="brand">EmpirePicks ▸ NFL Odds</div>
     <nav class="nav">
@@ -19,15 +19,16 @@
     </nav>
   </header>
 
-  <main class="home-container">
-    <div id="events-container" class="games-container">
-      <div class="loader">Loading games...</div>
-    </div>
+  <main id="events-container" class="games-container">
+    <div class="loader">Loading NFL games...</div>
   </main>
 
   <script src="auth.js"></script>
-  <script>Auth.requireAuth();</script>
+  <script>
+    Auth.requireAuth();
+  </script>
   <script src="teams.js"></script>
   <script src="script.js"></script>
+
 </body>
 </html>

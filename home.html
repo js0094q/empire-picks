@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>EmpirePicks • Home</title>
 
-  <link rel="stylesheet" href="styles.css?v=home-v3"/>
+  <link rel="stylesheet" href="styles.css?v=final-home"/>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 </head>
 
@@ -15,7 +15,7 @@
   <div class="brand">EmpirePicks</div>
   <nav class="nav">
     <a href="index.html">Odds</a>
-    <a href="props.html">Props</a>
+    <a href="dashboard.html">Props</a>
     <a href="analytics.html">Analytics</a>
     <button class="button small" onclick="Auth.logout()">Log Out</button>
   </nav>
@@ -37,7 +37,7 @@
       <div class="card-desc">Live odds, consensus probability, and best EV pick for every game.</div>
     </a>
 
-    <a href="props.html" class="home-card">
+    <a href="dashboard.html" class="home-card">
       <div class="card-title">Player Props Hub</div>
       <div class="card-desc">Passing, rushing, receiving, and TD props aggregated from all US books.</div>
     </a>
@@ -52,9 +52,7 @@
 </main>
 
 <script src="auth.js"></script>
-<script>
-  Auth.requireAuth();
-</script>
+<script>Auth.requireAuth();</script>
 
 </body>
 </html>

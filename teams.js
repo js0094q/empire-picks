@@ -44,7 +44,7 @@ const TeamAssets = {
       abbr,
       primary: data.primary,
       secondary: data.secondary,
-      logoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(abbr)}&background=${bg}&color=fff&size=64&length=3&rounded=true`,
+      logoUrl: `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png`
       helmetUrl: `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png`
     };
   }

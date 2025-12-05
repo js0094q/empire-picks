@@ -23,8 +23,7 @@ function americanToDecimal(o) {
   return o > 0 ? 1 + o / 100 : 1 + 100 / -o;
 }
 
-function money(o) {
-  return o > 0 ? `+${o}` : `${o}`;
+const dashMoney = o => (o > 0 ? `+${o}` : `${o}`);
 }
 
 function combos(arr, k) {
@@ -151,7 +150,7 @@ function renderTable(rows) {
           <td>${r.game}</td>
           <td>${r.book}</td>
           <td>${r.market} – ${r.side}</td>
-          <td>${money(r.odds)}</td>
+          <td>${dashMoney(r.odds)}</td>
           <td><span class="badge-ev-pos">+${(r.edge * 100).toFixed(1)}%</span></td>
           <td>${r.kickoff}</td>
         </tr>
@@ -175,7 +174,7 @@ function renderTop5(legs) {
       return `
         <div class="top5-item">
           <strong>${l.game}</strong><br>
-          ${l.book} – ${l.market} ${l.side} ${money(l.odds)}
+          ${l.book} – ${l.market} ${l.side} ${dashMoney(l.odds)}
           <div class="badge-ev-pos">+${pct}% edge</div>
         </div>
       `;
@@ -226,7 +225,7 @@ function buildParlays(legs) {
                 l => `
               <li>
                 ${l.game} – <strong>${l.market} ${l.side}</strong>
-                (${money(l.odds)}, +${(l.edge * 100).toFixed(1)}% edge)
+                (${dashMoney(l.odds)}, +${(l.edge * 100).toFixed(1)}% edge)
               </li>`
               )
               .join("")}

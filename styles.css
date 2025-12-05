@@ -1,20 +1,19 @@
 :root {
-  --dk-bg: #0A0A0A;
-  --dk-card: #111111;
-  --dk-border: #1F1F1F;
-  --dk-text: #FFFFFF;
-  --dk-muted: #A0A0A0;
-  --dk-green: #65FF00;
-  --dk-red: #FF4444;
-  --radius: 12px;
-  --shadow: 0 0 18px rgba(0,0,0,0.6);
+  --bg: #000;
+  --card: #111;
+  --border: #262626;
+  --text: #fff;
+  --muted: #999;
+
+  --neon-green: #75FF2B;
+  --neon-glow: rgba(117,255,43,0.35);
+  --radius: 14px;
 }
 
 body {
-  margin: 0;
-  background: var(--dk-bg);
-  color: var(--dk-text);
-  font-family: "Manrope", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Manrope", sans-serif;
 }
 
 /* HEADER */
@@ -53,13 +52,30 @@ button:hover {
   margin: 0 auto;
 }
 
-/* GAME CARD */
-.card {
-  background: var(--dk-card);
-  border: 1px solid var(--dk-border);
+.game-card {
+  background: var(--card);
   padding: 1rem;
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin: 1rem auto;
+  max-width: 780px;
+  transition: 0.25s ease;
+}
+
+.game-card:hover {
+  border-color: var(--neon-green);
+  box-shadow: 0 0 22px var(--neon-glow);
+  transform: translateY(-4px);
+}
+
+.betting-row {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 12px;
+  padding: 1rem;
+  background: #0f0f0f;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
 }
 
 /* CARD HEADER */

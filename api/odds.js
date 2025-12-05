@@ -1,5 +1,5 @@
 // =============================================
-// /api/odds.js — EmpirePicks Full Odds + Props
+// /api/odds.js — Odds + Props for ONE Game
 // =============================================
 
 export default async function handler(req, res) {
@@ -15,37 +15,29 @@ export default async function handler(req, res) {
     }
 
     const sport = "americanfootball_nfl";
-    const regions = "us";
-    const oddsFormat = "american";
-
-    // ALL markets we want:
     const markets = [
       "h2h",
       "spreads",
       "totals",
-
-      // PASSING
       "player_pass_attempts",
       "player_pass_completions",
       "player_pass_tds",
       "player_pass_yds",
-
-      // RECEIVING
       "player_receptions",
       "player_reception_tds",
       "player_reception_yds",
-
-      // RUSHING
       "player_rush_tds",
       "player_rush_yds",
-
-      // TD markets
       "player_tds_over",
       "player_anytime_td"
     ].join(",");
 
-    const base = "https://api.the-odds-api.com/v4";
-    const url = `${base}/sports/${sport}/events/${eventId}/odds?apiKey=${apiKey}&regions=${regions}&markets=${markets}&oddsFormat=${oddsFormat}`;
+    const url = `https://api.the-odds-api.com/v4/sports/${sport}/events/${eventId}/odds
+      ?apiKey=${apiKey}
+      &regions=us
+      &markets=${markets}
+      &oddsFormat=american`
+      .replace(/\s+/g, "");
 
     const r = await fetch(url, { cache: "no-store" });
 
@@ -59,21 +51,12 @@ export default async function handler(req, res) {
 
     const json = await r.json();
 
-    // API returns either:
-    // - an array of games (usually 1)
-    // - or an object error
-    if (!Array.isArray(json)) {
-      return res.status(200).json([]);
-    }
+    if (!Array.isArray(json)) return res.status(200).json([]);
 
-    // return exactly one game's odds
     res.status(200).json(json);
 
   } catch (err) {
     console.error("ODDS API ERROR", err);
-    res.status(500).json({
-      error: "Odds handler failed",
-      details: err.message
-    });
+    res.status(500).json({ error: "Odds handler failed", details: err.message });
   }
 }

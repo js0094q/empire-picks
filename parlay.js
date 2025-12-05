@@ -1,4 +1,3 @@
-// parlay.js — Handles pick selection and submission
 let Parlay = {
   picks: [],
 
@@ -20,15 +19,12 @@ let Parlay = {
       return;
     }
 
-    container.innerHTML = this.picks
-      .map(
-        (p) => `
-        <div class="parlay-leg">
-          <strong>${p.player}</strong> • ${p.type} • ${p.line} @ ${p.odds}
-          <button onclick="Parlay.remove('${p.id}')" class="button small">X</button>
-        </div>`
-      )
-      .join("");
+    container.innerHTML = this.picks.map(p => `
+      <div class="parlay-leg">
+        <strong>${p.player}</strong> • ${marketLabel(p.market)} • ${fmtOdds(p.odds)}
+        <button onclick="Parlay.remove('${p.id}')" class="button small">X</button>
+      </div>
+    `).join("");
   },
 
   async submit() {
@@ -37,14 +33,14 @@ let Parlay = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: Auth.currentUser?.id || "anon",
+          user_id: "anon", // hook into auth if needed
           team: pick.team,
           player: pick.player,
-          type: pick.type,
-          line: pick.line,
+          type: marketLabel(pick.market),
+          line: "-",
           odds: pick.odds,
           ev_score: pick.ev
-        }),
+        })
       });
     }
 
@@ -54,5 +50,4 @@ let Parlay = {
   }
 };
 
-// Hook up submit button
 document.getElementById("place-parlay").addEventListener("click", () => Parlay.submit());

@@ -1,33 +1,58 @@
-// parlay.js — parlay builder
+// parlay.js — very simple global parlay slip
 
-window.addLeg = function (_, eventId, label, value) {
-  const id = `${eventId}-${label}-${value}`;
+(function () {
+  const itemsEl = document.getElementById("parlay-items");
+  const slipEl = document.getElementById("parlay-slip");
+  const placeBtn = document.getElementById("place-parlay");
 
-  window.AppState.addParlayLeg({
-    id,
-    eventId,
-    label,
-    value
-  });
+  const legs = [];
 
-  renderParlaySlip();
-};
+  function render() {
+    if (!itemsEl) return;
+    if (!legs.length) {
+      itemsEl.classList.add("muted");
+      itemsEl.innerHTML = "No picks added";
+      return;
+    }
+    itemsEl.classList.remove("muted");
+    itemsEl.innerHTML = legs
+      .map(
+        (l, idx) =>
+          `<div class="parlay-leg">
+            <span>${l.game} – <strong>${l.label}</strong> ${l.odds}</span>
+            <button data-i="${idx}" class="parlay-remove">×</button>
+          </div>`
+      )
+      .join("");
+    itemsEl.querySelectorAll(".parlay-remove").forEach(btn => {
+      btn.onclick = () => {
+        const i = parseInt(btn.dataset.i, 10);
+        legs.splice(i, 1);
+        render();
+      }
+    });
+  }
 
-window.removeParlay = function (id) {
-  window.AppState.removeParlayLeg(id);
-  renderParlaySlip();
-};
+  function addLeg(leg) {
+    legs.push(leg);
+    render();
+  }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const placeBtn = document.getElementById('place-parlay');
   if (placeBtn) {
     placeBtn.onclick = () => {
-      const slip = window.AppState.parlay;
-      if (!slip.length) {
-        alert('No legs selected.');
+      if (!legs.length) {
+        alert("Add at least one leg first.");
         return;
       }
-      alert(`Parlay placed with ${slip.length} legs! (EV engine next)`);
+      alert("This is a demo. In production, this would export your slip.");
     };
   }
-});
+
+  // Expose
+  window.Parlay = {
+    addLeg,
+    getLegs() { return legs.slice(); }
+  };
+
+  render();
+})();

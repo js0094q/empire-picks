@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EmpirePicks • Props Hub</title>
+
+  <link rel="stylesheet" href="styles.css?v=props-fd"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="brand">EmpirePicks ▸ Props Hub</div>
+    <nav class="nav">
+      <a href="index.html">Games</a>
+      <a href="props.html" class="active">Props</a>
+      <a href="analytics.html">Analytics</a>
+    </nav>
+  </header>
+
+  <!-- MAIN PROPS CONTAINER -->
+  <main id="props-container" class="props-container">
+    <div class="loader">Loading props and EV models...</div>
+  </main>
+
+  <!-- PARLAY SLIP -->
+  <div class="parlay-slip" id="parlay-slip">
+    <h3>Your Parlay</h3>
+    <div id="parlay-items" class="muted">No picks added yet</div>
+    <button class="button" id="place-parlay">Place Parlay</button>
+  </div>
+
+  <script src="teams.js"></script>
+  <script src="parlay.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

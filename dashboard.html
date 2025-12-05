@@ -7,14 +7,6 @@
 
   <link rel="stylesheet" href="styles.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
-
-  <!-- AUTH GUARD -->
-  <script>
-  // Auth guard using your actual Auth object
-  if (!window.Auth || !window.Auth.isLoggedIn()) {
-    window.location.href = "/login.html";
-  }
-</script>
 </head>
 
 <body>
@@ -28,8 +20,7 @@
 
     <nav class="nav">
       <a href="index.html">Home</a>
-      <a href="#" class="active">NFL</a>
-      <button id="logout-btn" class="button secondary">Log Out</button>
+      <a href="dashboard.html" class="active">NFL Dashboard</a>
     </nav>
   </header>
 
@@ -46,11 +37,47 @@
     <button class="button primary full-width" id="place-parlay">Place Parlay</button>
   </div>
 
-  <!-- SCRIPT ORDER MATTERS -->
-  <!-- Everything below MUST be modules to use import/export logic -->
-  <script type="module" src="teams.js"></script>
-  <script type="module" src="parlay.js"></script>
-  <script type="module" src="script.js"></script>  <!-- games engine -->
-  <script type="module" src="dashboard.js"></script>
+  <!-- DASHBOARD ANALYTICS PANEL -->
+  <section class="dashboard-section">
+    <h2>Weekly EV Edges</h2>
+    <button id="refresh" class="button secondary">Refresh</button>
+
+    <div id="top5" class="top5-panel"></div>
+
+    <table id="dash" class="table">
+      <thead>
+        <tr>
+          <th>Game</th>
+          <th>Book</th>
+          <th>Market</th>
+          <th>Odds</th>
+          <th>Edge</th>
+          <th>Kickoff</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- PARLAY ENGINE OUTPUT -->
+  <section class="dashboard-section">
+    <h2>Parlay EV Optimizer</h2>
+
+    <label>Minimum Edge:
+      <input id="parlayEdgeFilter" type="number" min="0" max="1" step="0.01" value="0.02"/>
+    </label>
+
+    <button id="generateParlays" class="button primary">Generate Parlays</button>
+
+    <div id="parlayResults" class="parlay-results"></div>
+  </section>
+
+  <!-- GLOBAL JS FILES -->
+  <!-- Order is CRITICAL. TeamAssets FIRST, then parlay, then script, then dashboard -->
+  <script src="teams.js"></script>
+  <script src="parlay.js"></script>
+  <script src="script.js"></script>
+  <script src="dashboard.js"></script>
+
 </body>
 </html>

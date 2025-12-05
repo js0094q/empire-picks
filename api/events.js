@@ -1,87 +1,66 @@
 // ============================================================
-// /api/events.js — EmpirePicks v1.0
-// Secure backend (server-only) events + odds feed
+// /api/events.js — EmpirePicks
+// Weekly NFL events feed (no eventId required)
 // ============================================================
 
 export default async function handler(req, res) {
   const apiKey = process.env.ODDS_API_KEY;
-  const sport = "americanfootball_nfl";
-  const regions = "us";
-  const oddsFormat = "american";
-  const eventId = req.query.eventId;
-
-  if (!apiKey || !eventId) {
-    return res.status(400).json({ error: "Missing apiKey or eventId" });
+  if (!apiKey) {
+    return res.status(500).json({ error: "Missing ODDS_API_KEY" });
   }
 
-  const url = `https://api.the-odds-api.com/v4/sports/${sport}/events/${eventId}/odds?apiKey=${apiKey}&regions=${regions}&markets=h2h,totals&oddsFormat=${oddsFormat}`;
+  const base = "https://api.the-odds-api.com/v4";
+  const sport = "americanfootball_nfl";
+  const url = `${base}/sports/${sport}/events?apiKey=${apiKey}`;
 
   try {
     const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error("Odds API responded with error status");
-
-    const json = await r.json();
-
-    if (!Array.isArray(json)) {
-      return res.status(500).json({ error: "Invalid odds response", payload: json });
+    if (!r.ok) {
+      return res
+        .status(500)
+        .json({ error: "Failed to fetch NFL events", status: r.status });
     }
 
-    const events = json.map(game => {
-      // choose bookmaker priority: DK → FD → first available
-      const book =
-        game.bookmakers.find(b => b.key === "draftkings") ||
-        game.bookmakers.find(b => b.key === "fanduel") ||
-        game.bookmakers[0];
+    const events = await r.json();
 
-      let homeSpread = "-";
-      let awaySpread = "-";
+    // --------------------------------------------------------
+    // EMPIREPICKS — FILTER TO ONE "NFL WEEK"
+    // Thursday 00:00 UTC through following Tuesday 11:00 UTC
+    // --------------------------------------------------------
+    const now = new Date();
 
-      if (book) {
-        const spreads = book.markets?.find(m => m.key === "spreads");
+    const todayUTC = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate()
+      )
+    );
 
-        if (spreads && spreads.outcomes) {
-          const h = spreads.outcomes.find(o => o.name === game.home_team);
-          const a = spreads.outcomes.find(o => o.name === game.away_team);
+    const todayUTCDay = todayUTC.getUTCDay(); // 0 = Sun ... 4 = Thu
+    const daysSinceThursday = (todayUTCDay - 4 + 7) % 7;
 
-          homeSpread = formatSpread(h?.point);
-          awaySpread = formatSpread(a?.point);
-        }
-      }
+    const thursdayUTC = new Date(todayUTC);
+    thursdayUTC.setUTCDate(todayUTC.getUTCDate() - daysSinceThursday);
+    thursdayUTC.setUTCHours(0, 0, 0, 0);
 
-      return {
-        id: game.id,
-        away: { name: game.away_team },
-        home: { name: game.home_team },
+    const tuesdayUTC = new Date(thursdayUTC);
+    tuesdayUTC.setUTCDate(thursdayUTC.getUTCDate() + 5); // Thu → Tue
+    tuesdayUTC.setUTCHours(11, 0, 0, 0);
 
-        time: new Date(game.commence_time).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit"
-        }),
-
-        odds: {
-          home: homeSpread,
-          away: awaySpread
-        }
-      };
+    const weekGames = (events || []).filter(ev => {
+      const kickoff = new Date(ev.commence_time);
+      return kickoff >= thursdayUTC && kickoff <= tuesdayUTC;
     });
 
-    res.status(200).json(events);
-
+    // Frontend expects the raw Odds API event shape:
+    // {
+    //   id, sport_key, sport_title, commence_time,
+    //   home_team, away_team, ...
+    // }
+    res.status(200).json(weekGames);
   } catch (err) {
     console.error("EVENTS API ERROR:", err);
-    res.status(500).json({
-      error: "Failed to fetch events",
-      details: err.message
-    });
+    res.status(500).json({ error: "Failed to fetch events", details: err.message });
   }
-}
-
-// ============================================================
-// Utilities
-// ============================================================
-
-function formatSpread(val) {
-  if (val === undefined || val === null) return "-";
-  if (val === 0 || val === 0.0) return "PK";
-  return val > 0 ? `+${val}` : `${val}`;
 }

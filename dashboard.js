@@ -4,7 +4,7 @@
 //  - Top 5 edges + simple parlay EV builder
 // ========================================================
 
-import { NFL_TEAMS } from "./teams.js";
+import NFL_TEAMS from "./teams.js";
 import { computeGameAnalytics } from "./script.js";
 
 // ---------- DOM ----------

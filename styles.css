@@ -138,7 +138,27 @@ button:hover {
   border-top: 2px solid var(--dk-green);
   box-shadow: -4px 0 12px rgba(0,255,0,0.2);
 }
-
+.back-button {
+  background: transparent;
+  border: none;
+  color: var(--dk-green);
+  font-size: 1rem;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+.back-button:hover {
+  color: #8CFF4E;
+}.back-button {
+  background: transparent;
+  border: none;
+  color: var(--dk-green);
+  font-size: 1rem;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+.back-button:hover {
+  color: #8CFF4E;
+}
 .footer {
   text-align: center;
   padding: 1rem;

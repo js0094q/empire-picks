@@ -1,126 +1,171 @@
-// ===========================
-// EmpirePicks DK Odds Engine
-// ===========================
+// =============================================================
+// EMPIREPICKS — NFL ODDS AGGREGATOR (FanDuel Theme)
+// =============================================================
 
-// Pull all events
-document.addEventListener("DOMContentLoaded", loadGames);
+document.addEventListener("DOMContentLoaded", loadNFL);
 
-async function loadGames() {
-  const container = document.getElementById("games-container");
-  container.innerHTML = `<div class="loader">Loading games...</div>`;
+async function loadNFL() {
+  const container = document.getElementById("events-container");
+  container.innerHTML = `<div class="loader">Loading NFL games...</div>`;
 
   try {
-    const r = await fetch("/api/events");
-    const games = await r.json();
+    // 1. Fetch all events
+    const eventsRes = await fetch("/api/events");
+    const events = await eventsRes.json();
 
     container.innerHTML = "";
-    games.forEach(g => renderGameCard(g, container));
+
+    for (const ev of events) {
+      const oddsRes = await fetch(`/api/odds?eventId=${ev.id}`);
+      const data = await oddsRes.json();
+      const game = data[0];
+
+      container.appendChild(renderGameCard(ev, game));
+    }
 
   } catch (err) {
-    container.innerHTML = `<div class="error">Failed loading games.</div>`;
+    console.error(err);
+    container.innerHTML = `<div class="error">Failed to load NFL games.</div>`;
   }
 }
 
+// =============================================================
+// GAME CARD RENDERING
+// =============================================================
 
-// ===========================
-// Game Card Builder
-// ===========================
-async function renderGameCard(ev, parent) {
+function renderGameCard(ev, game) {
   const card = document.createElement("div");
   card.className = "game-card";
 
-  // Get odds
-  const oddsRes = await fetch(`/api/odds?eventId=${ev.id}`);
-  const data = await oddsRes.json();
-  const game = data[0];
+  const away = TeamAssets.get(ev.away_team);
+  const home = TeamAssets.get(ev.home_team);
 
-  if (!game) {
-    card.innerHTML = `<div class="error">No odds yet</div>`;
-    parent.appendChild(card);
-    return;
-  }
-
+  // Compute aggregation + EV
   const ana = analyzeGame(game, ev.away_team, ev.home_team);
-  const line = computeAggregateOdds(game, ev.away_team, ev.home_team, ana);
+  const agg = computeAggregateOdds(game, ev.away_team, ev.home_team, ana);
 
-  const kickoffLocal = new Date(ev.commence_time).toLocaleString("en-US", {
+  const kickoff = new Date(ev.commence_time).toLocaleString("en-US", {
     timeZone: "America/New_York",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    weekday: "short"
   });
 
   card.innerHTML = `
     <div class="game-header">
-      <div class="teams">${ev.away_team} @ ${ev.home_team}</div>
-      <div class="kickoff">Kickoff: ${kickoffLocal}</div>
+      <div class="teams">
+        <img src="${away.logoUrl}" class="team-logo">
+        ${ev.away_team}
+        <span style="margin:0 6px; color:var(--muted);">@</span>
+        <img src="${home.logoUrl}" class="team-logo">
+        ${ev.home_team}
+      </div>
+      <div class="kickoff">${kickoff}</div>
     </div>
 
-    ${renderAggregateRow(line)}
-
-    <div class="model-pick">
-      Model Pick: <span class="pick-team">${ana.winner}</span>
-      <span class="pick-prob">${(ana.winnerProb * 100).toFixed(1)}%</span>
-    </div>
-  `;
-
-  parent.appendChild(card);
-}
-
-
-// ===========================
-// Aggregate Odds Row (Display)
-// ===========================
-function renderAggregateRow(l) {
-  return `
     <div class="betting-row">
-
       <div class="bet-block">
         <div class="bet-label">Spread</div>
-        <div class="bet-value">${l.spreadTeam} ${l.spread} (${money(l.spreadOdds)})</div>
+        <div class="bet-value">${agg.spreadTeam === ev.away_team ? agg.spread : -agg.spread}</div>
       </div>
 
       <div class="bet-block">
         <div class="bet-label">Moneyline</div>
-        <div class="bet-value">${l.mlTeam} ${money(l.ml)}</div>
+        <div class="bet-value">${fmtOdds(agg.ml)}</div>
       </div>
 
       <div class="bet-block">
         <div class="bet-label">Total</div>
-        <div class="bet-value">O${l.total} / U${l.total}</div>
+        <div class="bet-value">${agg.total}</div>
       </div>
 
       <div class="bet-block best-ev">
         <div class="bet-label">Best EV</div>
-        <div class="bet-value">${l.bestEV.team} ${money(l.bestEV.odds)}</div>
-        <div class="bet-ev">+${(l.bestEV.edge * 100).toFixed(1)}%</div>
+        <div class="bet-value">${agg.bestEV.team}</div>
+        <div class="bet-ev">${(agg.bestEV.edge * 100).toFixed(1)}%</div>
       </div>
+    </div>
 
+    <div class="model-pick">
+      Consensus Pick:
+      <span class="pick-team">${ana.winner}</span>
+      <span class="pick-prob">${(ana.winnerProb * 100).toFixed(1)}%</span>
     </div>
   `;
+
+  return card;
 }
 
+// =============================================================
+// ANALYZE GAME — MONEYLINE PROBABILITIES
+// =============================================================
 
-// ===========================
-// Aggregate Engine
-// ===========================
-function computeAggregateOdds(game, away, home, ana) {
-  const ml = [];
-  const spreads = [];
-  const totals = [];
-  let bestEV = { edge: -999 };
+function analyzeGame(game, away, home) {
+  if (!game || !game.bookmakers) {
+    return { nvA: 0.5, nvH: 0.5, winner: home, winnerProb: 0.5 };
+  }
+
+  let arrA = [];
+  let arrH = [];
 
   game.bookmakers.forEach(bm => {
-    bm.markets.forEach(m => {
+    const m = bm.markets?.find(x => x.key === "h2h");
+    if (!m || !m.outcomes) return;
 
-      // --- MONEYLINE ---
+    const a = m.outcomes.find(o => o.name === away);
+    const h = m.outcomes.find(o => o.name === home);
+
+    if (a?.price !== undefined) arrA.push(implied(a.price));
+    if (h?.price !== undefined) arrH.push(implied(h.price));
+  });
+
+  const avg = arr => arr.length ? arr.reduce((x,y)=>x+y,0)/arr.length : 0.5;
+
+  const pA = avg(arrA);
+  const pH = avg(arrH);
+
+  const nvA = pA / (pA + pH);
+  const nvH = pH / (pA + pH);
+
+  return {
+    nvA,
+    nvH,
+    winner: nvA > nvH ? away : home,
+    winnerProb: Math.max(nvA, nvH)
+  };
+}
+
+// =============================================================
+// AGGREGATE ODDS — Spread, ML, Total, Best EV
+// =============================================================
+
+function computeAggregateOdds(game, away, home, ana) {
+  let mls = [];
+  let spreads = [];
+  let totals = [];
+  let bestEV = { team: null, odds: null, edge: -999 };
+
+  if (!game || !game.bookmakers) {
+    return {
+      ml: 0,
+      spreadTeam: home,
+      spread: 0,
+      total: 0,
+      bestEV
+    };
+  }
+
+  game.bookmakers.forEach(bm => {
+    bm.markets?.forEach(m => {
+
+      // Moneyline
       if (m.key === "h2h") {
-        m.outcomes.forEach(o => {
-          if (o.name === away || o.name === home) ml.push(o.price);
+        m.outcomes?.forEach(o => {
+          if (typeof o.price === "number") mls.push(o.price);
 
-          // EV
-          const implied = prob(o.price);
-          const fv = o.name === away ? ana.nvA : ana.nvH;
-          const edge = fv - implied;
+          const imp = implied(o.price || 0);
+          const fair = o.name === away ? ana.nvA : ana.nvH;
+          const edge = fair - imp;
 
           if (edge > bestEV.edge) {
             bestEV = { team: o.name, odds: o.price, edge };
@@ -128,81 +173,52 @@ function computeAggregateOdds(game, away, home, ana) {
         });
       }
 
-      // --- SPREAD ---
+      // Spread
       if (m.key === "spreads") {
-        m.outcomes.forEach(o => spreads.push(o));
+        m.outcomes?.forEach(o => spreads.push(o));
       }
 
-      // --- TOTALS ---
+      // Totals
       if (m.key === "totals") {
-        m.outcomes.forEach(o => totals.push(o));
+        m.outcomes?.forEach(o => totals.push(o));
       }
-
     });
   });
 
-  const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length || 0;
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
-  const mlTeam = ana.nvA > ana.nvH ? away : home;
-  const avgML = avg(ml);
+  const mlAvg = avg(mls);
 
-  const bestSpread = spreads.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0] || {name: mlTeam, point: 0, price: 0};
-  const total = totals[0]?.point || 0;
+  const bestSpread =
+    spreads.length
+      ? spreads.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0]
+      : {name: home, point: 0};
+
+  const totalAvg =
+    totals.length
+      ? totals.sort((a,b)=>Math.abs(a.point)-Math.abs(b.point))[0].point
+      : 0;
 
   return {
-    mlTeam,
-    ml: avgML,
+    mlTeam: ana.nvA > ana.nvH ? away : home,
+    ml: mlAvg,
     spreadTeam: bestSpread.name,
     spread: bestSpread.point,
-    spreadOdds: bestSpread.price,
-    total,
+    total: totalAvg,
     bestEV
   };
 }
 
+// =============================================================
+// HELPERS
+// =============================================================
 
-// ===========================
-// Game Analysis
-// ===========================
-function analyzeGame(game, away, home) {
-  let aOdds = [], hOdds = [];
-
-  game.bookmakers.forEach(bm => {
-    const h2h = bm.markets.find(m => m.key === "h2h");
-    if (!h2h) return;
-
-    h2h.outcomes.forEach(o => {
-      if (o.name === away) aOdds.push(prob(o.price));
-      if (o.name === home) hOdds.push(prob(o.price));
-    });
-  });
-
-  const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length || 0;
-
-  const pA = avg(aOdds);
-  const pH = avg(hOdds);
-
-  const nvA = pA / (pA + pH);
-  const nvH = pH / (pA + pH);
-
-  const winner = nvA > nvH ? away : home;
-
-  return {
-    nvA,
-    nvH,
-    winner,
-    winnerProb: Math.max(nvA, nvH)
-  };
+function implied(odds) {
+  if (odds > 0) return 100/(odds+100);
+  return -odds/(-odds+100);
 }
 
-
-// ===========================
-// Helpers
-// ===========================
-function prob(odds) {
-  return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
-}
-
-function money(v) {
-  return v > 0 ? `+${v}` : `${v}`;
+function fmtOdds(o) {
+  if (!o || isNaN(o)) return "-";
+  return o > 0 ? "+" + o : o;
 }

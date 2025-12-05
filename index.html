@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>EmpirePicks – NFL Odds</title>
 
-  <link rel="stylesheet" href="styles.css?v=dk-final"/>
+  <link rel="stylesheet" href="styles.css?v=final"/>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 
 <body>
   <header class="header">
-    <div class="brand">EmpirePicks ▸ NFL</div>
+    <div class="brand">EmpirePicks ▸ NFL Odds</div>
     <nav class="nav">
       <a href="home.html">Home</a>
       <a href="dashboard.html">Analytics</a>
@@ -19,14 +19,14 @@
     </nav>
   </header>
 
-  <main id="games-container" class="games-container">
-    <div class="loader">Loading games...</div>
+  <main class="home-container">
+    <div id="events-container" class="games-container">
+      <div class="loader">Loading games...</div>
+    </div>
   </main>
 
   <script src="auth.js"></script>
-  <script>
-    Auth.requireAuth();
-  </script>
+  <script>Auth.requireAuth();</script>
   <script src="teams.js"></script>
   <script src="script.js"></script>
 </body>

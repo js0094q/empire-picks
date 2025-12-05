@@ -1,6 +1,5 @@
 // ================================================================
-// /api/odds-events.js — EmpirePicks
-// FULL AGGREGATED EVENTS + ODDS + PROPS (FanDuel-style structure)
+// /api/odds-events.js — Full Game + Props for All Events
 // ================================================================
 
 export default async function handler(req, res) {
@@ -13,27 +12,16 @@ export default async function handler(req, res) {
     const base = "https://api.the-odds-api.com/v4";
     const sport = "americanfootball_nfl";
 
-    // ---------------------------
-    // 1. Fetch ALL Events
-    // ---------------------------
+    // 1. Fetch all events
     const evRes = await fetch(
       `${base}/sports/${sport}/events?apiKey=${apiKey}`,
       { cache: "no-store" }
     );
 
-    if (!evRes.ok) {
-      return res.status(500).json({
-        error: "Failed fetching events",
-        status: evRes.status
-      });
-    }
-
     const events = await evRes.json();
-    const upcoming = events.filter(ev => new Date(ev.commence_time) > new Date());
+    const upcoming = events.filter(e => new Date(e.commence_time) > new Date());
 
-    // ---------------------------
-    // 2. Fetch odds for all events
-    // ---------------------------
+    // 2. Markets list
     const markets = [
       "h2h",
       "spreads",
@@ -54,50 +42,35 @@ export default async function handler(req, res) {
     const results = [];
 
     for (const ev of upcoming) {
-      const url = `${base}/sports/${sport}/events/${ev.id}/odds?apiKey=${apiKey}&regions=us&markets=${markets}&oddsFormat=american`;
+      const url = `${base}/sports/${sport}/events/${ev.id}/odds
+        ?apiKey=${apiKey}
+        &regions=us
+        &markets=${markets}
+        &oddsFormat=american`
+        .replace(/\s+/g, "");
 
       try {
         const oddsRes = await fetch(url, { cache: "no-store" });
 
         if (!oddsRes.ok) {
-          results.push({
-            ...ev,
-            odds: null,
-            error: `Odds error: ${oddsRes.status}`
-          });
+          results.push({ ...ev, odds: null, error: `Odds error ${oddsRes.status}` });
           continue;
         }
 
-        const oddsJson = await oddsRes.json();
+        const data = await oddsRes.json();
+        const gameOdds = Array.isArray(data) ? data[0] : null;
 
-        // odds API returns array of 1 element
-        const gameOdds = Array.isArray(oddsJson) ? oddsJson[0] : null;
+        results.push({ ...ev, odds: gameOdds });
 
-        results.push({
-          ...ev,
-          odds: gameOdds
-        });
-
-      } catch (innerErr) {
-        console.error("ODDS FETCH ERROR:", ev.id, innerErr);
-        results.push({
-          ...ev,
-          odds: null,
-          error: innerErr.message
-        });
+      } catch (err) {
+        results.push({ ...ev, odds: null, error: err.message });
       }
     }
 
-    // ---------------------------
-    // 3. Return final merged dataset
-    // ---------------------------
     return res.status(200).json(results);
 
   } catch (err) {
-    console.error("ODDS-EVENTS API ERROR", err);
-    res.status(500).json({
-      error: "Odds-events handler failed",
-      details: err.message
-    });
+    console.error("ODDS-EVENTS ERROR", err);
+    res.status(500).json({ error: "Odds-events handler failed", details: err.message });
   }
 }

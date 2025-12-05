@@ -19,9 +19,10 @@
   --ev-glow: rgba(76,255,133,0.35);
 
   --radius: 16px;
-  --shadow-ev: 0 0 18px var(--ev-glow);
-
   --font: "Manrope", sans-serif;
+
+  --shadow-blue: 0 0 18px rgba(0,121,243,0.4);
+  --shadow-ev: 0 0 18px var(--ev-glow);
 }
 
 * {
@@ -38,7 +39,7 @@ body {
 }
 
 /* ================================================
-   HEADER
+   HEADER (FanDuel Blue Bar)
    ================================================ */
 
 .header {
@@ -69,35 +70,35 @@ body {
   transition: 0.25s ease;
 }
 
-.nav a:hover {
+.nav a:hover,
+.nav a.active {
   color: var(--fd-light);
 }
 
 /* ================================================
-   BUTTONS
+   BUTTONS (FanDuel Blue System)
    ================================================ */
 
 .button {
-  background: var(--neon-green);
-  color: #000;
+  background: var(--fd-blue);
+  color: #FFFFFF;
   padding: 0.55rem 1rem;
   border-radius: 10px;
   border: none;
   font-weight: 700;
   cursor: pointer;
-  transition: 0.15s;
+  transition: 0.2s;
 }
 
 .button:hover {
-  background: var(--neon-green-strong);
+  background: var(--fd-light);
+  box-shadow: var(--shadow-blue);
 }
 
 .button.small {
   padding: 0.4rem 0.7rem;
   font-size: 0.85rem;
 }
-
-
 
 /* ================================================
    LOADER
@@ -109,26 +110,24 @@ body {
   color: var(--muted);
 }
 
-
-
 /* ================================================
-   GAME CARD
+   GAME CARD (FanDuel Style)
    ================================================ */
 
 .game-card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin: 1rem auto;
+  padding: 1.2rem;
+  margin: 1.2rem auto;
   max-width: 780px;
 
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .game-card:hover {
-  border-color: var(--neon-green);
-  box-shadow: var(--shadow-neon);
+  border-color: var(--fd-blue);
+  box-shadow: var(--shadow-blue);
   transform: translateY(-4px);
 }
 
@@ -139,7 +138,7 @@ body {
 }
 
 .game-header .teams {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
 }
 
@@ -148,10 +147,8 @@ body {
   font-size: 0.95rem;
 }
 
-
-
 /* ================================================
-   AGGREGATED BETTING ROW (Spread, ML, Total, EV)
+   BETTING ROW (Spread, ML, Total, EV)
    ================================================ */
 
 .betting-row {
@@ -159,17 +156,18 @@ body {
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   padding: 1rem;
-  background: #0F0F0F;
+
+  background: #121418;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-bottom: 0.75rem;
 
-  transition: 0.2s;
+  transition: 0.2s ease;
 }
 
 .betting-row:hover {
-  border-color: var(--neon-green);
-  box-shadow: var(--shadow-neon);
+  border-color: var(--fd-light);
+  box-shadow: var(--shadow-blue);
 }
 
 .bet-block {
@@ -190,35 +188,31 @@ body {
   color: var(--text);
 }
 
-
-
 /* ================================================
    BEST EV HIGHLIGHT
    ================================================ */
 
 .best-ev {
-  background: rgba(117,255,43,0.08);
-  border: 1px solid var(--neon-green);
+  background: rgba(76,255,133,0.08);
+  border: 1px solid var(--ev-green);
   border-radius: var(--radius);
-  padding: 0.5rem;
+  padding: 0.55rem;
 
-  animation: pulse 2s infinite ease-in-out;
+  animation: pulse-ev 2s infinite ease-in-out;
 }
 
 .bet-ev {
   margin-top: 4px;
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--neon-green);
+  color: var(--ev-green);
 }
 
-@keyframes pulse {
-  0% { box-shadow: 0 0 6px var(--neon-glow); }
-  50% { box-shadow: 0 0 18px var(--neon-glow); }
-  100% { box-shadow: 0 0 6px var(--neon-glow); }
+@keyframes pulse-ev {
+  0% { box-shadow: 0 0 6px var(--ev-glow); }
+  50% { box-shadow: 0 0 18px var(--ev-glow); }
+  100% { box-shadow: 0 0 6px var(--ev-glow); }
 }
-
-
 
 /* ================================================
    MODEL PICK
@@ -230,14 +224,17 @@ body {
 }
 
 .pick-team {
-  color: var(--neon-green);
+  color: var(--fd-light);
   font-weight: 700;
 }
 
-
+.pick-prob {
+  color: var(--ev-green);
+  font-weight: 700;
+}
 
 /* ================================================
-   PARLAY SLIP (Floating Right Panel)
+   PARLAY SLIP (FD Theme)
    ================================================ */
 
 .parlay-slip {
@@ -246,19 +243,19 @@ body {
   bottom: 0;
   width: 300px;
 
-  background: var(--bg-elevated);
-  border-top: 2px solid var(--neon-green);
-  border-left: 2px solid var(--neon-green);
+  background: #0D0F14;
+  border-top: 2px solid var(--fd-blue);
+  border-left: 2px solid var(--fd-blue);
   padding: 1rem;
 
   border-radius: 14px 0 0 0;
-  box-shadow: -4px 0 28px var(--neon-glow);
+  box-shadow: -4px 0 28px rgba(0,121,243,0.35);
 
   transition: 0.2s ease;
 }
 
 .parlay-leg {
-  background: #161616;
+  background: #16191F;
   border: 1px solid var(--border);
   padding: 0.6rem;
   border-radius: var(--radius);
@@ -268,11 +265,9 @@ body {
 }
 
 .parlay-leg:hover {
-  border-color: var(--neon-green);
-  box-shadow: var(--shadow-neon);
+  border-color: var(--fd-light);
+  box-shadow: var(--shadow-blue);
 }
-
-
 
 /* ================================================
    HOME SCREEN
@@ -285,16 +280,16 @@ body {
 }
 
 .home-hero {
-  background: linear-gradient(145deg, #000, #0A0A0A, #000);
+  background: linear-gradient(145deg, var(--fd-dark), #000, var(--fd-dark));
   padding: 2rem;
   border-radius: var(--radius);
   text-align: center;
-  box-shadow: var(--shadow-neon);
+  box-shadow: var(--shadow-blue);
   margin-bottom: 1.5rem;
 }
 
 .home-hero h1 {
-  color: var(--neon-green);
+  color: var(--fd-blue);
   font-size: 2.4rem;
 }
 
@@ -315,26 +310,14 @@ body {
 }
 
 .home-card:hover {
-  border-color: var(--neon-green);
-  box-shadow: var(--shadow-neon);
+  border-color: var(--fd-blue);
+  box-shadow: var(--shadow-blue);
   transform: translateY(-5px);
 }
-
-
 
 /* ================================================
    AUTH (Login / Signup)
    ================================================ */
-
-.auth-body {
-  background: var(--bg);
-}
-
-.auth-main {
-  display: flex;
-  justify-content: center;
-  padding-top: 2rem;
-}
 
 .auth-card {
   background: var(--card);
@@ -343,71 +326,16 @@ body {
   padding: 1.5rem;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 0 18px rgba(0,0,0,0.5);
-}
-
-.auth-tabs {
-  display: flex;
-  background: #161616;
-  border-radius: 999px;
-  padding: 3px;
-  margin-bottom: 1rem;
-}
-
-.auth-tab {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  padding: 0.5rem 0;
-  border-radius: 999px;
-  font-weight: 600;
-  cursor: pointer;
+  box-shadow: var(--shadow-blue);
 }
 
 .auth-tab.active {
-  background: #222;
-  color: var(--neon-green);
+  background: var(--fd-blue);
+  color: white;
 }
-
-.auth-form {
-  display: none;
-}
-
-.auth-form.active {
-  display: block;
-}
-
-.auth-form input {
-  width: 100%;
-  background: #0F0F0F;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.55rem;
-  margin-top: 0.25rem;
-  color: var(--text);
-}
-
-.auth-form input:focus {
-  border-color: var(--neon-green);
-}
-
-.auth-message {
-  margin-top: 0.75rem;
-}
-
-.auth-message.error {
-  color: #FF4444;
-}
-
-.auth-message.success {
-  color: var(--neon-green);
-}
-
-
 
 /* ================================================
-   UTILITY
+   ERROR
    ================================================ */
 
 .error {

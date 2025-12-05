@@ -3,52 +3,58 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>EmpirePicks – Home</title>
+  <title>EmpirePicks • Home</title>
 
-  <link rel="stylesheet" href="styles.css?v=dk1"/>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css?v=home-v3"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 </head>
 
 <body>
 
-  <header class="header">
-    EmpirePicks ▸ Home
-    <button class="header-right button" onclick="Auth.logout(); window.location.href='login.html';">
-      Log Out
-    </button>
-  </header>
+<header class="header">
+  <div class="brand">EmpirePicks</div>
+  <nav class="nav">
+    <a href="index.html">Odds</a>
+    <a href="props.html">Props</a>
+    <a href="analytics.html">Analytics</a>
+    <button class="button small" onclick="Auth.logout()">Log Out</button>
+  </nav>
+</header>
 
-  <main class="home-main">
-    <section class="home-hero">
-      <h1>EmpirePicks</h1>
-      <p>DraftKings-style analytics layer built for the common player.</p>
-    </section>
+<main class="home-container">
 
-    <section class="home-grid">
-      <a href="nfl.html" class="home-card">
-        <h2>NFL Odds & Picks</h2>
-        <p>Live lines, model pick, and best EV bet for each game.</p>
-      </a>
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Smarter Betting Starts Here</h1>
+    <p>The EmpirePicks engine analyzes market-wide sportsbook data to surface the most valuable plays, props, and edges — instantly.</p>
+  </section>
 
-      <a href="dashboard.html" class="home-card">
-        <h2>Analytics Dashboard</h2>
-        <p>Market edges, EV ranking, and parlay optimizer.</p>
-      </a>
+  <!-- NAV CARDS -->
+  <section class="home-cards">
 
-      <a href="feedback.html" class="home-card">
-        <h2>Beta Feedback</h2>
-        <p>Tell us what works, what sucks, and what you want next.</p>
-      </a>
-    </section>
-  </main>
+    <a href="index.html" class="home-card">
+      <div class="card-title">NFL Odds & Picks</div>
+      <div class="card-desc">Live odds, consensus probability, and best EV pick for every game.</div>
+    </a>
 
-  <footer class="footer">
-    EmpirePicks Beta • Data from The Odds API
-  </footer>
+    <a href="props.html" class="home-card">
+      <div class="card-title">Player Props Hub</div>
+      <div class="card-desc">Passing, rushing, receiving, and TD props aggregated from all US books.</div>
+    </a>
 
-  <script src="auth.js"></script>
-  <script>
-    Auth.requireAuth();
-  </script>
+    <a href="analytics.html" class="home-card">
+      <div class="card-title">Market Analytics</div>
+      <div class="card-desc">Top EV plays, line movement, and parlay optimization.</div>
+    </a>
+
+  </section>
+
+</main>
+
+<script src="auth.js"></script>
+<script>
+  Auth.requireAuth();
+</script>
+
 </body>
 </html>

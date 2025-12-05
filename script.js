@@ -3,7 +3,7 @@
 // ========================================================
 
 // Import team colors + logos
-import { NFL_TEAMS } from "./teams.js";
+import NFL_TEAMS from "./teams.js";
 
 // ========================================================
 //  SMALL HELPERS

@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "empirepicks",
   "builds": [
     { "src": "*.html", "use": "@vercel/static" },
     { "src": "*.css", "use": "@vercel/static" },
@@ -8,10 +7,7 @@
     { "src": "api/*.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "^/api/(.*)$", "dest": "/api/$1.js" },
-    { "src": "^/dashboard$", "dest": "/dashboard.html" },
-    { "src": "^/login$", "dest": "/login.html" },
-    { "src": "^/$", "dest": "/index.html" },
+    { "src": "/api/(.*)", "dest": "/api/$1.js" },
     { "src": "/(.*)", "dest": "/$1" }
   ]
 }

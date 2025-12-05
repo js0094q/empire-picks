@@ -1,6 +1,4 @@
-// ===============================================================
-// EMPIREPICKS — PROPS HUB (Group by Game → Market)
-// ===============================================================
+// dashboard.js — EmpirePicks Props Hub (Final Aesthetic + Odds Fix)
 
 document.addEventListener("DOMContentLoaded", loadPropsHub);
 
@@ -9,7 +7,6 @@ async function loadPropsHub() {
   container.innerHTML = `<div class="loader">Loading props...</div>`;
 
   try {
-    // Fetch all games with full odds + props
     const res = await fetch("/api/odds-events");
     const games = await res.json();
 
@@ -18,14 +15,13 @@ async function loadPropsHub() {
     games.forEach(game => {
       if (!game.odds || !game.odds.bookmakers) return;
 
-      const markets = extractPropsByMarket(game);
+      const propsByMarket = extractPropsByMarket(game);
+      container.innerHTML += renderGameHeader(game);
 
-      container.innerHTML += renderGamePropsHeader(game);
-
-      Object.entries(markets).forEach(([market, props]) => {
-        container.innerHTML += renderMarketHeader(market);
-        props.forEach(p => {
-          container.innerHTML += renderPropCard(p);
+      Object.entries(propsByMarket).forEach(([market, props]) => {
+        container.innerHTML += renderMarketLabel(market);
+        props.forEach(prop => {
+          container.innerHTML += renderPropCard(prop);
         });
       });
 
@@ -38,28 +34,23 @@ async function loadPropsHub() {
   }
 }
 
-// ===============================================================
-// EXTRACT PROPS → MARKET GROUPING
-// ===============================================================
-
+// Extract all props and group by market
 function extractPropsByMarket(game) {
-  const markets = {};
+  const map = {};
 
-  const bmList = game.odds.bookmakers || [];
-  bmList.forEach(bm => {
+  (game.odds.bookmakers || []).forEach(bm => {
     (bm.markets || []).forEach(m => {
       if (!m.key.startsWith("player_")) return;
-
-      if (!markets[m.key]) markets[m.key] = [];
+      if (!map[m.key]) map[m.key] = [];
 
       (m.outcomes || []).forEach(o => {
         if (typeof o.price !== "number") return;
 
         const implied = impliedProb(o.price);
-        const fair = 0.50; // placeholder model probability
+        const fair = 0.5; // placeholder model logic
         const ev = fair - implied;
 
-        markets[m.key].push({
+        map[m.key].push({
           market: m.key,
           player: o.name,
           odds: o.price,
@@ -67,39 +58,40 @@ function extractPropsByMarket(game) {
           fair,
           ev,
           game: `${game.away_team} @ ${game.home_team}`,
-          book: bm.title
+          team: game.home_team, // default to home
+          book: bm.title,
+          id: `${game.id}-${m.key}-${o.name}` // unique
         });
       });
     });
   });
 
-  // SORT: EV descending per market
-  Object.keys(markets).forEach(m => {
-    markets[m].sort((a,b) => b.ev - a.ev);
+  Object.keys(map).forEach(key => {
+    map[key].sort((a, b) => b.ev - a.ev);
   });
 
-  return markets;
+  return map;
 }
 
-// ===============================================================
-// EV + IMPLIED PROBABILITY
-// ===============================================================
-
+// Odds helper
 function impliedProb(odds) {
-  if (odds > 0) return 100 / (odds + 100);
-  return -odds / (-odds + 100);
+  return odds > 0
+    ? 100 / (odds + 100)
+    : -odds / (-odds + 100);
 }
 
-// ===============================================================
-// RENDER UI COMPONENTS
-// ===============================================================
+function fmtOdds(odds) {
+  return odds > 0 ? `+${odds}` : odds;
+}
 
-function renderGamePropsHeader(game) {
+// ========== UI ==========
+
+function renderGameHeader(game) {
   const away = TeamAssets.get(game.away_team).logoUrl;
   const home = TeamAssets.get(game.home_team).logoUrl;
 
   return `
-    <div class="game-card" style="margin-top:25px;">
+    <div class="game-card gradient-card">
       <div class="props-game-header">
         <div class="team">
           <img src="${away}" class="team-logo">
@@ -115,16 +107,11 @@ function renderGamePropsHeader(game) {
   `;
 }
 
-function renderMarketHeader(market) {
-  const pretty = marketLabel(market);
-  return `
-    <div class="market-header">${pretty}</div>
-  `;
+function renderMarketLabel(market) {
+  return `<div class="market-header">${marketLabel(market)}</div>`;
 }
 
 function renderPropCard(p) {
-  const oddsFmt = p.odds > 0 ? `+${p.odds}` : p.odds;
-
   return `
     <div class="prop-card">
       <div class="prop-top">
@@ -132,17 +119,17 @@ function renderPropCard(p) {
           <div class="prop-player">${p.player}</div>
           <div class="prop-market">${marketLabel(p.market)}</div>
         </div>
-        <div class="prop-odds">${oddsFmt}</div>
+        <div class="prop-odds">${fmtOdds(p.odds)}</div>
       </div>
 
       <div class="prop-stats">
-        <div>Implied: ${(p.implied*100).toFixed(1)}%</div>
-        <div>Model: ${(p.fair*100).toFixed(1)}%</div>
-        <div class="prop-ev">EV: ${(p.ev*100).toFixed(1)}%</div>
+        <div>Implied: ${(p.implied * 100).toFixed(1)}%</div>
+        <div>Model: ${(p.fair * 100).toFixed(1)}%</div>
+        <div class="prop-ev">EV: ${(p.ev * 100).toFixed(1)}%</div>
       </div>
 
       <button class="button small"
-        onclick='addToParlay("${p.player} - ${marketLabel(p.market)}", "${p.odds}", "${p.book}")'>
+        onclick='Parlay.add(${JSON.stringify(p)})'>
         Add to Parlay
       </button>
     </div>
@@ -150,21 +137,15 @@ function renderPropCard(p) {
 }
 
 function marketLabel(key) {
-  const map = {
-    "player_pass_attempts": "Passing Attempts",
-    "player_pass_completions": "Pass Completions",
-    "player_pass_tds": "Passing TDs",
+  const labels = {
     "player_pass_yds": "Passing Yards",
-
-    "player_receptions": "Receptions",
-    "player_reception_tds": "Receiving TDs",
-    "player_reception_yds": "Receiving Yards",
-
-    "player_rush_tds": "Rushing TDs",
+    "player_pass_tds": "Passing TDs",
     "player_rush_yds": "Rushing Yards",
-
-    "player_tds_over": "Anytime TD (Over)",
-    "player_anytime_td": "Anytime TD"
+    "player_rush_tds": "Rushing TDs",
+    "player_reception_yds": "Receiving Yards",
+    "player_reception_tds": "Receiving TDs",
+    "player_anytime_td": "Anytime TD",
+    "player_tds_over": "TD (Over)",
   };
-  return map[key] || key;
+  return labels[key] || key.replace("player_", "").replace(/_/g, " ");
 }

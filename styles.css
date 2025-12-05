@@ -1,185 +1,416 @@
+/* ================================================
+   EMPIREPICKS — DRAFTKINGS NEON THEME
+   Full Stylesheet (Complete Replacement)
+   ================================================ */
+
 :root {
-  --bg: #000;
-  --card: #111;
+  --bg: #000000;
+  --bg-elevated: #0D0D0D;
+  --card: #111111;
   --border: #262626;
-  --text: #fff;
-  --muted: #999;
+
+  --text: #FFFFFF;
+  --muted: #8E8E8E;
 
   --neon-green: #75FF2B;
+  --neon-green-strong: #5CFF00;
   --neon-glow: rgba(117,255,43,0.35);
+
   --radius: 14px;
+  --shadow-neon: 0 0 22px var(--neon-glow);
+
+  --font: "Manrope", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Manrope", sans-serif;
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* HEADER */
+
+
+/* ================================================
+   HEADER
+   ================================================ */
+
 .header {
-  text-align: center;
-  padding: 1.2rem;
-  border-bottom: 1px solid var(--dk-border);
+  width: 100%;
+  padding: 1rem 1.4rem;
   background: #0A0A0A;
+  border-bottom: 1px solid var(--border);
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header .brand {
+  font-size: 1.3rem;
   font-weight: 700;
-  font-size: 1.4rem;
+  color: var(--neon-green);
 }
 
-/* BUTTONS */
-button {
-  background: #141414;
-  border: 1px solid var(--dk-border);
-  color: var(--dk-text);
+.nav a {
+  color: var(--muted);
+  margin-left: 1rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+.nav a:hover {
+  color: var(--neon-green);
+}
+
+
+
+/* ================================================
+   BUTTONS
+   ================================================ */
+
+.button {
+  background: var(--neon-green);
+  color: #000;
   padding: 0.55rem 1rem;
-  border-radius: 8px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
   cursor: pointer;
-  font-weight: 600;
-  box-shadow: inset 0 0 6px rgba(255,255,255,0.05);
-  transition: 0.15s ease;
-}
-button:hover {
-  border-color: var(--dk-green);
-  color: var(--dk-green);
+  transition: 0.15s;
 }
 
-/* GAME GRID */
-.games {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  max-width: 900px;
-  margin: 0 auto;
+.button:hover {
+  background: var(--neon-green-strong);
 }
+
+.button.small {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+
+
+/* ================================================
+   LOADER
+   ================================================ */
+
+.loader {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+}
+
+
+
+/* ================================================
+   GAME CARD
+   ================================================ */
 
 .game-card {
   background: var(--card);
-  padding: 1rem;
-  border-radius: var(--radius);
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
   margin: 1rem auto;
   max-width: 780px;
-  transition: 0.25s ease;
+
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .game-card:hover {
   border-color: var(--neon-green);
-  box-shadow: 0 0 22px var(--neon-glow);
+  box-shadow: var(--shadow-neon);
   transform: translateY(-4px);
 }
 
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.game-header .teams {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.game-header .kickoff {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+
+
+/* ================================================
+   AGGREGATED BETTING ROW (Spread, ML, Total, EV)
+   ================================================ */
+
 .betting-row {
   display: grid;
-  grid-template-columns: repeat(4,1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   padding: 1rem;
-  background: #0f0f0f;
+  background: #0F0F0F;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+
+  transition: 0.2s;
+}
+
+.betting-row:hover {
+  border-color: var(--neon-green);
+  box-shadow: var(--shadow-neon);
+}
+
+.bet-block {
+  text-align: center;
+}
+
+.bet-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.bet-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+
+
+/* ================================================
+   BEST EV HIGHLIGHT
+   ================================================ */
+
+.best-ev {
+  background: rgba(117,255,43,0.08);
+  border: 1px solid var(--neon-green);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.bet-ev {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--neon-green);
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 6px var(--neon-glow); }
+  50% { box-shadow: 0 0 18px var(--neon-glow); }
+  100% { box-shadow: 0 0 6px var(--neon-glow); }
+}
+
+
+
+/* ================================================
+   MODEL PICK
+   ================================================ */
+
+.model-pick {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+.pick-team {
+  color: var(--neon-green);
+  font-weight: 700;
+}
+
+
+
+/* ================================================
+   PARLAY SLIP (Floating Right Panel)
+   ================================================ */
+
+.parlay-slip {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+
+  background: var(--bg-elevated);
+  border-top: 2px solid var(--neon-green);
+  border-left: 2px solid var(--neon-green);
+  padding: 1rem;
+
+  border-radius: 14px 0 0 0;
+  box-shadow: -4px 0 28px var(--neon-glow);
+
+  transition: 0.2s ease;
+}
+
+.parlay-leg {
+  background: #161616;
+  border: 1px solid var(--border);
+  padding: 0.6rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+
+  transition: 0.2s;
+}
+
+.parlay-leg:hover {
+  border-color: var(--neon-green);
+  box-shadow: var(--shadow-neon);
+}
+
+
+
+/* ================================================
+   HOME SCREEN
+   ================================================ */
+
+.home-main {
+  margin: 2rem auto;
+  max-width: 900px;
+  padding: 1rem;
+}
+
+.home-hero {
+  background: linear-gradient(145deg, #000, #0A0A0A, #000);
+  padding: 2rem;
+  border-radius: var(--radius);
+  text-align: center;
+  box-shadow: var(--shadow-neon);
+  margin-bottom: 1.5rem;
+}
+
+.home-hero h1 {
+  color: var(--neon-green);
+  font-size: 2.4rem;
+}
+
+.home-grid {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.home-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  padding: 1.2rem;
+
+  transition: 0.3s ease;
+}
+
+.home-card:hover {
+  border-color: var(--neon-green);
+  box-shadow: var(--shadow-neon);
+  transform: translateY(-5px);
+}
+
+
+
+/* ================================================
+   AUTH (Login / Signup)
+   ================================================ */
+
+.auth-body {
+  background: var(--bg);
+}
+
+.auth-main {
+  display: flex;
+  justify-content: center;
+  padding-top: 2rem;
+}
+
+.auth-card {
+  background: var(--card);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-}
-
-/* CARD HEADER */
-.card-header h2 {
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.card-header small {
-  display: block;
-  color: var(--dk-muted);
-  margin-top: 4px;
-}
-
-/* TABS */
-.tabs {
-  display: flex;
-  margin-top: 1rem;
-  border-bottom: 1px solid var(--dk-border);
-}
-
-.tab {
-  flex: 1;
-  padding: 0.7rem;
-  text-align: center;
-  font-weight: 600;
-  background: var(--dk-tab);
-  border-right: 1px solid var(--dk-border);
-  cursor: pointer;
-  transition: 0.15s;
-}
-.tab:hover {
-  background: #161616;
-}
-.tab.active {
-  background: var(--dk-tab-active);
-  color: var(--dk-green);
-}
-
-/* TAB CONTENT */
-.tab-content {
-  display: none;
-  padding: 0.9rem 0;
-}
-.tab-content.active {
-  display: block;
-}
-
-/* TABLE */
-.table {
+  padding: 1.5rem;
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.92rem;
-  margin-top: 0.5rem;
-}
-.table th {
-  color: var(--dk-muted);
-  text-align: left;
-  padding: 8px;
-  border-bottom: 1px solid var(--dk-border);
-}
-.table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--dk-border);
+  max-width: 420px;
+  box-shadow: 0 0 18px rgba(0,0,0,0.5);
 }
 
-/* EV COLORS */
-.ev-pos { color: var(--dk-green); font-weight: 700; }
-.ev-neg { color: var(--dk-red); }
+.auth-tabs {
+  display: flex;
+  background: #161616;
+  border-radius: 999px;
+  padding: 3px;
+  margin-bottom: 1rem;
+}
 
-/* PARLAY SLIP */
-#parlayMaker {
-  background: var(--dk-card);
-  border-left: 2px solid var(--dk-green);
-  border-top: 2px solid var(--dk-green);
-  box-shadow: -4px 0 12px rgba(0,255,0,0.2);
-}
-.back-button {
+.auth-tab {
+  flex: 1;
   background: transparent;
   border: none;
-  color: var(--dk-green);
-  font-size: 1rem;
+  color: var(--muted);
+  padding: 0.5rem 0;
+  border-radius: 999px;
+  font-weight: 600;
   cursor: pointer;
-  margin-right: 1rem;
 }
-.back-button:hover {
-  color: #8CFF4E;
-}.back-button {
-  background: transparent;
-  border: none;
-  color: var(--dk-green);
-  font-size: 1rem;
-  cursor: pointer;
-  margin-right: 1rem;
+
+.auth-tab.active {
+  background: #222;
+  color: var(--neon-green);
 }
-.back-button:hover {
-  color: #8CFF4E;
+
+.auth-form {
+  display: none;
 }
-.footer {
+
+.auth-form.active {
+  display: block;
+}
+
+.auth-form input {
+  width: 100%;
+  background: #0F0F0F;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem;
+  margin-top: 0.25rem;
+  color: var(--text);
+}
+
+.auth-form input:focus {
+  border-color: var(--neon-green);
+}
+
+.auth-message {
+  margin-top: 0.75rem;
+}
+
+.auth-message.error {
+  color: #FF4444;
+}
+
+.auth-message.success {
+  color: var(--neon-green);
+}
+
+
+
+/* ================================================
+   UTILITY
+   ================================================ */
+
+.error {
+  color: #FF4D4D;
   text-align: center;
   padding: 1rem;
-  color: var(--dk-muted);
-  font-size: 0.85rem;
-  border-top: 1px solid var(--dk-border);
-  margin-top: 30px;
 }

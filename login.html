@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EmpirePicks – Login</title>
+
+  <link rel="stylesheet" href="styles.css?v=dk1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
+</head>
+
+<body class="auth-body">
+
+  <header class="header">
+    <button class="back-button" onclick="window.location.href='index.html'">← Back</button>
+    EmpirePicks ▸ Account
+  </header>
+
+  <main class="auth-main">
+    <div class="auth-card">
+
+      <!-- Brand -->
+      <div class="auth-brand">
+        <div class="brand-mark">EP</div>
+        <div class="auth-title-wrap">
+          <div class="auth-title">EmpirePicks</div>
+          <div class="auth-subtitle">Join or sign in to track picks</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-mode="login">Log In</button>
+        <button class="auth-tab" data-mode="signup">Sign Up</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="login-form" class="auth-form active">
+        <label>Email
+          <input type="email" id="login-email" required placeholder="you@example.com"/>
+        </label>
+
+        <label>Password
+          <input type="password" id="login-password" required minlength="6" placeholder="•••••••"/>
+        </label>
+
+        <button class="button auth-button" type="submit">
+          Log In
+        </button>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form id="signup-form" class="auth-form">
+        <label>Email
+          <input type="email" id="signup-email" required placeholder="you@example.com"/>
+        </label>
+
+        <label>Password
+          <input type="password" id="signup-password" required minlength="6" placeholder="At least 6 characters"/>
+        </label>
+
+        <button class="button auth-button" type="submit">
+          Create Account
+        </button>
+      </form>
+
+      <div id="auth-message" class="auth-message muted"></div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    EmpirePicks Beta • Not for real wagering
+  </footer>
+
+  <script src="auth.js"></script>
+
+  <script>
+    const tabs = document.querySelectorAll('.auth-tab');
+    const forms = document.querySelectorAll('.auth-form');
+    const msg = document.getElementById("auth-message");
+
+    function switchMode(mode) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+      forms.forEach(f => f.classList.toggle('active', f.id.startsWith(mode)));
+      msg.textContent = "";
+    }
+
+    tabs.forEach(t => {
+      t.addEventListener("click", () => switchMode(t.dataset.mode));
+    });
+
+    // Login
+    document.getElementById("login-form").addEventListener("submit", e => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value.trim().toLowerCase();
+      const pw = document.getElementById("login-password").value;
+
+      const ok = Auth.login(email, pw);
+
+      if (!ok) {
+        msg.textContent = "Incorrect email or password.";
+        msg.classList.add("error");
+        msg.classList.remove("success");
+        return;
+      }
+
+      msg.textContent = "Welcome back! Redirecting…";
+      msg.classList.add("success");
+      setTimeout(() => location.href = "index.html", 400);
+    });
+
+    // Signup
+    document.getElementById("signup-form").addEventListener("submit", e => {
+      e.preventDefault();
+      const email = document.getElementById("signup-email").value.trim().toLowerCase();
+      const pw = document.getElementById("signup-password").value;
+
+      const result = Auth.signup(email, pw);
+
+      if (!result.ok) {
+        msg.textContent = result.message;
+        msg.classList.add("error");
+        msg.classList.remove("success");
+        return;
+      }
+
+      msg.textContent = "Account created! Redirecting…";
+      msg.classList.add("success");
+      setTimeout(() => location.href = "index.html", 400);
+    });
+
+    // Auto redirect if already logged in
+    if (Auth.isLoggedIn()) {
+      location.href = "index.html";
+    }
+  </script>
+
+</body>
+</html>

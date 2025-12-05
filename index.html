@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks – Beat The Books</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EmpirePicks – NFL Odds & EV Engine</title>
 
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 
 <body>
 
+  <!-- HEADER -->
   <header class="site-header">
     <div class="brand">
       <div class="brand-mark">EP</div>
@@ -18,24 +19,45 @@
     </div>
 
     <nav class="nav">
-      <a href="login.html" class="button secondary">Log In</a>
-      <a href="dashboard.html" class="button primary">Launch App</a>
+      <a class="active" href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
     </nav>
   </header>
 
-  <main style="text-align:center; padding:80px 20px;">
-    <h1 style="font-size:3rem; margin-bottom:14px;">
-      Dominate the Sportsbooks
-    </h1>
-
-    <p class="muted" style="max-width:600px; margin:0 auto 32px;">
-      Real-time NFL odds, player props, EV-based betting edges, and a next-generation parlay optimizer.
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <h1 class="hero-title">NFL Weekly Odds + Expected Value Engine</h1>
+    <p class="hero-sub">
+      Aggregated odds from major US sportsbooks, blended into a no-vig model to reveal
+      which sides, totals, and props the market is truly favoring.
     </p>
 
-    <a href="dashboard.html" class="button primary" style="font-size:1.2rem; padding:14px 32px;">
-      Enter EmpirePicks
-    </a>
-  </main>
+    <div class="hero-actions">
+      <a href="dashboard.html" class="button primary">Go to Dashboard</a>
+    </div>
+  </section>
 
+  <!-- GAME FEED -->
+  <section class="game-feed" id="events-container">
+    <div class="loader">Loading NFL games...</div>
+  </section>
+
+  <!-- FLOATING PARLAY SLIP -->
+  <div class="parlay-slip" id="parlay-slip">
+    <h4>Your Parlay</h4>
+    <div id="parlay-items" class="muted">No picks added</div>
+    <br/>
+    <button class="button primary full-width" id="place-parlay">Place Parlay</button>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    EmpirePicks.com – Data Powered by The Odds API  
+  </footer>
+
+  <!-- JS FILE ORDER: DO NOT CHANGE -->
+  <script src="teams.js"></script>     <!-- global: window.TeamAssets -->
+  <script src="parlay.js"></script>    <!-- global parlay engine -->
+  <script src="script.js"></script>    <!-- game cards + odds + props -->
 </body>
 </html>

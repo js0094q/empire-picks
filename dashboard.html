@@ -9,10 +9,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
 
   <!-- AUTH GUARD -->
-  <script type="module">
-    import { validateToken } from "./token.js";
-    if (!validateToken()) window.location.href = "/login.html";
-  </script>
+  <script>
+  // Auth guard using your actual Auth object
+  if (!window.Auth || !window.Auth.isLoggedIn()) {
+    window.location.href = "/login.html";
+  }
+</script>
 </head>
 
 <body>

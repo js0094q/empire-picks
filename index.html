@@ -10,7 +10,6 @@
 </head>
 
 <body>
-
   <!-- HEADER -->
   <header class="site-header">
     <div class="brand">
@@ -19,26 +18,22 @@
     </div>
 
     <nav class="nav">
-      <a class="active" href="index.html">Home</a>
+      <a href="index.html" class="active">Games</a>
       <a href="dashboard.html">Dashboard</a>
     </nav>
   </header>
 
-  <!-- HERO SECTION -->
+  <!-- HERO -->
   <section class="hero">
-    <h1 class="hero-title">NFL Weekly Odds + Expected Value Engine</h1>
+    <h1 class="hero-title">NFL Weekly Odds + Expected Value</h1>
     <p class="hero-sub">
-      Aggregated odds from major US sportsbooks, blended into a no-vig model to reveal
-      which sides, totals, and props the market is truly favoring.
+      Aggregated moneyline, spreads, totals, and player props from major US books,
+      with no-vig probabilities to show what the market really thinks.
     </p>
-
-    <div class="hero-actions">
-      <a href="dashboard.html" class="button primary">Go to Dashboard</a>
-    </div>
   </section>
 
   <!-- GAME FEED -->
-  <section class="game-feed" id="events-container">
+  <section class="game-feed" id="games-container">
     <div class="loader">Loading NFL games...</div>
   </section>
 
@@ -52,12 +47,12 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    EmpirePicks.com – Data Powered by The Odds API  
+    EmpirePicks.com – Data from The Odds API
   </footer>
 
-  <!-- JS FILE ORDER: DO NOT CHANGE -->
-  <script src="teams.js"></script>     <!-- global: window.TeamAssets -->
-  <script src="parlay.js"></script>    <!-- global parlay engine -->
-  <script src="script.js"></script>    <!-- game cards + odds + props -->
+  <!-- JS ORDER MATTERS -->
+  <script src="teams.js"></script>
+  <script src="parlay.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

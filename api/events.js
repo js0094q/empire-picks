@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
     const events = await r.json();
 
-    // Optional: upcoming games only (no past games)
+    // return upcoming only
     const now = new Date();
     const filtered = events.filter(ev => new Date(ev.commence_time) > now);
 

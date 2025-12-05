@@ -1,23 +1,25 @@
-/* ================================================
-   EMPIREPICKS — DRAFTKINGS NEON THEME
-   Full Stylesheet (Complete Replacement)
-   ================================================ */
-
 :root {
+  /* =============================
+     EMPIREPICKS — FAN DUEL THEME
+     ============================= */
+
+  --fd-blue: #0079F3;
+  --fd-dark: #001F3F;
+  --fd-light: #33A6FF;
+
   --bg: #000000;
-  --bg-elevated: #0D0D0D;
-  --card: #111111;
-  --border: #262626;
+  --bg-elevated: #0A0A0A;
+  --card: #0F0F12;
+  --border: #1C1F26;
 
   --text: #FFFFFF;
-  --muted: #8E8E8E;
+  --muted: #B4B8C4;
 
-  --neon-green: #75FF2B;
-  --neon-green-strong: #5CFF00;
-  --neon-glow: rgba(117,255,43,0.35);
+  --ev-green: #4CFF85;
+  --ev-glow: rgba(76,255,133,0.35);
 
-  --radius: 14px;
-  --shadow-neon: 0 0 22px var(--neon-glow);
+  --radius: 16px;
+  --shadow-ev: 0 0 18px var(--ev-glow);
 
   --font: "Manrope", sans-serif;
 }
@@ -35,8 +37,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-
-
 /* ================================================
    HEADER
    ================================================ */
@@ -44,33 +44,34 @@ body {
 .header {
   width: 100%;
   padding: 1rem 1.4rem;
-  background: #0A0A0A;
-  border-bottom: 1px solid var(--border);
+
+  background: var(--fd-dark);
+  border-bottom: 2px solid var(--fd-blue);
 
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .header .brand {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--neon-green);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--fd-blue);
+  letter-spacing: 0.5px;
 }
 
 .nav a {
   color: var(--muted);
   margin-left: 1rem;
-  font-size: 0.95rem;
-  text-decoration: none;
-  transition: 0.2s;
+  font-size: 1rem;
+  transition: 0.25s ease;
 }
 
 .nav a:hover {
-  color: var(--neon-green);
+  color: var(--fd-light);
 }
-
-
 
 /* ================================================
    BUTTONS

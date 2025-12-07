@@ -265,3 +265,21 @@ body {
   margin-top: 40px;
   color: var(--ep-neutral);
 }
+/* Force override old card defaults */
+.game-card {
+  background: linear-gradient(155deg, #111826 0 percent, #1b2639 100 percent) !important;
+  color: white !important;
+  border-radius: var(--radius) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Force override accordion defaults */
+.accordion {
+  background: rgba(28, 36, 52, 0.85) !important;
+  color: white !important;
+}
+
+/* Force override page background */
+body {
+  background: #090d14 !important;
+}

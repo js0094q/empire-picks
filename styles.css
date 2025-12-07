@@ -1,0 +1,166 @@
+/* ================================
+   EmpirePicks Theme
+   ================================ */
+
+:root {
+  --ep-bg: #0b132b;
+  --ep-bg-light: #1c2541;
+  --ep-card: #3a506b;
+  --ep-gold: #ffcc4d;
+  --ep-green: #28e07b;
+  --ep-red: #ff5b5b;
+  --ep-neutral: #d4d4d4;
+
+  --radius: 12px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Manrope", sans-serif;
+  background: var(--ep-bg);
+  color: white;
+}
+
+/* Header */
+.ep-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  background: var(--ep-bg-light);
+  border-bottom: 2px solid var(--ep-gold);
+}
+
+.ep-header .logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ep-gold);
+}
+
+#refresh-btn {
+  padding: 8px 16px;
+  background: var(--ep-gold);
+  border: none;
+  border-radius: var(--radius);
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Games Container */
+.games-container {
+  padding: 16px;
+}
+
+/* Game Card */
+.game-card {
+  background: var(--ep-card);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  padding: 14px;
+  transition: 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.teams {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.team-logo {
+  width: 38px;
+  height: 38px;
+}
+
+.kickoff {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+/* Accordion */
+.accordion {
+  margin-top: 12px;
+  background: var(--ep-bg-light);
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+}
+
+.accordion-title {
+  font-weight: bold;
+}
+
+.panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.panel.open {
+  padding-top: 12px;
+}
+
+/* Market Grid */
+.market-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.market-box {
+  background: var(--ep-card);
+  padding: 10px;
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+/* EV Colors */
+.ev-green {
+  color: var(--ep-green);
+  font-weight: bold;
+}
+
+.ev-red {
+  color: var(--ep-red);
+  font-weight: bold;
+}
+
+.ev-neutral {
+  color: var(--ep-neutral);
+}
+
+/* Props */
+.prop-category {
+  margin-top: 16px;
+  padding: 10px;
+  background: #22304d;
+  border-radius: var(--radius);
+}
+
+.prop-item {
+  background: #31415f;
+  padding: 10px;
+  border-radius: var(--radius);
+  margin-top: 10px;
+}
+
+/* Footer */
+.ep-footer {
+  text-align: center;
+  padding: 16px;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}

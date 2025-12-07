@@ -4,7 +4,7 @@ import { Teams } from "./teams.js";
    UTILITY FUNCTIONS
    ============================================================ */
 
-// Convert American odds to implied probability
+// Convert American odds to implied probability (not used directly in UI now, but handy)
 function implied(odds) {
   if (odds > 0) return 100 / (odds + 100);
   return -odds / (-odds + 100);
@@ -17,15 +17,28 @@ function pct(x) {
 
 // EV color classification
 function evClass(value) {
+  if (value == null || Number.isNaN(value)) return "ev-neutral";
   if (value > 0.03) return "ev-green";
   if (value < -0.03) return "ev-red";
   return "ev-neutral";
 }
 
-// Format odds
+// Format odds for display
 function fmtOdds(o) {
   if (o === null || o === undefined) return "-";
   return o > 0 ? `+${o}` : `${o}`;
+}
+
+// Safe EV formatting
+function fmtEV(ev) {
+  if (ev == null || Number.isNaN(ev)) return "N/A";
+  return pct(ev);
+}
+
+// Safe probability formatting
+function fmtProb(p) {
+  if (p == null || Number.isNaN(p)) return "N/A";
+  return pct(p);
 }
 
 // Format kickoff time in local ET
@@ -74,6 +87,7 @@ async function loadGames() {
   try {
     games = await fetchGames();
   } catch (err) {
+    console.error(err);
     container.innerHTML = `<div class="error">Failed to load games.</div>`;
     return;
   }
@@ -94,18 +108,21 @@ async function loadGames() {
 loadGames();
 
 /* ============================================================
-   GAME CARD RENDERING
+   GAME CARD RENDERING (TOP CARD WITH EDGE)
    ============================================================ */
 
 function createGameCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
-  card.dataset.id = game.id;  // <-- CRITICAL: Stores event ID
+  card.dataset.id = game.id; // event id used for props
 
   const home = Teams[game.home_team] || {};
   const away = Teams[game.away_team] || {};
   const best = game.best;
   const kickoff = kickoffLocal(game.commence_time);
+
+  const homeAbbr = home.abbr ? home.abbr.toUpperCase() : game.home_team;
+  const awayAbbr = away.abbr ? away.abbr.toUpperCase() : game.away_team;
 
   card.innerHTML = `
     <div class="game-header">
@@ -123,20 +140,50 @@ function createGameCard(game) {
     <div class="market-grid">
       <div class="market-box">
         <div>Moneyline</div>
-        <div>${away.abbr?.toUpperCase()}: ${fmtOdds(best.ml.away.odds)}</div>
-        <div>${home.abbr?.toUpperCase()}: ${fmtOdds(best.ml.home.odds)}</div>
+        <div>
+          ${awayAbbr}: ${fmtOdds(best.ml.away.odds)}
+          <div class="${evClass(best.ml.away.ev)}" style="font-size:0.75rem;">
+            EV ${fmtEV(best.ml.away.ev)} • Prob ${fmtProb(best.ml.away.consensus_prob)}
+          </div>
+        </div>
+        <div>
+          ${homeAbbr}: ${fmtOdds(best.ml.home.odds)}
+          <div class="${evClass(best.ml.home.ev)}" style="font-size:0.75rem;">
+            EV ${fmtEV(best.ml.home.ev)} • Prob ${fmtProb(best.ml.home.consensus_prob)}
+          </div>
+        </div>
       </div>
 
       <div class="market-box">
         <div>Spread</div>
-        <div>${away.abbr} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})</div>
-        <div>${home.abbr} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})</div>
+        <div>
+          ${awayAbbr} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})
+          <div class="${evClass(best.spread.away.ev)}" style="font-size:0.75rem;">
+            EV ${fmtEV(best.spread.away.ev)} • Prob ${fmtProb(best.spread.away.consensus_prob)}
+          </div>
+        </div>
+        <div>
+          ${homeAbbr} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})
+          <div class="${evClass(best.spread.home.ev)}" style="font-size:0.75rem;">
+            EV ${fmtEV(best.spread.home.ev)} • Prob ${fmtProb(best.spread.home.consensus_prob)}
+          </div>
+        </div>
       </div>
 
       <div class="market-box">
         <div>Total</div>
-        <div>Over ${best.total.over.point} (${fmtOdds(best.total.over.odds)})</div>
-        <div>Under ${best.total.under.point} (${fmtOdds(best.total.under.odds)})</div>
+        <div>
+          Over ${best.total.over.point} (${fmtOdds(best.total.over.odds)})
+          <div class="${evClass(best.total.over.ev)}" style="font-size:0.75rem;">
+            EV ${fmtEV(best.total.over.ev)} • Prob ${fmtProb(best.total.over.consensus_prob)}
+          </div>
+        </div>
+        <div>
+          Under ${best.total.under.point} (${fmtOdds(best.total.under.odds)})
+          <div class="${evClass(best.total.under.ev)}" style="font-size:0.75rem;">
+            EV ${fmtEV(best.total.under.ev)} • Prob ${fmtProb(best.total.under.consensus_prob)}
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -183,11 +230,13 @@ function buildMarketsTable(game) {
       html += `
         <div class="prop-item">
           <div><strong>${row.bookmaker}</strong></div>
-          <div>${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
-            <span class="${evClass(row.outcome1.edge)}">EV ${pct(row.outcome1.edge)}</span>
+          <div>
+            ${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
+            <span class="${evClass(row.outcome1.edge)}">EV ${fmtEV(row.outcome1.edge)}</span>
           </div>
-          <div>${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
-            <span class="${evClass(row.outcome2.edge)}">EV ${pct(row.outcome2.edge)}</span>
+          <div>
+            ${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
+            <span class="${evClass(row.outcome2.edge)}">EV ${fmtEV(row.outcome2.edge)}</span>
           </div>
         </div>
       `;
@@ -204,7 +253,7 @@ function buildMarketsTable(game) {
 function createPropsAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
-  acc.dataset.id = game.id;   // <-- CRITICAL: identify which event to fetch props for
+  acc.dataset.id = game.id;   // event id for props
 
   acc.innerHTML = `<div class="accordion-title">Player Props</div>`;
 
@@ -223,6 +272,7 @@ function createPropsAccordion(game) {
         panel.innerHTML = buildPropsUI(props);
         panel.dataset.loaded = "true";
       } catch (err) {
+        console.error(err);
         panel.innerHTML = `<div class="error">Failed to load props.</div>`;
       }
     }
@@ -250,37 +300,8 @@ function buildPropsUI(data) {
       html += `
         <div class="prop-item">
           <div><strong>${p.player}</strong></div>
-          <div>${p.label ? p.label : ""} Line: ${p.point}</div>
+          <div>${p.label ? p.label + " — " : ""}Line: ${p.point}</div>
 
-          <div>Over ${fmtOdds(p.over_odds)}
-            <span class="${evClass(p.over_ev)}">EV ${pct(p.over_ev)}</span>
-            <span style="opacity:0.7;">(${pct(p.over_prob)})</span>
-          </div>
-
-          <div>Under ${fmtOdds(p.under_odds)}
-            <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>
-            <span style="opacity:0.7;">(${pct(p.under_prob)})</span>
-          </div>
-        </div>
-      `;
-    });
-
-    html += `</div>`;
-  });
-
-  return html;
-}
-
-/* ============================================================
-   ACCORDION OPEN/CLOSE HANDLER
-   ============================================================ */
-
-function toggleAccordion(panel) {
-  if (panel.style.maxHeight) {
-    panel.style.maxHeight = null;
-    panel.classList.remove("open");
-  } else {
-    panel.style.maxHeight = panel.scrollHeight + "px";
-    panel.classList.add("open");
-  }
-}
+          <div>
+            Over ${fmtOdds(p.over_odds)}
+            <span class="${evClass(p.over_ev)}">

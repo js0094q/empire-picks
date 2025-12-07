@@ -10,19 +10,19 @@ const BASE = "https://api.the-odds-api.com/v4";
    ============================================================ */
 
 function implied(odds) {
-  if (!odds && odds !== 0) return null;
+  if (odds == null) return null;
   return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
-}
-
-function noVigNormalize(pList) {
-  const total = pList.reduce((a, c) => a + c, 0);
-  if (!total) return pList.map(() => 0.5);
-  return pList.map(p => p / total);
 }
 
 function avg(arr) {
   if (!arr || !arr.length) return null;
   return arr.reduce((a, c) => a + c, 0) / arr.length;
+}
+
+function noVigNormalize(list) {
+  const total = list.reduce((a, c) => a + c, 0);
+  if (!total) return list.map(() => 0.5);
+  return list.map(p => p / total);
 }
 
 function edge(fairProb, impliedProb) {
@@ -31,34 +31,22 @@ function edge(fairProb, impliedProb) {
 }
 
 /* ============================================================
-   WEEK + VISIBILITY FILTERS
+   WEEK FILTERING
    ============================================================ */
 
 function inWeekWindow(commenceUTC) {
-  const now = new Date();
   const event = new Date(commenceUTC);
-
-  const options = { timeZone: "America/New_York" };
-  const eventET = new Date(event.toLocaleString("en-US", options));
-
-  const d = eventET.getDay(); // 0 Sun, 1 Mon, ..., 4 Thu, ...
-
-  const isThuToSat = d >= 4 && d <= 6;
-  const isSun = d === 0;
-  const isMon = d === 1;
-
-  return isThuToSat || isSun || isMon;
+  const d = new Date(event.toLocaleString("en-US", { timeZone: "America/New_York" })).getDay();
+  return d === 4 || d === 5 || d === 6 || d === 0 || d === 1; // Thu–Mon
 }
 
 function isVisible(commenceUTC) {
-  const now = new Date();
-  const start = new Date(commenceUTC);
-  const hours = (now - start) / (1000 * 3600);
-  return hours < 4;
+  const diff = (Date.now() - new Date(commenceUTC)) / 3600000;
+  return diff < 4;
 }
 
 /* ============================================================
-   MAIN AGGREGATION ENGINE
+   AGGREGATE BOOKMAKERS
    ============================================================ */
 
 function aggregateBookmakers(game) {
@@ -96,7 +84,6 @@ function aggregateBookmakers(game) {
         consensus.h2h.home.push(fH);
         consensus.h2h.away.push(fA);
 
-        // Store best prices
         if (!best.ml.home.odds || homeO.price > best.ml.home.odds)
           best.ml.home = { team: homeO.name, odds: homeO.price };
         if (!best.ml.away.odds || awayO.price > best.ml.away.odds)
@@ -104,8 +91,20 @@ function aggregateBookmakers(game) {
 
         markets.h2h.push({
           bookmaker: book.title,
-          outcome1: { name: awayO.name, odds: awayO.price, implied: pA },
-          outcome2: { name: homeO.name, odds: homeO.price, implied: pH }
+          outcome1: {
+            name: awayO.name,
+            odds: awayO.price,
+            implied: pA,
+            fair: fA,
+            edge: edge(fA, pA)
+          },
+          outcome2: {
+            name: homeO.name,
+            odds: homeO.price,
+            implied: pH,
+            fair: fH,
+            edge: edge(fH, pH)
+          }
         });
       }
 
@@ -119,7 +118,7 @@ function aggregateBookmakers(game) {
 
         const pH = implied(h.price);
         const pA = implied(a.price);
-        const [fA, fH] = noVigNormalize([pA, pH]); // away first, home second
+        const [fA, fH] = noVigNormalize([pA, pH]);
 
         consensus.spreads.home.push(fH);
         consensus.spreads.away.push(fA);
@@ -131,8 +130,22 @@ function aggregateBookmakers(game) {
 
         markets.spreads.push({
           bookmaker: book.title,
-          outcome1: { name: a.name, point: a.point, odds: a.price, implied: pA },
-          outcome2: { name: h.name, point: h.point, odds: h.price, implied: pH }
+          outcome1: {
+            name: a.name,
+            point: a.point,
+            odds: a.price,
+            implied: pA,
+            fair: fA,
+            edge: edge(fA, pA)
+          },
+          outcome2: {
+            name: h.name,
+            point: h.point,
+            odds: h.price,
+            implied: pH,
+            fair: fH,
+            edge: edge(fH, pH)
+          }
         });
       }
 
@@ -158,24 +171,35 @@ function aggregateBookmakers(game) {
 
         markets.totals.push({
           bookmaker: book.title,
-          outcome1: { name: "Over", point: over.point, odds: over.price, implied: pO },
-          outcome2: { name: "Under", point: under.point, odds: under.price, implied: pU }
+          outcome1: {
+            name: "Over",
+            point: over.point,
+            odds: over.price,
+            implied: pO,
+            fair: fO,
+            edge: edge(fO, pO)
+          },
+          outcome2: {
+            name: "Under",
+            point: under.point,
+            odds: under.price,
+            implied: pU,
+            fair: fU,
+            edge: edge(fU, pU)
+          }
         });
       }
     }
   }
 
-  /* -----------------------------
-     FINAL CONSENSUS + EV ATTACH
-  ------------------------------ */
+  /* ============================================================
+     Final consensus + EV for BEST lines
+  ============================================================ */
 
-  function attach(list, impliedPrice) {
-    const cp = avg(list);
-    const ip = implied(impliedPrice);
-    return {
-      consensus_prob: cp,
-      ev: edge(cp, ip)
-    };
+  function attach(list, odds) {
+    const fair = avg(list);
+    const imp = implied(odds);
+    return { consensus_prob: fair, ev: edge(fair, imp) };
   }
 
   best.ml.home = { ...best.ml.home, ...attach(consensus.h2h.home, best.ml.home.odds) };
@@ -201,24 +225,24 @@ export default async function handler(req, res) {
       `&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 
     const r = await fetch(url);
-    if (!r.ok) return res.status(500).json({ error: "Odds API error" });
+    if (!r.ok) return res.status(500).json({ error: "Odds API failure" });
 
-    const list = await r.json();
+    const events = await r.json();
     const out = [];
 
-    for (const g of list) {
+    for (const g of events) {
       if (!inWeekWindow(g.commence_time)) continue;
       if (!isVisible(g.commence_time)) continue;
 
-      const { markets, best } = aggregateBookmakers(g);
+      const agg = aggregateBookmakers(g);
 
       out.push({
         id: g.id,
         home_team: g.home_team,
         away_team: g.away_team,
         commence_time: g.commence_time,
-        books: markets,
-        best
+        books: agg.markets,
+        best: agg.best
       });
     }
 

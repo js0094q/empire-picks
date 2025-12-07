@@ -1,34 +1,34 @@
 import { Teams } from "./teams.js";
 
-// --------------------------------------------
-// Utility functions
-// --------------------------------------------
+/* ============================================================
+   UTILITY FUNCTIONS
+   ============================================================ */
 
-// Convert American odds → implied probability
+// Convert American odds to implied probability
 function implied(odds) {
   if (odds > 0) return 100 / (odds + 100);
   return -odds / (-odds + 100);
 }
 
-// Format percent as xx.x%
+// Percent format
 function pct(x) {
   return (x * 100).toFixed(1) + "%";
 }
 
-// EV color class
+// EV color classification
 function evClass(value) {
   if (value > 0.03) return "ev-green";
   if (value < -0.03) return "ev-red";
   return "ev-neutral";
 }
 
-// Format odds nicely
+// Format odds
 function fmtOdds(o) {
-  if (o > 0) return "+" + o;
-  return o;
+  if (o === null || o === undefined) return "-";
+  return o > 0 ? `+${o}` : `${o}`;
 }
 
-// Format local kickoff time
+// Format kickoff time in local ET
 function kickoffLocal(utc) {
   return new Date(utc).toLocaleString("en-US", {
     timeZone: "America/New_York",
@@ -39,30 +39,31 @@ function kickoffLocal(utc) {
   });
 }
 
-// --------------------------------------------
-// Fetch logic
-// --------------------------------------------
+/* ============================================================
+   FETCH HELPERS
+   ============================================================ */
 
 async function fetchGames() {
   const r = await fetch("/api/events");
-  if (!r.ok) throw new Error("Error loading events");
+  if (!r.ok) throw new Error("Failed to fetch events");
   return r.json();
 }
 
 async function fetchProps(eventId) {
   const r = await fetch(`/api/props?id=${eventId}`);
-  if (!r.ok) throw new Error("Props fetch error");
+  if (!r.ok) throw new Error("Failed to fetch props");
   return r.json();
 }
 
-// --------------------------------------------
-// Render game list
-// --------------------------------------------
+/* ============================================================
+   PAGE INITIALIZATION
+   ============================================================ */
+
 const container = document.getElementById("games-container");
 const refreshBtn = document.getElementById("refresh-btn");
 
 refreshBtn.addEventListener("click", async () => {
-  container.innerHTML = `<div class="loading">Refreshing...</div>`;
+  container.innerHTML = `<div class="loading">Refreshing…</div>`;
   await loadGames();
 });
 
@@ -80,7 +81,7 @@ async function loadGames() {
   container.innerHTML = "";
 
   if (!games.length) {
-    container.innerHTML = `<div>No active games this week.</div>`;
+    container.innerHTML = `<div>No games available.</div>`;
     return;
   }
 
@@ -92,17 +93,18 @@ async function loadGames() {
 
 loadGames();
 
-// --------------------------------------------
-// Build Game Card
-// --------------------------------------------
+/* ============================================================
+   GAME CARD RENDERING
+   ============================================================ */
+
 function createGameCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
+  card.dataset.id = game.id;  // <-- CRITICAL: Stores event ID
 
   const home = Teams[game.home_team] || {};
   const away = Teams[game.away_team] || {};
-
-  const best = game.best; // from API aggregator
+  const best = game.best;
   const kickoff = kickoffLocal(game.commence_time);
 
   card.innerHTML = `
@@ -121,14 +123,14 @@ function createGameCard(game) {
     <div class="market-grid">
       <div class="market-box">
         <div>Moneyline</div>
-        <div>${best.ml.away.team}: ${fmtOdds(best.ml.away.odds)}</div>
-        <div>${best.ml.home.team}: ${fmtOdds(best.ml.home.odds)}</div>
+        <div>${away.abbr}: ${fmtOdds(best.ml.away.odds)}</div>
+        <div>${home.abbr}: ${fmtOdds(best.ml.home.odds)}</div>
       </div>
 
       <div class="market-box">
         <div>Spread</div>
-        <div>${best.spread.away.team} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})</div>
-        <div>${best.spread.home.team} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})</div>
+        <div>${away.abbr} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})</div>
+        <div>${home.abbr} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})</div>
       </div>
 
       <div class="market-box">
@@ -139,7 +141,7 @@ function createGameCard(game) {
     </div>
   `;
 
-  // Add two accordions: main markets + props
+  // Add accordions
   const mainAcc = createMainAccordion(game);
   const propsAcc = createPropsAccordion(game);
 
@@ -149,45 +151,43 @@ function createGameCard(game) {
   return card;
 }
 
-// --------------------------------------------
-// Main Markets Accordion
-// --------------------------------------------
+/* ============================================================
+   MAIN MARKETS ACCORDION
+   ============================================================ */
+
 function createMainAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
+
   acc.innerHTML = `<div class="accordion-title">Main Markets (All Books)</div>`;
 
   const panel = document.createElement("div");
   panel.className = "panel";
 
   panel.innerHTML = buildMarketsTable(game);
-
   acc.appendChild(panel);
 
   acc.addEventListener("click", () => toggleAccordion(panel));
-
   return acc;
 }
 
 function buildMarketsTable(game) {
-  const books = game.books; // aggregated from server
-
+  const books = game.books;
   let html = "";
 
   ["h2h", "spreads", "totals"].forEach(key => {
-    if (!books[key]) return;
-
+    if (!books[key] || !books[key].length) return;
     html += `<h3>${key.toUpperCase()}</h3>`;
 
     books[key].forEach(row => {
       html += `
         <div class="prop-item">
           <div><strong>${row.bookmaker}</strong></div>
-          <div>${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}  
-              <span class="${evClass(row.outcome1.edge)}">EV ${pct(row.outcome1.edge)}</span>
+          <div>${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
+            <span class="${evClass(row.outcome1.edge)}">EV ${pct(row.outcome1.edge)}</span>
           </div>
-          <div>${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}  
-              <span class="${evClass(row.outcome2.edge)}">EV ${pct(row.outcome2.edge)}</span>
+          <div>${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
+            <span class="${evClass(row.outcome2.edge)}">EV ${pct(row.outcome2.edge)}</span>
           </div>
         </div>
       `;
@@ -197,56 +197,68 @@ function buildMarketsTable(game) {
   return html;
 }
 
-// --------------------------------------------
-// Props Accordion
-// --------------------------------------------
+/* ============================================================
+   PLAYER PROPS ACCORDION
+   ============================================================ */
+
 function createPropsAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
+  acc.dataset.id = game.id;   // <-- CRITICAL: identify which event to fetch props for
+
   acc.innerHTML = `<div class="accordion-title">Player Props</div>`;
 
   const panel = document.createElement("div");
   panel.className = "panel";
-
   acc.appendChild(panel);
 
   acc.addEventListener("click", async () => {
+    const eventId = acc.dataset.id;
+
     if (!panel.dataset.loaded) {
       panel.innerHTML = `<div class="loading">Loading props…</div>`;
-      const props = await fetchProps(game.id);
-      panel.innerHTML = buildPropsUI(props);
-      panel.dataset.loaded = "true";
+
+      try {
+        const props = await fetchProps(eventId);
+        panel.innerHTML = buildPropsUI(props);
+        panel.dataset.loaded = "true";
+      } catch (err) {
+        panel.innerHTML = `<div class="error">Failed to load props.</div>`;
+      }
     }
+
     toggleAccordion(panel);
   });
 
   return acc;
 }
 
-// --------------------------------------------
-// Categorized Props Rendering
-// --------------------------------------------
-function buildPropsUI(propsData) {
-  if (!propsData || !propsData.categories) return `<div>No props available.</div>`;
+/* ============================================================
+   BUILD PROPS UI
+   ============================================================ */
 
-  const cats = propsData.categories;
+function buildPropsUI(data) {
+  if (!data || !data.categories) return `<div>No props available.</div>`;
 
   let html = "";
+  const cats = data.categories;
 
-  Object.keys(cats).forEach(catName => {
-    html += `<div class="prop-category"><h3>${catName}</h3>`;
+  Object.keys(cats).forEach(cat => {
+    html += `<div class="prop-category"><h3>${cat}</h3>`;
 
-    cats[catName].forEach(p => {
+    cats[cat].forEach(p => {
       html += `
         <div class="prop-item">
           <div><strong>${p.player}</strong></div>
-          <div>${p.label} — Line ${p.point}</div>
-          <div>Over: ${fmtOdds(p.over_odds)} 
-            <span class="${evClass(p.over_ev)}">EV ${pct(p.over_ev)}</span>  
+          <div>${p.label ? p.label : ""} Line: ${p.point}</div>
+
+          <div>Over ${fmtOdds(p.over_odds)}
+            <span class="${evClass(p.over_ev)}">EV ${pct(p.over_ev)}</span>
             <span style="opacity:0.7;">(${pct(p.over_prob)})</span>
           </div>
-          <div>Under: ${fmtOdds(p.under_odds)} 
-            <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>  
+
+          <div>Under ${fmtOdds(p.under_odds)}
+            <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>
             <span style="opacity:0.7;">(${pct(p.under_prob)})</span>
           </div>
         </div>
@@ -259,17 +271,16 @@ function buildPropsUI(propsData) {
   return html;
 }
 
-// --------------------------------------------
-// Accordion handler
-// --------------------------------------------
+/* ============================================================
+   ACCORDION OPEN/CLOSE HANDLER
+   ============================================================ */
+
 function toggleAccordion(panel) {
   if (panel.style.maxHeight) {
     panel.style.maxHeight = null;
+    panel.classList.remove("open");
   } else {
     panel.style.maxHeight = panel.scrollHeight + "px";
+    panel.classList.add("open");
   }
 }
-
-// --------------------------------------------
-// End of Script
-// --------------------------------------------

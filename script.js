@@ -123,8 +123,8 @@ function createGameCard(game) {
     <div class="market-grid">
       <div class="market-box">
         <div>Moneyline</div>
-        <div>${away.abbr}: ${fmtOdds(best.ml.away.odds)}</div>
-        <div>${home.abbr}: ${fmtOdds(best.ml.home.odds)}</div>
+        <div>${away.abbr?.toUpperCase()}: ${fmtOdds(best.ml.away.odds)}</div>
+        <div>${home.abbr?.toUpperCase()}: ${fmtOdds(best.ml.home.odds)}</div>
       </div>
 
       <div class="market-box">

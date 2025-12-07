@@ -304,4 +304,35 @@ function buildPropsUI(data) {
 
           <div>
             Over ${fmtOdds(p.over_odds)}
-            <span class="${evClass(p.over_ev)}">
+            <span class="${evClass(p.over_ev)}">EV ${fmtEV(p.over_ev)}</span>
+            <span style="opacity:0.7;">(${fmtProb(p.over_prob)})</span>
+          </div>
+
+          <div>
+            Under ${fmtOdds(p.under_odds)}
+            <span class="${evClass(p.under_ev)}">EV ${fmtEV(p.under_ev)}</span>
+            <span style="opacity:0.7;">(${fmtProb(p.under_prob)})</span>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  });
+
+  return html;
+}
+
+/* ============================================================
+   ACCORDION OPEN/CLOSE HANDLER
+   ============================================================ */
+
+function toggleAccordion(panel) {
+  if (panel.style.maxHeight) {
+    panel.style.maxHeight = null;
+    panel.classList.remove("open");
+  } else {
+    panel.style.maxHeight = panel.scrollHeight + "px";
+    panel.classList.add("open");
+  }
+}

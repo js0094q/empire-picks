@@ -130,7 +130,7 @@ export default async function handler(req, res) {
     const json = await r.json();
 
     // Use the first element (this endpoint returns an array)
-    const eventData = json[0];
+    const eventData = Array.isArray(json) ? json[0] : json;
     if (!eventData) return res.status(200).json({ categories: {} });
 
     const categories = aggregateProps(eventData);

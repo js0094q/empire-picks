@@ -6,7 +6,7 @@ const SPORT = "americanfootball_nfl";
 const BASE = "https://api.the-odds-api.com/v4";
 
 /* ============================================================
-   MATH HELPERS
+   HELPERS
    ============================================================ */
 
 function implied(odds) {
@@ -15,61 +15,45 @@ function implied(odds) {
 }
 
 function avg(arr) {
-  if (!arr || !arr.length) return null;
+  if (!arr || arr.length === 0) return null;
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
 function noVigNormalize(list) {
-  if (!list || !list.length) return [0.5, 0.5];
-
-  const total = list.reduce((a, c) => a + c, 0);
-  if (!total) return list.map(() => 0.5);
-
-  return list.map(p => p / total);
+  const t = list.reduce((a, b) => a + b, 0);
+  if (!t) return list.map(() => 0.5);
+  return list.map(v => v / t);
 }
 
-function edge(fairProb, impliedProb) {
-  if (fairProb == null || impliedProb == null) return null;
-  return fairProb - impliedProb;
+function edge(fair, imp) {
+  if (fair == null || imp == null) return null;
+  return fair - imp;
 }
 
-/* ============================================================
-   PLAYER NAME NORMALIZATION
-   ============================================================ */
+// Title Case helper
+function titleCase(str) {
+  return str.replace(/\w\S*/g, w => w[0].toUpperCase() + w.substring(1));
+}
 
-function normalizePlayer(rawName) {
-  if (!rawName) return "Unknown Player";
-
-  let name = rawName.trim();
-
-  // Remove double spaces
-  name = name.replace(/\s+/g, " ");
-
-  // Remove suffixes (API sometimes includes weird characters)
-  name = name.replace(/ Jr\.?| III| II| IV| V/g, "");
-
-  // Remove team prefixes that some bookmakers attach:
-  // Example: "KC Patrick Mahomes" → "Patrick Mahomes"
-  if (name.match(/^[A-Z]{2,4}\s+/)) {
-    name = name.replace(/^[A-Z]{2,4}\s+/, "");
-  }
-
-  // Remove stray commas or hyphens
-  name = name.replace(/^[,-]+/, "").replace(/[,-]+$/, "");
-
-  return name.trim();
+// Player name cleaner
+function normalizePlayer(name) {
+  if (!name) return "Unknown Player";
+  let n = name.trim();
+  n = n.replace(/\s+/g, " ");
+  n = n.replace(/ Jr\.?| III| II| IV| V/g, "");
+  if (/^[A-Z]{2,4}\s+/.test(n)) n = n.replace(/^[A-Z]{2,4}\s+/, "");
+  return n.trim();
 }
 
 /* ============================================================
    CATEGORY MAPPING
    ============================================================ */
 
-// Converts Odds API market keys → clean UI category names
 function categoryOf(key) {
   if (key.includes("pass_yd")) return "Passing Yards";
   if (key.includes("pass_attempts")) return "Pass Attempts";
   if (key.includes("pass_completions")) return "Pass Completions";
-  if (key.includes("pass_tds")) return "Pass Touchdowns";
+  if (key.includes("pass_tds")) return "Passing Touchdowns";
 
   if (key.includes("rush_yd")) return "Rushing Yards";
   if (key.includes("rush_tds")) return "Rushing Touchdowns";
@@ -78,37 +62,33 @@ function categoryOf(key) {
   if (key.includes("receptions")) return "Receptions";
   if (key.includes("reception_tds")) return "Receiving Touchdowns";
 
-  if (key.includes("anytime")) return "Anytime TD Scorer";
-  if (key.includes("tds_over")) return "Total TDs (Over Only)";
+  if (key.includes("anytime")) return "Anytime TD";
+  if (key.includes("tds_over")) return "Total TDs";
 
   return "Other Props";
 }
 
 /* ============================================================
-   AGGREGATE PROPS ENGINE
+   AGGREGATION
    ============================================================ */
 
-function aggregateProps(eventData) {
+function aggregateProps(ev) {
   const categories = {};
 
-  for (const book of eventData.bookmakers || []) {
+  for (const book of ev.bookmakers || []) {
     for (const market of book.markets || []) {
       const cat = categoryOf(market.key);
 
       for (const out of market.outcomes || []) {
-        const rawPlayer = out.description || out.player || null;
-        const player = normalizePlayer(rawPlayer);
-
+        const player = normalizePlayer(out.description || out.player || "");
         const isOver = out.name.toLowerCase().includes("over");
         const isUnder = out.name.toLowerCase().includes("under");
-
         const line = out.point ?? null;
         const price = out.price ?? null;
 
-        // Initialize category container
         if (!categories[cat]) categories[cat] = [];
 
-        // Look for an existing entry for the same player & line
+        // find entry
         let entry = categories[cat].find(
           e => e.player === player && e.point === line
         );
@@ -116,7 +96,7 @@ function aggregateProps(eventData) {
         if (!entry) {
           entry = {
             player,
-            label: market.key.replace("player_", "").replace(/_/g, " "),
+            label: titleCase(market.key.replace("player_", "").replace(/_/g, " ")),
             point: line,
             over_odds: null,
             under_odds: null,
@@ -126,42 +106,51 @@ function aggregateProps(eventData) {
           categories[cat].push(entry);
         }
 
-        const pImp = implied(price);
+        const imp = implied(price);
 
         if (isOver) {
-          if (!entry.over_odds || price > entry.over_odds) {
-            entry.over_odds = price;
-          }
-          entry.over_list.push(pImp);
+          if (!entry.over_odds || price > entry.over_odds) entry.over_odds = price;
+          entry.over_list.push(imp);
         }
 
         if (isUnder) {
-          if (!entry.under_odds || price > entry.under_odds) {
-            entry.under_odds = price;
-          }
-          entry.under_list.push(pImp);
+          if (!entry.under_odds || price > entry.under_odds) entry.under_odds = price;
+          entry.under_list.push(imp);
         }
       }
     }
   }
 
-  /* ============================================================
-     FINALIZE EV + CONSENSUS PROBABILITIES
-     ============================================================ */
-
+  /* Final EV & filtering */
   for (const cat in categories) {
-    categories[cat].forEach(p => {
-      const overAvg = avg(p.over_list) ?? 0.5;
-      const underAvg = avg(p.under_list) ?? 0.5;
+    categories[cat] = categories[cat]
+      .map(p => {
+        const overAvg = avg(p.over_list);
+        const underAvg = avg(p.under_list);
 
-      const [fO, fU] = noVigNormalize([overAvg, underAvg]);
+        const [fO, fU] = noVigNormalize([
+          overAvg ?? 0.5,
+          underAvg ?? 0.5
+        ]);
 
-      p.over_prob = fO;
-      p.under_prob = fU;
+        p.over_prob = fO;
+        p.under_prob = fU;
 
-      p.over_ev = edge(fO, overAvg);
-      p.under_ev = edge(fU, underAvg);
-    });
+        p.over_ev = edge(fO, overAvg);
+        p.under_ev = edge(fU, underAvg);
+
+        // Low confidence: only 1 book on both sides
+        p.lowConfidence =
+          (p.over_list.length <= 1 && p.under_list.length <= 1);
+
+        return p;
+      })
+      .filter(p => !p.lowConfidence) // remove garbage props
+      .sort((a, b) => {
+        const aEV = Math.max(a.over_ev ?? -999, a.under_ev ?? -999);
+        const bEV = Math.max(b.over_ev ?? -999, b.under_ev ?? -999);
+        return bEV - aEV;
+      });
   }
 
   return categories;
@@ -174,46 +163,38 @@ function aggregateProps(eventData) {
 export default async function handler(req, res) {
   try {
     const id = req.query.id;
-    if (!id) {
-      return res.status(400).json({ error: "Missing event ID" });
-    }
+    if (!id) return res.status(400).json({ error: "Missing event ID" });
+
+    const markets = [
+      "player_pass_attempts",
+      "player_pass_completions",
+      "player_pass_tds",
+      "player_pass_yds",
+      "player_receptions",
+      "player_reception_tds",
+      "player_reception_yds",
+      "player_rush_tds",
+      "player_rush_yds",
+      "player_tds_over",
+      "player_anytime_td"
+    ];
 
     const url =
       `${BASE}/sports/${SPORT}/events/${id}/odds?apiKey=${API_KEY}` +
-      `&regions=us&oddsFormat=american` +
-      `&markets=` +
-      [
-        "player_pass_attempts",
-        "player_pass_completions",
-        "player_pass_tds",
-        "player_pass_yds",
-        "player_receptions",
-        "player_reception_tds",
-        "player_reception_yds",
-        "player_rush_tds",
-        "player_rush_yds",
-        "player_tds_over",
-        "player_anytime_td"
-      ].join(",");
+      `&regions=us&oddsFormat=american&markets=${markets.join(",")}`;
 
     const r = await fetch(url);
-    if (!r.ok) {
-      return res.status(500).json({ error: "Props API error" });
-    }
+    if (!r.ok) return res.status(500).json({ error: "Props API failure" });
 
     const json = await r.json();
+    const ev = Array.isArray(json) ? json[0] : json;
+    if (!ev) return res.status(200).json({ categories: {} });
 
-    // API sometimes returns object instead of array
-    const eventData = Array.isArray(json) ? json[0] : json;
-    if (!eventData) {
-      return res.status(200).json({ categories: {} });
-    }
-
-    const categories = aggregateProps(eventData);
-
-    return res.status(200).json({ categories });
+    return res.status(200).json({
+      categories: aggregateProps(ev)
+    });
   } catch (err) {
-    console.error("Props API ERROR:", err);
+    console.error(err);
     return res.status(500).json({ error: err.message });
   }
 }

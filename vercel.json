@@ -27,9 +27,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-
-  "env": {
-    "ODDS_API_KEY": "@odds_api_key"
-  }
+  ]
 }

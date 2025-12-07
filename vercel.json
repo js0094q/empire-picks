@@ -24,6 +24,19 @@
     },
 
     {
+      "src": "/(.*\\.css)",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*\\.js)",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*\\.(png|jpg|jpeg|svg|webp))",
+      "dest": "/$1"
+    },
+
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }

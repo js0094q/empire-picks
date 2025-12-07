@@ -62,6 +62,14 @@ function isVisible(commenceUTC) {
 // --------------------------------------------
 function aggregateBookmakers(game) {
   const markets = { h2h: [], spreads: [], totals: [] };
+
+  // For consensus calculations
+  const consensus = {
+    h2h: { home: [], away: [] },
+    spreads: { home: [], away: [] },
+    totals: { over: [], under: [] }
+  };
+
   const best = {
     ml: { home: {}, away: {} },
     spread: { home: {}, away: {} },
@@ -73,34 +81,93 @@ function aggregateBookmakers(game) {
       if (!["h2h", "spreads", "totals"].includes(m.key)) continue;
 
       if (m.key === "h2h") {
-        if (m.outcomes.length < 2) continue;
-        const o1 = m.outcomes[0];
-        const o2 = m.outcomes[1];
+        const oHome = m.outcomes.find(o => o.name === game.home_team);
+        const oAway = m.outcomes.find(o => o.name === game.away_team);
+        if (!oHome || !oAway) continue;
 
-        const p1 = implied(o1.price);
-        const p2 = implied(o2.price);
+        const pHome = implied(oHome.price);
+        const pAway = implied(oAway.price);
 
-        const [f1, f2] = noVig([p1, p2]);
+        // No-vig
+        const [fHome, fAway] = noVig([pHome, pAway]);
 
-        const row = {
-          bookmaker: book.title,
-          outcome1: {
-            name: o1.name,
-            odds: o1.price,
-            implied: p1,
-            fair: f1,
-            edge: f1 - p1
-          },
-          outcome2: {
-            name: o2.name,
-            odds: o2.price,
-            implied: p2,
-            fair: f2,
-            edge: f2 - p2
-          }
-        };
+        consensus.h2h.home.push(fHome);
+        consensus.h2h.away.push(fAway);
 
-        markets.h2h.push(row);
+        // Best price tracking
+        if (!best.ml.home.odds || oHome.price > best.ml.home.odds)
+          best.ml.home = { team: oHome.name, odds: oHome.price };
+        if (!best.ml.away.odds || oAway.price > best.ml.away.odds)
+          best.ml.away = { team: oAway.name, odds: oAway.price };
+      }
+
+      if (m.key === "spreads") {
+        const h = m.outcomes.find(o => o.name === game.home_team);
+        const a = m.outcomes.find(o => o.name === game.away_team);
+        if (!h || !a) continue;
+
+        const pH = implied(h.price);
+        const pA = implied(a.price);
+        const [fH, fA] = noVig([pA, pH]); // A first if away is underdog
+
+        consensus.spreads.home.push(fH);
+        consensus.spreads.away.push(fA);
+
+        if (!best.spread.home.odds || h.price > best.spread.home.odds)
+          best.spread.home = { team: h.name, point: h.point, odds: h.price };
+        if (!best.spread.away.odds || a.price > best.spread.away.odds)
+          best.spread.away = { team: a.name, point: a.point, odds: a.price };
+      }
+
+      if (m.key === "totals") {
+        const over = m.outcomes.find(o => o.name === "Over");
+        const under = m.outcomes.find(o => o.name === "Under");
+        if (!over || !under) continue;
+
+        const pO = implied(over.price);
+        const pU = implied(under.price);
+
+        const [fO, fU] = noVig([pO, pU]);
+
+        consensus.totals.over.push(fO);
+        consensus.totals.under.push(fU);
+
+        if (!best.total.over.odds || over.price > best.total.over.odds)
+          best.total.over = { point: over.point, odds: over.price };
+        if (!best.total.under.odds || under.price > best.total.under.odds)
+          best.total.under = { point: under.point, odds: under.price };
+      }
+    }
+  }
+
+  // Compute final consensus + EV
+  function avg(arr) {
+    if (!arr.length) return null;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  }
+
+  // Attach consensus + EV
+  const attachEV = (obj, consProbKey, impliedOdds) => {
+    const cp = consProbKey; // consensus probability
+    const imp = implied(impliedOdds || 0);
+    return {
+      ...obj,
+      consensus_prob: cp,
+      ev: cp - imp
+    };
+  };
+
+  best.ml.home = attachEV(best.ml.home, avg(consensus.h2h.home), best.ml.home.odds);
+  best.ml.away = attachEV(best.ml.away, avg(consensus.h2h.away), best.ml.away.odds);
+
+  best.spread.home = attachEV(best.spread.home, avg(consensus.spreads.home), best.spread.home.odds);
+  best.spread.away = attachEV(best.spread.away, avg(consensus.spreads.away), best.spread.away.odds);
+
+  best.total.over = attachEV(best.total.over, avg(consensus.totals.over), best.total.over.odds);
+  best.total.under = attachEV(best.total.under, avg(consensus.totals.under), best.total.under.odds);
+
+  return { markets, best };
+}
 
         // Best prices (best underdog/favorite value)
         if (!best.ml[o1.name.toLowerCase()] ||

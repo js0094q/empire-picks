@@ -1,28 +1,33 @@
-// script.js — optimized to display new metrics
+// script.js — now displays which market has the top consensus edge
 import { Teams } from "./teams.js";
 
-/* HELPERS */
+/* ============================================================
+   HELPERS
+   ============================================================ */
 
 function pct(x) {
   return (x * 100).toFixed(1) + "%";
 }
 
 function fmtOdds(o) {
-  return o == null ? "-" : o > 0 ? `+${o}` : `${o}`;
+  if (o == null) return "-";
+  return o > 0 ? `+${o}` : `${o}`;
 }
 
 function fmtProb(x) {
-  return x == null ? "N/A" : pct(x);
+  if (x == null || isNaN(x)) return "N/A";
+  return pct(x);
 }
 
 function fmtEV(x) {
-  return x == null ? "N/A" : pct(x);
+  if (x == null || isNaN(x)) return "N/A";
+  return pct(x);
 }
 
-function evClass(x) {
-  if (x == null) return "ev-neutral";
-  if (x > 0.02) return "ev-green";
-  if (x < -0.02) return "ev-red";
+function evClass(e) {
+  if (e == null || isNaN(e)) return "ev-neutral";
+  if (e > 0.03) return "ev-green";
+  if (e < -0.03) return "ev-red";
   return "ev-neutral";
 }
 
@@ -31,30 +36,38 @@ function kickoffLocal(utc) {
     timeZone: "America/New_York",
     hour: "numeric",
     minute: "2-digit",
-    weekday: "short",
     month: "short",
-    day: "numeric"
+    day: "numeric",
+    weekday: "short"
   });
 }
 
-/* FETCH */
+/* ============================================================
+   FETCH HELPERS
+   ============================================================ */
 
 async function fetchGames() {
-  return (await fetch("/api/events")).json();
+  const r = await fetch("/api/events");
+  return r.json();
 }
+
 async function fetchProps(id) {
-  return (await fetch(`/api/props?id=${id}`)).json();
+  const r = await fetch(`/api/props?id=${id}`);
+  return r.json();
 }
+
+/* ============================================================
+   INITIAL LOAD
+   ============================================================ */
 
 const container = document.getElementById("games-container");
 document.getElementById("refresh-btn").onclick = () => loadGames();
 
 loadGames();
 
-/* MAIN LOAD */
-
 async function loadGames() {
-  container.innerHTML = `<div class="loading">Loading NFL games...</div>`;
+  container.innerHTML = `<div class="loading">Loading NFL games…</div>`;
+
   let games = [];
   try {
     games = await fetchGames();
@@ -67,7 +80,36 @@ async function loadGames() {
   games.forEach(g => container.appendChild(createCard(g)));
 }
 
-/* CARD */
+/* ============================================================
+   DETERMINE THE BEST MARKET (NEW FEATURE)
+   ============================================================ */
+
+function findBestMarket(game) {
+  const b = game.best;
+
+  const list = [
+    { label: `${game.away_team} ML`, ev: b.ml.away.ev },
+    { label: `${game.home_team} ML`, ev: b.ml.home.ev },
+
+    { label: `${game.away_team} ${b.spread.away.point} Spread`, ev: b.spread.away.ev },
+    { label: `${game.home_team} ${b.spread.home.point} Spread`, ev: b.spread.home.ev },
+
+    { label: `Over ${b.total.over.point}`, ev: b.total.over.ev },
+    { label: `Under ${b.total.under.point}`, ev: b.total.under.ev }
+  ];
+
+  // Remove null EV items
+  const filtered = list.filter(x => x.ev != null);
+
+  // Pick highest EV
+  const best = filtered.reduce((a, c) => (c.ev > a.ev ? c : a), filtered[0]);
+
+  return best;
+}
+
+/* ============================================================
+   CARD RENDERING
+   ============================================================ */
 
 function createCard(game) {
   const card = document.createElement("div");
@@ -78,25 +120,23 @@ function createCard(game) {
 
   const kickoff = kickoffLocal(game.commence_time);
 
-  const topEV = Math.max(
-    game.best.ml.home.ev,
-    game.best.ml.away.ev,
-    game.best.spread.home.ev,
-    game.best.spread.away.ev,
-    game.best.total.over.ev,
-    game.best.total.under.ev
-  );
+  // NEW FEATURE — find which market produced the highest EV
+  const bestMarket = findBestMarket(game);
 
   card.innerHTML = `
     <div class="ev-badge">
-      Consensus Edge: <span class="${evClass(topEV)}">${fmtEV(topEV)}</span>
+      Consensus Edge: 
+      <span class="${evClass(bestMarket.ev)}">${fmtEV(bestMarket.ev)}</span>
+      <div style="font-size:.75rem; opacity:.85;">${bestMarket.label}</div>
     </div>
 
     <div class="game-header">
       <div class="teams">
-        <img src="${away.logo}" class="team-logo"> ${game.away_team}
-        <span style="opacity:.6;">@</span>
-        <img src="${home.logo}" class="team-logo"> ${game.home_team}
+        <img src="${away.logo}" class="team-logo">
+        ${game.away_team}
+        <span style="opacity:.6;"> @ </span>
+        <img src="${home.logo}" class="team-logo">
+        ${game.home_team}
       </div>
       <div class="kickoff">${kickoff}</div>
     </div>
@@ -104,13 +144,15 @@ function createCard(game) {
     ${buildMainGrid(game)}
   `;
 
-  card.appendChild(buildAccordionMain(game));
-  card.appendChild(buildAccordionProps(game));
+  card.appendChild(buildMainAccordion(game));
+  card.appendChild(buildPropsAccordion(game));
 
   return card;
 }
 
-/* MARKET GRID */
+/* ============================================================
+   MARKET GRID
+   ============================================================ */
 
 function buildMainGrid(game) {
   const b = game.best;
@@ -119,17 +161,15 @@ function buildMainGrid(game) {
     <div class="market-grid">
 
       <div class="market-box">
-        <div class="box-title">Moneyline</div>
-
+        <div>Moneyline</div>
         <div>
-          ${game.away_team} ${fmtOdds(b.ml.away.odds)}
+          ${game.away_team}: ${fmtOdds(b.ml.away.odds)}
           <div class="${evClass(b.ml.away.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(b.ml.away.ev)} • Prob ${fmtProb(b.ml.away.consensus_prob)}
           </div>
         </div>
-
         <div>
-          ${game.home_team} ${fmtOdds(b.ml.home.odds)}
+          ${game.home_team}: ${fmtOdds(b.ml.home.odds)}
           <div class="${evClass(b.ml.home.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(b.ml.home.ev)} • Prob ${fmtProb(b.ml.home.consensus_prob)}
           </div>
@@ -137,15 +177,13 @@ function buildMainGrid(game) {
       </div>
 
       <div class="market-box">
-        <div class="box-title">Spread</div>
-
+        <div>Spread</div>
         <div>
           ${game.away_team} ${b.spread.away.point} (${fmtOdds(b.spread.away.odds)})
           <div class="${evClass(b.spread.away.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(b.spread.away.ev)} • Prob ${fmtProb(b.spread.away.consensus_prob)}
           </div>
         </div>
-
         <div>
           ${game.home_team} ${b.spread.home.point} (${fmtOdds(b.spread.home.odds)})
           <div class="${evClass(b.spread.home.ev)}" style="font-size:.75rem;">
@@ -155,15 +193,13 @@ function buildMainGrid(game) {
       </div>
 
       <div class="market-box">
-        <div class="box-title">Total</div>
-
+        <div>Total</div>
         <div>
           Over ${b.total.over.point} (${fmtOdds(b.total.over.odds)})
           <div class="${evClass(b.total.over.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(b.total.over.ev)} • Prob ${fmtProb(b.total.over.consensus_prob)}
           </div>
         </div>
-
         <div>
           Under ${b.total.under.point} (${fmtOdds(b.total.under.odds)})
           <div class="${evClass(b.total.under.ev)}" style="font-size:.75rem;">
@@ -176,15 +212,18 @@ function buildMainGrid(game) {
   `;
 }
 
-/* ACCORDIONS */
+/* ============================================================
+   MAIN MARKET ACCORDION
+   ============================================================ */
 
-function buildAccordionMain(game) {
+function buildMainAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
   acc.innerHTML = `<div class="accordion-title">Full Market Breakdown (All Books)</div>`;
 
   const panel = document.createElement("div");
   panel.className = "panel";
+
   panel.innerHTML = buildMarketTable(game);
 
   acc.onclick = () => toggle(panel);
@@ -194,36 +233,42 @@ function buildAccordionMain(game) {
 
 function buildMarketTable(game) {
   const b = game.books;
-  let h = "";
+  let html = "";
 
-  ["h2h", "spreads", "totals"].forEach(k => {
-    if (!b[k]?.length) return;
-    h += `<h3>${k.toUpperCase()}</h3>`;
+  ["h2h", "spreads", "totals"].forEach(key => {
+    if (!b[key] || !b[key].length) return;
 
-    b[k].forEach(row => {
-      h += `
+    html += `<h3>${key.toUpperCase()}</h3>`;
+
+    b[key].forEach(row => {
+      html += `
         <div class="prop-item">
           <div><strong>${row.bookmaker}</strong></div>
-          <div>${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
+
+          <div>
+            ${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
             <span class="${evClass(row.outcome1.edge)}">EV ${fmtEV(row.outcome1.edge)}</span>
           </div>
-          <div>${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
+
+          <div>
+            ${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
             <span class="${evClass(row.outcome2.edge)}">EV ${fmtEV(row.outcome2.edge)}</span>
           </div>
         </div>`;
     });
   });
 
-  return h;
+  return html;
 }
 
-/* PROPS ACCORDION */
+/* ============================================================
+   PLAYER PROPS ACCORDION
+   ============================================================ */
 
-function buildAccordionProps(game) {
+function buildPropsAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
   acc.dataset.id = game.id;
-
   acc.innerHTML = `<div class="accordion-title">Player Props</div>`;
 
   const panel = document.createElement("div");
@@ -231,13 +276,13 @@ function buildAccordionProps(game) {
 
   acc.onclick = async () => {
     if (!panel.dataset.loaded) {
-      panel.innerHTML = `<div class="loading">Loading props...</div>`;
+      panel.innerHTML = `<div class="loading">Loading props…</div>`;
       try {
-        const d = await fetchProps(game.id);
-        panel.innerHTML = buildPropsUI(d.categories);
+        const data = await fetchProps(game.id);
+        panel.innerHTML = buildPropsUI(data.categories);
         panel.dataset.loaded = "true";
       } catch {
-        panel.innerHTML = `<div class="error">Failed to load props.</div>`;
+        panel.innerHTML = `<div class="error">Failed to load props</div>`;
       }
     }
     toggle(panel);
@@ -248,42 +293,46 @@ function buildAccordionProps(game) {
 }
 
 function buildPropsUI(cats) {
-  if (!cats) return `<div>No props available.</div>`;
-  let h = "";
+  if (!cats) return `<div>No props available</div>`;
+
+  let html = "";
 
   Object.keys(cats).forEach(cat => {
     const arr = cats[cat];
     if (!arr.length) return;
 
-    h += `<div class="prop-category"><h3>${cat}</h3>`;
+    html += `<div class="prop-category"><h3>${cat}</h3>`;
 
     arr.forEach(p => {
-      h += `
+      html += `
         <div class="prop-item">
-          <div><strong>${p.player}</strong> — ${p.label}</div>
-          <div>Line: ${p.point}</div>
+          <div><strong>${p.player}</strong></div>
+          <div>${p.label}: ${p.point}</div>
 
           <div>
             Over ${fmtOdds(p.over_odds)}
             <span class="${evClass(p.over_ev)}">EV ${fmtEV(p.over_ev)}</span>
-            (${fmtProb(p.over_prob)})
+            <span style="opacity:.7;">(${fmtProb(p.over_prob)})</span>
           </div>
 
           <div>
             Under ${fmtOdds(p.under_odds)}
             <span class="${evClass(p.under_ev)}">EV ${fmtEV(p.under_ev)}</span>
-            (${fmtProb(p.under_prob)})
+            <span style="opacity:.7;">(${fmtProb(p.under_prob)})</span>
           </div>
-        </div>`;
+        </div>
+      `;
     });
 
-    h += `</div>`;
+    html += `</div>`;
   });
 
-  return h;
+  return html;
 }
 
-/* COLLAPSE LOGIC */
+/* ============================================================
+   ACCORDION LOGIC
+   ============================================================ */
 
 function toggle(panel) {
   if (panel.style.maxHeight) {

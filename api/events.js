@@ -1,4 +1,4 @@
-// /api/events.js
+// /api/events.js — Optimized aggregation engine
 import fetch from "node-fetch";
 
 const API_KEY = process.env.ODDS_API_KEY;
@@ -6,7 +6,25 @@ const SPORT = "americanfootball_nfl";
 const BASE = "https://api.the-odds-api.com/v4";
 
 /* ============================================================
-   MATH HELPERS
+   SHARP / PUBLIC BOOK WEIGHTING
+   ============================================================ */
+
+const BOOK_WEIGHTS = {
+  pinnacle: 1.6,
+  betonlineag: 1.35,
+  bovada: 1.1,
+  fanduel: 1.0,
+  draftkings: 1.0,
+  betmgm: 0.95,
+  caesars: 0.9,
+  betrivers: 0.85,
+  barstool: 0.8,
+  pointsbetus: 0.85,
+  twinspires: 0.75
+};
+
+/* ============================================================
+   HELPERS
    ============================================================ */
 
 function implied(odds) {
@@ -14,39 +32,53 @@ function implied(odds) {
   return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
 }
 
-function avg(arr) {
-  if (!arr || !arr.length) return null;
-  return arr.reduce((a, c) => a + c, 0) / arr.length;
+/* Symmetric no-vig (Zeng–Zhang) */
+function noVigSymmetric(pA, pB) {
+  const denom = pA + pB - pA * pB;
+  if (denom <= 0) return [0.5, 0.5];
+  return [pA / denom, pB / denom];
 }
 
-function noVigNormalize(list) {
-  const total = list.reduce((a, c) => a + c, 0);
-  if (!total) return list.map(() => 0.5);
-  return list.map(p => p / total);
+function weightedFair(list) {
+  const probs = list.map(x => x.p);
+  const weights = list.map(x => x.w);
+
+  const wSum = weights.reduce((a, b) => a + b, 0);
+  if (!wSum) return null;
+
+  const fair = probs.reduce((s, p, i) => s + p * weights[i], 0) / wSum;
+  return fair;
 }
 
-function edge(fairProb, impliedProb) {
-  if (fairProb == null || impliedProb == null) return null;
-  return fairProb - impliedProb;
+function variance(arr) {
+  if (arr.length <= 1) return 1;
+  const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  const v = arr.reduce((s, x) => s + (x - mean) ** 2, 0) / arr.length;
+  return Math.max(0.15, Math.min(1, 1 - v));  // normalized stability score
+}
+
+function edge(fair, impliedProb, stability = 1) {
+  if (fair == null || impliedProb == null) return null;
+  return (fair - impliedProb) * stability;
 }
 
 /* ============================================================
    WEEK FILTERING
    ============================================================ */
 
-function inWeekWindow(commenceUTC) {
-  const event = new Date(commenceUTC);
-  const d = new Date(event.toLocaleString("en-US", { timeZone: "America/New_York" })).getDay();
-  return d === 4 || d === 5 || d === 6 || d === 0 || d === 1; // Thu–Mon
+function inWeekWindow(utc) {
+  const d = new Date(utc).toLocaleString("en-US", { timeZone: "America/New_York" });
+  const dow = new Date(d).getDay();
+  return [4,5,6,0,1].includes(dow); // Thu–Mon
 }
 
-function isVisible(commenceUTC) {
-  const diff = (Date.now() - new Date(commenceUTC)) / 3600000;
-  return diff < 4;
+function isVisible(utc) {
+  const diffHours = (Date.now() - new Date(utc)) / 3600000;
+  return diffHours < 4;
 }
 
 /* ============================================================
-   AGGREGATE BOOKMAKERS
+   AGGREGATOR
    ============================================================ */
 
 function aggregateBookmakers(game) {
@@ -56,22 +88,16 @@ function aggregateBookmakers(game) {
     totals: { over: [], under: [] }
   };
 
-  const best = {
-    ml: { home: {}, away: {} },
-    spread: { home: {}, away: {} },
-    total: { over: {}, under: {} }
-  };
-
   const markets = { h2h: [], spreads: [], totals: [] };
 
   for (const book of game.bookmakers || []) {
+    const weight = BOOK_WEIGHTS[book.key] || 1;
+
     for (const m of book.markets || []) {
       const key = m.key;
-      if (!["h2h", "spreads", "totals"].includes(key)) continue;
+      if (!["h2h","spreads","totals"].includes(key)) continue;
 
-      /* -----------------------------
-         MONEYLINE
-      ------------------------------ */
+      /* ---------------- H2H ---------------- */
       if (key === "h2h") {
         const homeO = m.outcomes.find(o => o.name === game.home_team);
         const awayO = m.outcomes.find(o => o.name === game.away_team);
@@ -79,15 +105,10 @@ function aggregateBookmakers(game) {
 
         const pH = implied(homeO.price);
         const pA = implied(awayO.price);
-        const [fH, fA] = noVigNormalize([pH, pA]);
+        const [fA, fH] = noVigSymmetric(pA, pH);
 
-        consensus.h2h.home.push(fH);
-        consensus.h2h.away.push(fA);
-
-        if (!best.ml.home.odds || homeO.price > best.ml.home.odds)
-          best.ml.home = { team: homeO.name, odds: homeO.price };
-        if (!best.ml.away.odds || awayO.price > best.ml.away.odds)
-          best.ml.away = { team: awayO.name, odds: awayO.price };
+        consensus.h2h.home.push({ p: fH, w: weight });
+        consensus.h2h.away.push({ p: fA, w: weight });
 
         markets.h2h.push({
           bookmaker: book.title,
@@ -108,9 +129,7 @@ function aggregateBookmakers(game) {
         });
       }
 
-      /* -----------------------------
-         SPREADS
-      ------------------------------ */
+      /* ---------------- SPREAD ---------------- */
       if (key === "spreads") {
         const h = m.outcomes.find(o => o.name === game.home_team);
         const a = m.outcomes.find(o => o.name === game.away_team);
@@ -118,15 +137,10 @@ function aggregateBookmakers(game) {
 
         const pH = implied(h.price);
         const pA = implied(a.price);
-        const [fA, fH] = noVigNormalize([pA, pH]);
+        const [fA, fH] = noVigSymmetric(pA, pH);
 
-        consensus.spreads.home.push(fH);
-        consensus.spreads.away.push(fA);
-
-        if (!best.spread.home.odds || h.price > best.spread.home.odds)
-          best.spread.home = { team: h.name, point: h.point, odds: h.price };
-        if (!best.spread.away.odds || a.price > best.spread.away.odds)
-          best.spread.away = { team: a.name, point: a.point, odds: a.price };
+        consensus.spreads.home.push({ p: fH, w: weight });
+        consensus.spreads.away.push({ p: fA, w: weight });
 
         markets.spreads.push({
           bookmaker: book.title,
@@ -149,9 +163,7 @@ function aggregateBookmakers(game) {
         });
       }
 
-      /* -----------------------------
-         TOTALS
-      ------------------------------ */
+      /* ---------------- TOTALS ---------------- */
       if (key === "totals") {
         const over = m.outcomes.find(o => o.name === "Over");
         const under = m.outcomes.find(o => o.name === "Under");
@@ -159,15 +171,10 @@ function aggregateBookmakers(game) {
 
         const pO = implied(over.price);
         const pU = implied(under.price);
-        const [fO, fU] = noVigNormalize([pO, pU]);
+        const [fO, fU] = noVigSymmetric(pO, pU);
 
-        consensus.totals.over.push(fO);
-        consensus.totals.under.push(fU);
-
-        if (!best.total.over.odds || over.price > best.total.over.odds)
-          best.total.over = { point: over.point, odds: over.price };
-        if (!best.total.under.odds || under.price > best.total.under.odds)
-          best.total.under = { point: under.point, odds: under.price };
+        consensus.totals.over.push({ p: fO, w: weight });
+        consensus.totals.under.push({ p: fU, w: weight });
 
         markets.totals.push({
           bookmaker: book.title,
@@ -193,23 +200,75 @@ function aggregateBookmakers(game) {
   }
 
   /* ============================================================
-     Final consensus + EV for BEST lines
-  ============================================================ */
+     FINAL CONSENSUS & EV (Weighted + Stability)
+     ============================================================ */
 
-  function attach(list, odds) {
-    const fair = avg(list);
-    const imp = implied(odds);
-    return { consensus_prob: fair, ev: edge(fair, imp) };
+  function finalize(list, odds) {
+    const fair = weightedFair(list);
+    const impliedProb = implied(odds);
+    const stability = variance(list.map(x => x.p)); // adjust EV
+
+    return {
+      consensus_prob: fair,
+      ev: edge(fair, impliedProb, stability),
+      stability
+    };
   }
 
-  best.ml.home = { ...best.ml.home, ...attach(consensus.h2h.home, best.ml.home.odds) };
-  best.ml.away = { ...best.ml.away, ...attach(consensus.h2h.away, best.ml.away.odds) };
+  /* build final best-line object but base EV on consensus fair prob */
+  const extractBest = (mkt, selector) => {
+    const rows = markets[mkt];
+    if (!rows.length) return null;
 
-  best.spread.home = { ...best.spread.home, ...attach(consensus.spreads.home, best.spread.home.odds) };
-  best.spread.away = { ...best.spread.away, ...attach(consensus.spreads.away, best.spread.away.odds) };
+    let best = null;
 
-  best.total.over = { ...best.total.over, ...attach(consensus.totals.over, best.total.over.odds) };
-  best.total.under = { ...best.total.under, ...attach(consensus.totals.under, best.total.under.odds) };
+    for (const r of rows) {
+      const o = selector(r);
+      if (!best || o.odds > best.odds) best = { ...o };
+    }
+
+    const side = mkt === "spreads"
+      ? (selector.name?.includes("home") ? "home" : "away")
+      : mkt;
+
+    const cons = mkt === "h2h"
+      ? finalize(
+          selector.name === game.home_team
+            ? consensus.h2h.home
+            : consensus.h2h.away,
+          best.odds
+        )
+      : mkt === "spreads"
+      ? finalize(
+          selector.name === game.home_team
+            ? consensus.spreads.home
+            : consensus.spreads.away,
+          best.odds
+        )
+      : finalize(
+          selector.name === "Over"
+            ? consensus.totals.over
+            : consensus.totals.under,
+          best.odds
+        );
+
+    return { ...best, ...cons };
+  };
+
+  const best = {
+    ml: {
+      home: extractBest("h2h", r => r.outcome2),
+      away: extractBest("h2h", r => r.outcome1)
+    },
+    spread: {
+      home: extractBest("spreads", r => r.outcome2),
+      away: extractBest("spreads", r => r.outcome1)
+    },
+    total: {
+      over: extractBest("totals", r => r.outcome1),
+      under: extractBest("totals", r => r.outcome2)
+    }
+  };
 
   return { markets, best };
 }

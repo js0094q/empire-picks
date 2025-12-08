@@ -1,285 +1,155 @@
-/* ================================
-   EmpirePicks Neon Noir Theme
-   ================================ */
+/* Neon Noir Theme — Enhanced */
 
 :root {
-  /* Core Palette */
   --ep-bg: #090d14;
-  --ep-bg-light: #131a26;
   --ep-card: #1a2235;
-  --ep-card-glow: rgba(28, 229, 160, 0.12);
-  --ep-accent-blue: #3ab4ff;
-
-  /* Brand Colors */
   --ep-gold: #f7c873;
   --ep-green: #1ce5a0;
   --ep-red: #ff4f4f;
   --ep-neutral: #c7d1e0;
-
+  --ep-blue: #3ab4ff;
   --radius: 14px;
-
-  /* Motion */
-  --t-fast: 0.18s ease;
-  --t-medium: 0.25s ease;
 }
 
 body {
   margin: 0;
-  padding: 0;
   font-family: "Manrope", sans-serif;
-  background: linear-gradient(180deg, #0b0f1a 0 percent, #090d14 80 percent);
+  background: #090d14;
   color: white;
-  overflow-x: hidden;
 }
 
-/* ================================
-   Header
-   ================================ */
+/* HEADER */
 
 .ep-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 14px 18px;
-  background: rgba(19, 26, 38, 0.85);
+  padding: 12px 18px;
+  background: rgba(19, 26, 38, 0.8);
   border-bottom: 2px solid var(--ep-gold);
-  backdrop-filter: blur(6px);
 }
 
-.ep-header .logo {
-  font-size: 1.65rem;
+.logo {
+  font-size: 1.7rem;
   font-weight: 800;
-  letter-spacing: 1px;
   color: var(--ep-gold);
-  text-shadow: 0 0 12px rgba(247, 200, 115, 0.35);
 }
 
-#refresh-btn {
-  padding: 8px 20px;
-  background: var(--ep-gold);
-  border: none;
-  border-radius: var(--radius);
-  color: black;
-  font-weight: bold;
-  cursor: pointer;
-  transition: var(--t-fast);
-}
-
-#refresh-btn:hover {
-  transform: scale(1.07);
-  box-shadow: 0 0 12px var(--ep-gold);
-}
-
-/* ================================
-   Games Container
-   ================================ */
+/* MAIN */
 
 .games-container {
   padding: 18px;
 }
 
-/* ================================
-   Game Cards
-   ================================ */
+/* GAME CARD */
 
 .game-card {
-  background: linear-gradient(155deg, #111826 0 percent, #1b2639 100 percent);
+  background: linear-gradient(155deg, #111826, #1b2639);
+  padding: 18px;
+  margin-bottom: 22px;
   border-radius: var(--radius);
-  margin-bottom: 20px;
-  padding: 16px;
-  transition: var(--t-medium);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
   position: relative;
   border: 1px solid rgba(255,255,255,0.06);
 }
 
-.game-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 0 22px var(--ep-card-glow);
+.ev-badge {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  background: rgba(255,255,255,0.08);
+  padding: 6px 10px;
+  border-radius: 8px;
 }
 
-/* Game Header */
-.game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+/* TEAMS */
 
 .teams {
   display: flex;
   align-items: center;
-  gap: 14px;
-  font-weight: bold;
+  gap: 12px;
   font-size: 1.15rem;
+  font-weight: 600;
 }
 
 .team-logo {
-  width: 46px;
-  height: 46px;
-  filter: drop-shadow(0 0 6px rgba(255,255,255,0.2));
+  width: 42px;
+  height: 42px;
 }
 
-.kickoff {
-  font-size: 0.92rem;
-  opacity: 0.85;
-  color: var(--ep-neutral);
-}
-
-/* Countdown style upgrade */
-.countdown {
-  font-size: 0.9rem;
-  color: var(--ep-accent-blue);
-  text-shadow: 0 0 10px rgba(58,180,255,0.35);
-}
-
-/* ================================
-   Accordion
-   ================================ */
-
-.accordion {
-  margin-top: 14px;
-  background: rgba(28, 36, 52, 0.75);
-  border-radius: var(--radius);
-  padding: 14px;
-  cursor: pointer;
-  transition: var(--t-medium);
-  border: 1px solid rgba(255,255,255,0.05);
-}
-
-.accordion:hover {
-  background: rgba(40, 49, 68, 0.85);
-  box-shadow: 0 0 16px rgba(255,255,255,0.07);
-}
-
-.accordion-title {
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 0.5px;
-}
-
-/* Panel Animation */
-.panel {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.35s ease, padding 0.25s ease;
-  padding-left: 6px;
-  padding-right: 6px;
-}
-
-.panel.open {
-  padding-top: 12px;
-}
-
-/* ================================
-   Market Grid
-   ================================ */
+/* GRIDS */
 
 .market-grid {
-  margin-top: 14px;
+  margin-top: 16px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+  gap: 14px;
 }
 
 .market-box {
-  background: linear-gradient(160deg, #1b2537 0 percent, #26324a 100 percent);
+  background: #1e2940;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.box-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* ACCORDION */
+
+.accordion {
+  margin-top: 16px;
+  background: #1f2a42;
+  padding: 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.accordion-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.panel.open {
+  padding-top: 10px;
+}
+
+/* PROPS */
+
+.prop-category {
+  background: #222f48;
+  padding: 14px;
+  margin-top: 14px;
+  border-radius: var(--radius);
+}
+
+.prop-item {
+  background: #283552;
   padding: 12px;
   border-radius: var(--radius);
-  text-align: center;
-  border: 1px solid rgba(255,255,255,0.06);
-
-  transition: var(--t-fast);
+  margin-top: 12px;
 }
 
-.market-box:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 14px rgba(58,180,255,0.25);
-}
-
-/* ================================
-   EV Coloring
-   ================================ */
+/* EV COLORS */
 
 .ev-green {
   color: var(--ep-green);
   font-weight: bold;
-  text-shadow: 0 0 6px rgba(28, 229, 160, 0.55);
 }
 
 .ev-red {
   color: var(--ep-red);
   font-weight: bold;
-  text-shadow: 0 0 6px rgba(255, 79, 79, 0.45);
 }
 
 .ev-neutral {
   color: var(--ep-neutral);
-}
-
-/* EV Badge (NEW) */
-.ev-badge {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  padding: 6px 10px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 8px;
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
-}
-
-/* ================================
-   Props Styling
-   ================================ */
-
-.prop-category {
-  margin-top: 18px;
-  padding: 12px;
-  background: linear-gradient(150deg, #182235 0 percent, #202d46 100 percent);
-  border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.05);
-}
-
-.prop-item {
-  background: #25324a;
-  padding: 12px;
-  border-radius: var(--radius);
-  margin-top: 12px;
-  transition: var(--t-fast);
-}
-
-.prop-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 0 14px rgba(247,200,115,0.25);
-}
-
-/* ================================
-   Footer
-   ================================ */
-
-.ep-footer {
-  text-align: center;
-  padding: 20px;
-  opacity: 0.7;
-  font-size: 0.9rem;
-  margin-top: 40px;
-  color: var(--ep-neutral);
-}
-/* Force override old card defaults */
-.game-card {
-  background: linear-gradient(155deg, #111826 0 percent, #1b2639 100 percent) !important;
-  color: white !important;
-  border-radius: var(--radius) !important;
-  border: 1px solid rgba(255,255,255,0.06) !important;
-}
-
-/* Force override accordion defaults */
-.accordion {
-  background: rgba(28, 36, 52, 0.85) !important;
-  color: white !important;
-}
-
-/* Force override page background */
-body {
-  background: #090d14 !important;
 }

@@ -1,4 +1,3 @@
-// script.js — now displays which market has the top consensus edge
 import { Teams } from "./teams.js";
 
 /* ============================================================
@@ -14,12 +13,12 @@ function fmtOdds(o) {
   return o > 0 ? `+${o}` : `${o}`;
 }
 
-function fmtProb(x) {
+function fmtEV(x) {
   if (x == null || isNaN(x)) return "N/A";
   return pct(x);
 }
 
-function fmtEV(x) {
+function fmtProb(x) {
   if (x == null || isNaN(x)) return "N/A";
   return pct(x);
 }
@@ -37,8 +36,7 @@ function kickoffLocal(utc) {
     hour: "numeric",
     minute: "2-digit",
     month: "short",
-    day: "numeric",
-    weekday: "short"
+    day: "numeric"
   });
 }
 
@@ -57,13 +55,22 @@ async function fetchProps(id) {
 }
 
 /* ============================================================
-   INITIAL LOAD
+   INITIAL LOAD & APP STATE
    ============================================================ */
 
 const container = document.getElementById("games-container");
 document.getElementById("refresh-btn").onclick = () => loadGames();
 
+window.AppState = {
+  games: {},            // eventId -> last known snapshot
+  lastUpdated: null
+};
+
 loadGames();
+
+/* ============================================================
+   PRIMARY LOAD FUNCTION
+   ============================================================ */
 
 async function loadGames() {
   container.innerHTML = `<div class="loading">Loading NFL games…</div>`;
@@ -77,71 +84,126 @@ async function loadGames() {
   }
 
   container.innerHTML = "";
-  games.forEach(g => container.appendChild(createCard(g)));
+
+  games.forEach(g => {
+    window.AppState.games[g.id] = g;
+    container.appendChild(createCard(g));
+  });
+
+  window.AppState.lastUpdated = Date.now();
 }
 
 /* ============================================================
-   DETERMINE THE BEST MARKET (NEW FEATURE)
+   DYNAMIC UPDATE ENGINE (AUTO REFRESH)
    ============================================================ */
 
-function findBestMarket(game) {
-  const b = game.best;
+const REFRESH_MS = 30000; // 30 seconds
 
-  const list = [
-    { label: `${game.away_team} ML`, ev: b.ml.away.ev },
-    { label: `${game.home_team} ML`, ev: b.ml.home.ev },
+setInterval(async () => {
+  try {
+    const newGames = await fetchGames();
 
-    { label: `${game.away_team} ${b.spread.away.point} Spread`, ev: b.spread.away.ev },
-    { label: `${game.home_team} ${b.spread.home.point} Spread`, ev: b.spread.home.ev },
+    newGames.forEach(g => {
+      const old = window.AppState.games[g.id];
 
-    { label: `Over ${b.total.over.point}`, ev: b.total.over.ev },
-    { label: `Under ${b.total.under.point}`, ev: b.total.under.ev }
-  ];
+      if (!old) {
+        // First-time event appears mid-session
+        window.AppState.games[g.id] = g;
+        container.appendChild(createCard(g));
+        return;
+      }
 
-  // Remove null EV items
-  const filtered = list.filter(x => x.ev != null);
+      updateCard(old, g);
+      window.AppState.games[g.id] = g;
+    });
 
-  // Pick highest EV
-  const best = filtered.reduce((a, c) => (c.ev > a.ev ? c : a), filtered[0]);
-
-  return best;
-}
+    window.AppState.lastUpdated = Date.now();
+  } catch (err) {
+    console.error("Auto-refresh error:", err);
+  }
+}, REFRESH_MS);
 
 /* ============================================================
-   CARD RENDERING
+   CARD CREATION
    ============================================================ */
 
 function createCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
+  card.dataset.id = game.id;
 
   const home = Teams[game.home_team] || {};
   const away = Teams[game.away_team] || {};
 
+  const homeAbbr = home.abbr?.toUpperCase() || game.home_team;
+  const awayAbbr = away.abbr?.toUpperCase() || game.away_team;
+
+  const best = game.best;
   const kickoff = kickoffLocal(game.commence_time);
 
-  // NEW FEATURE — find which market produced the highest EV
-  const bestMarket = findBestMarket(game);
-
   card.innerHTML = `
-    <div class="ev-badge">
-      Consensus Edge: 
-      <span class="${evClass(bestMarket.ev)}">${fmtEV(bestMarket.ev)}</span>
-      <div style="font-size:.75rem; opacity:.85;">${bestMarket.label}</div>
-    </div>
-
     <div class="game-header">
       <div class="teams">
         <img src="${away.logo}" class="team-logo">
         ${game.away_team}
-        <span style="opacity:.6;"> @ </span>
+        <span style="opacity:0.6;"> @ </span>
         <img src="${home.logo}" class="team-logo">
         ${game.home_team}
       </div>
       <div class="kickoff">${kickoff}</div>
     </div>
 
-    ${buildMainGrid(game)}
+    <div class="market-grid">
+
+      <div class="market-box">
+        <div>Moneyline</div>
+        <div>
+          ${awayAbbr}: ${fmtOdds(best.ml.away.odds)}
+          <div class="${evClass(best.ml.away.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.ml.away.ev)} • Prob ${fmtProb(best.ml.away.consensus_prob)}
+          </div>
+        </div>
+        <div>
+          ${homeAbbr}: ${fmtOdds(best.ml.home.odds)}
+          <div class="${evClass(best.ml.home.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.ml.home.ev)} • Prob ${fmtProb(best.ml.home.consensus_prob)}
+          </div>
+        </div>
+      </div>
+
+      <div class="market-box">
+        <div>Spread</div>
+        <div>
+          ${awayAbbr} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})
+          <div class="${evClass(best.spread.away.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.spread.away.ev)} • Prob ${fmtProb(best.spread.away.consensus_prob)}
+          </div>
+        </div>
+        <div>
+          ${homeAbbr} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})
+          <div class="${evClass(best.spread.home.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.spread.home.ev)} • Prob ${fmtProb(best.spread.home.consensus_prob)}
+          </div>
+        </div>
+      </div>
+
+      <div class="market-box">
+        <div>Total</div>
+        <div>
+          Over ${best.total.over.point} (${fmtOdds(best.total.over.odds)})
+          <div class="${evClass(best.total.over.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.total.over.ev)} • Prob ${fmtProb(best.total.over.consensus_prob)}
+          </div>
+        </div>
+        <div>
+          Under ${best.total.under.point} (${fmtOdds(best.total.under.odds)})
+          <div class="${evClass(best.total.under.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.total.under.ev)} • Prob ${fmtProb(best.total.under.consensus_prob)}
+          </div>
+        </div>
+      </div>
+
+    </div>
   `;
 
   card.appendChild(buildMainAccordion(game));
@@ -151,65 +213,26 @@ function createCard(game) {
 }
 
 /* ============================================================
-   MARKET GRID
+   UPDATE EXISTING CARD (NO FULL PAGE RELOAD)
    ============================================================ */
 
-function buildMainGrid(game) {
-  const b = game.best;
+function updateCard(oldGame, newGame) {
+  const card = document.querySelector(`.game-card[data-id="${newGame.id}"]`);
+  if (!card) return;
 
-  return `
-    <div class="market-grid">
+  // Detect changes that should trigger animation
+  const hasChanged =
+    JSON.stringify(oldGame.best) !== JSON.stringify(newGame.best);
 
-      <div class="market-box">
-        <div>Moneyline</div>
-        <div>
-          ${game.away_team}: ${fmtOdds(b.ml.away.odds)}
-          <div class="${evClass(b.ml.away.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(b.ml.away.ev)} • Prob ${fmtProb(b.ml.away.consensus_prob)}
-          </div>
-        </div>
-        <div>
-          ${game.home_team}: ${fmtOdds(b.ml.home.odds)}
-          <div class="${evClass(b.ml.home.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(b.ml.home.ev)} • Prob ${fmtProb(b.ml.home.consensus_prob)}
-          </div>
-        </div>
-      </div>
+  if (!hasChanged) return;
 
-      <div class="market-box">
-        <div>Spread</div>
-        <div>
-          ${game.away_team} ${b.spread.away.point} (${fmtOdds(b.spread.away.odds)})
-          <div class="${evClass(b.spread.away.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(b.spread.away.ev)} • Prob ${fmtProb(b.spread.away.consensus_prob)}
-          </div>
-        </div>
-        <div>
-          ${game.home_team} ${b.spread.home.point} (${fmtOdds(b.spread.home.odds)})
-          <div class="${evClass(b.spread.home.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(b.spread.home.ev)} • Prob ${fmtProb(b.spread.home.consensus_prob)}
-          </div>
-        </div>
-      </div>
+  // Build a fresh card and replace the old one in-place
+  const freshCard = createCard(newGame);
+  card.replaceWith(freshCard);
 
-      <div class="market-box">
-        <div>Total</div>
-        <div>
-          Over ${b.total.over.point} (${fmtOdds(b.total.over.odds)})
-          <div class="${evClass(b.total.over.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(b.total.over.ev)} • Prob ${fmtProb(b.total.over.consensus_prob)}
-          </div>
-        </div>
-        <div>
-          Under ${b.total.under.point} (${fmtOdds(b.total.under.odds)})
-          <div class="${evClass(b.total.under.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(b.total.under.ev)} • Prob ${fmtProb(b.total.under.consensus_prob)}
-          </div>
-        </div>
-      </div>
-
-    </div>
-  `;
+  // Highlight animation
+  freshCard.classList.add("updated");
+  setTimeout(() => freshCard.classList.remove("updated"), 1200);
 }
 
 /* ============================================================
@@ -219,19 +242,19 @@ function buildMainGrid(game) {
 function buildMainAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
-  acc.innerHTML = `<div class="accordion-title">Full Market Breakdown (All Books)</div>`;
+  acc.innerHTML = `<div class="accordion-title">Main Markets (All Books)</div>`;
 
   const panel = document.createElement("div");
   panel.className = "panel";
 
-  panel.innerHTML = buildMarketTable(game);
+  panel.innerHTML = buildMarketsTable(game);
 
   acc.onclick = () => toggle(panel);
   acc.appendChild(panel);
   return acc;
 }
 
-function buildMarketTable(game) {
+function buildMarketsTable(game) {
   const b = game.books;
   let html = "";
 
@@ -247,14 +270,19 @@ function buildMarketTable(game) {
 
           <div>
             ${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
-            <span class="${evClass(row.outcome1.edge)}">EV ${fmtEV(row.outcome1.edge)}</span>
+            <span class="${evClass(row.outcome1.edge)}">
+              EV ${fmtEV(row.outcome1.edge)}
+            </span>
           </div>
 
           <div>
             ${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
-            <span class="${evClass(row.outcome2.edge)}">EV ${fmtEV(row.outcome2.edge)}</span>
+            <span class="${evClass(row.outcome2.edge)}">
+              EV ${fmtEV(row.outcome2.edge)}
+            </span>
           </div>
-        </div>`;
+        </div>
+      `;
     });
   });
 
@@ -262,7 +290,7 @@ function buildMarketTable(game) {
 }
 
 /* ============================================================
-   PLAYER PROPS ACCORDION
+   PLAYER PROPS (REFRESHES EACH TIME YOU OPEN)
    ============================================================ */
 
 function buildPropsAccordion(game) {
@@ -275,22 +303,27 @@ function buildPropsAccordion(game) {
   panel.className = "panel";
 
   acc.onclick = async () => {
-    if (!panel.dataset.loaded) {
+    toggle(panel);
+
+    // Only refresh when accordion is open
+    if (panel.classList.contains("open")) {
       panel.innerHTML = `<div class="loading">Loading props…</div>`;
       try {
         const data = await fetchProps(game.id);
         panel.innerHTML = buildPropsUI(data.categories);
-        panel.dataset.loaded = "true";
       } catch {
         panel.innerHTML = `<div class="error">Failed to load props</div>`;
       }
     }
-    toggle(panel);
   };
 
   acc.appendChild(panel);
   return acc;
 }
+
+/* ============================================================
+   BUILD PROPS UI
+   ============================================================ */
 
 function buildPropsUI(cats) {
   if (!cats) return `<div>No props available</div>`;

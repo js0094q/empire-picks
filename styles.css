@@ -1,3 +1,25 @@
+.hero {
+  background: radial-gradient(
+    circle at top,
+    rgba(56,189,248,0.18),
+    #020617 70%
+  );
+  padding: 28px 24px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(148,163,184,0.15);
+}
+
+.hero h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.hero p {
+  max-width: 620px;
+  color: #cbd5f5;
+  font-size: 0.95rem;
+}
+
 body {
   background: #0b1020;
   color: #f8fafc;

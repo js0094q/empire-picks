@@ -54,6 +54,20 @@ body {
 .consensus-lean { background: #a7f3d0; color: #064e3b; }
 .consensus-weak { background: #64748b; color: #020617; }
 
+.teams {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.teams img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+
 /* GAME CARDS */
 
 .game-card {

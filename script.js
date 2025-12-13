@@ -4,23 +4,11 @@ import { Teams } from "./teams.js";
    HELPERS
    ============================================================ */
 
-function pct(x) {
-  return (x * 100).toFixed(1) + "%";
-}
+const pct = x => (x * 100).toFixed(1) + "%";
 
 function fmtOdds(o) {
   if (o == null) return "-";
   return o > 0 ? `+${o}` : `${o}`;
-}
-
-function fmtEV(x) {
-  if (x == null || isNaN(x)) return "N/A";
-  return pct(x);
-}
-
-function fmtProb(x) {
-  if (x == null || isNaN(x)) return "N/A";
-  return pct(x);
 }
 
 function evClass(e) {
@@ -33,10 +21,10 @@ function evClass(e) {
 function kickoffLocal(utc) {
   return new Date(utc).toLocaleString("en-US", {
     timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
     month: "short",
-    day: "numeric"
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
   });
 }
 
@@ -48,445 +36,271 @@ window.Parlay = {
   legs: [],
 
   addLeg(leg) {
-    // Prevent duplicate exact legs
-    if (!this.legs.some(l => l.label === leg.label && l.odds === leg.odds)) {
+    if (!this.legs.some(l => l.label === leg.label)) {
       this.legs.push(leg);
     }
-    renderParlay();
+    renderParlayModal();
   },
 
   removeLeg(i) {
     this.legs.splice(i, 1);
-    renderParlay();
+    renderParlayModal();
   }
 };
 
-function americanToDecimal(odds) {
-  if (odds > 0) return (odds / 100) + 1;
-  return (100 / Math.abs(odds)) + 1;
+function americanToDecimal(o) {
+  return o > 0 ? (o / 100 + 1) : (100 / Math.abs(o) + 1);
 }
 
-function computeParlay() {
-  if (!window.Parlay.legs.length) return { payout: 0, prob: 0, ev: 0 };
+function computeParlay(legs) {
+  if (!legs.length) return { mult: 0, prob: 0, ev: 0 };
 
-  let payout = 1;
+  let mult = 1;
   let prob = 1;
 
-  window.Parlay.legs.forEach(l => {
-    payout *= americanToDecimal(l.odds);
-    prob *= l.prob || 0.5;
+  legs.forEach(l => {
+    mult *= americanToDecimal(l.odds);
+    prob *= l.prob ?? 0.5;
   });
 
-  const ev = (prob * payout) - 1;
-
-  return { payout, prob, ev };
+  return {
+    mult,
+    prob,
+    ev: (prob * mult) - 1
+  };
 }
 
-function renderParlay() {
-  const box = document.getElementById("parlay-legs");
-  const sum = document.getElementById("parlay-summary");
-
-  if (!box || !sum) return;
-
-  box.innerHTML = "";
-  window.Parlay.legs.forEach((l, i) => {
-    box.innerHTML += `
-      <div class="parlay-leg">
-        ${l.label} (${fmtOdds(l.odds)})
-        <span class="remove-leg" onclick="window.Parlay.removeLeg(${i})">✖</span>
-      </div>
-    `;
-  });
-
-  const { payout, prob, ev } = computeParlay();
-
-  sum.innerHTML = `
-    <hr>
-    <div><strong>Legs:</strong> ${window.Parlay.legs.length}</div>
-    <div><strong>Payout Multiplier:</strong> ${payout.toFixed(2)}x</div>
-    <div><strong>Probability:</strong> ${fmtProb(prob)}</div>
-    <div><strong>Expected Value:</strong> 
-      <span class="${evClass(ev)}">${fmtEV(ev)}</span>
-    </div>
-  `;
+function stakeReturn(stake, mult) {
+  const total = stake * mult;
+  return { win: total - stake, total };
 }
 
 /* ============================================================
-   FETCH HELPERS
+   FETCH
    ============================================================ */
 
 async function fetchGames() {
   const r = await fetch("/api/events");
+  if (!r.ok) throw new Error("Events failed");
   return r.json();
 }
 
 async function fetchProps(id) {
   const r = await fetch(`/api/props?id=${id}`);
+  if (!r.ok) throw new Error("Props failed");
   return r.json();
 }
 
 /* ============================================================
-   INITIAL LOAD & APP STATE
+   INIT
    ============================================================ */
 
 const container = document.getElementById("games-container");
-document.getElementById("refresh-btn").onclick = () => loadGames();
-
-window.AppState = {
-  games: {},
-  lastUpdated: null
-};
+document.getElementById("refresh-btn").onclick = loadGames;
 
 loadGames();
 
 /* ============================================================
-   PRIMARY LOAD FUNCTION
+   LOAD EVENTS
    ============================================================ */
 
 async function loadGames() {
-  container.innerHTML = `<div class="loading">Loading NFL games…</div>`;
-
-  let games = [];
+  container.innerHTML = `<div class="loading">Loading games…</div>`;
   try {
-    games = await fetchGames();
+    const games = await fetchGames();
+    container.innerHTML = "";
+    games.forEach(g => container.appendChild(createGameCard(g)));
   } catch {
-    container.innerHTML = `<div class="error">API Error</div>`;
-    return;
+    container.innerHTML = `<div class="error">Failed loading games</div>`;
   }
-
-  container.innerHTML = "";
-
-  games.forEach(g => {
-    window.AppState.games[g.id] = g;
-    container.appendChild(createCard(g));
-  });
-
-  window.AppState.lastUpdated = Date.now();
 }
 
 /* ============================================================
-   AUTO REFRESH ENGINE
+   GAME CARD
    ============================================================ */
 
-const REFRESH_MS = 30000;
-
-setInterval(async () => {
-  try {
-    const newGames = await fetchGames();
-
-    newGames.forEach(g => {
-      const old = window.AppState.games[g.id];
-
-      if (!old) {
-        window.AppState.games[g.id] = g;
-        container.appendChild(createCard(g));
-        return;
-      }
-
-      updateCard(old, g);
-      window.AppState.games[g.id] = g;
-    });
-
-    window.AppState.lastUpdated = Date.now();
-  } catch (err) {
-    console.error("Auto-refresh error:", err);
-  }
-}, REFRESH_MS);
-
-/* ============================================================
-   CARD CREATION
-   ============================================================ */
-
-function createCard(game) {
+function createGameCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
-  card.dataset.id = game.id;
 
   const home = Teams[game.home_team] || {};
   const away = Teams[game.away_team] || {};
-
-  const homeAbbr = home.abbr?.toUpperCase() || game.home_team;
-  const awayAbbr = away.abbr?.toUpperCase() || game.away_team;
-
-  const best = game.best;
-  const kickoff = kickoffLocal(game.commence_time);
 
   card.innerHTML = `
     <div class="game-header">
       <div class="teams">
         <img src="${away.logo}" class="team-logo">
         ${game.away_team}
-        <span style="opacity:0.6;"> @ </span>
+        <span class="muted">@</span>
         <img src="${home.logo}" class="team-logo">
         ${game.home_team}
       </div>
-      <div class="kickoff">${kickoff}</div>
-    </div>
-
-    <div class="market-grid">
-
-      <!-- MONEYLINE -->
-      <div class="market-box">
-        <div>Moneyline</div>
-
-        <div>
-          ${awayAbbr}: ${fmtOdds(best.ml.away.odds)}
-          <div class="${evClass(best.ml.away.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(best.ml.away.ev)} • Prob ${fmtProb(best.ml.away.consensus_prob)}
-          </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${awayAbbr} ML",
-              odds: ${best.ml.away.odds},
-              prob: ${best.ml.away.consensus_prob}
-            })'>➕ Parlay</button>
-        </div>
-
-        <div>
-          ${homeAbbr}: ${fmtOdds(best.ml.home.odds)}
-          <div class="${evClass(best.ml.home.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(best.ml.home.ev)} • Prob ${fmtProb(best.ml.home.consensus_prob)}
-          </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${homeAbbr} ML",
-              odds: ${best.ml.home.odds},
-              prob: ${best.ml.home.consensus_prob}
-            })'>➕ Parlay</button>
-        </div>
-      </div>
-
-      <!-- SPREAD -->
-      <div class="market-box">
-        <div>Spread</div>
-
-        <div>
-          ${awayAbbr} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})
-          <div class="${evClass(best.spread.away.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(best.spread.away.ev)} • Prob ${fmtProb(best.spread.away.consensus_prob)}
-          </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${awayAbbr} Spread ${best.spread.away.point}",
-              odds: ${best.spread.away.odds},
-              prob: ${best.spread.away.consensus_prob}
-            })'>➕ Parlay</button>
-        </div>
-
-        <div>
-          ${homeAbbr} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})
-          <div class="${evClass(best.spread.home.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(best.spread.home.ev)} • Prob ${fmtProb(best.spread.home.consensus_prob)}
-          </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${homeAbbr} Spread ${best.spread.home.point}",
-              odds: ${best.spread.home.odds},
-              prob: ${best.spread.home.consensus_prob}
-            })'>➕ Parlay</button>
-        </div>
-      </div>
-
-      <!-- TOTAL -->
-      <div class="market-box">
-        <div>Total</div>
-
-        <div>
-          Over ${best.total.over.point} (${fmtOdds(best.total.over.odds)})
-          <div class="${evClass(best.total.over.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(best.total.over.ev)} • Prob ${fmtProb(best.total.over.consensus_prob)}
-          </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "Over ${best.total.over.point}",
-              odds: ${best.total.over.odds},
-              prob: ${best.total.over.consensus_prob}
-            })'>➕ Parlay</button>
-        </div>
-
-        <div>
-          Under ${best.total.under.point} (${fmtOdds(best.total.under.odds)})
-          <div class="${evClass(best.total.under.ev)}" style="font-size:.75rem;">
-            EV ${fmtEV(best.total.under.ev)} • Prob ${fmtProb(best.total.under.consensus_prob)}
-          </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "Under ${best.total.under.point}",
-              odds: ${best.total.under.odds},
-              prob: ${best.total.under.consensus_prob}
-            })'>➕ Parlay</button>
-        </div>
-      </div>
-
+      <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
     </div>
   `;
 
-  card.appendChild(buildMainAccordion(game));
+  card.appendChild(buildMarket("Moneyline", game.books.h2h, game));
+  card.appendChild(buildMarket("Spread", game.books.spreads, game));
+  card.appendChild(buildMarket("Total", game.books.totals, game));
   card.appendChild(buildPropsAccordion(game));
 
   return card;
 }
 
 /* ============================================================
-   UPDATE CARD
+   MARKETS
    ============================================================ */
 
-function updateCard(oldGame, newGame) {
-  const card = document.querySelector(`.game-card[data-id="${newGame.id}"]`);
-  if (!card) return;
+function buildMarket(title, rows = [], game) {
+  const box = document.createElement("div");
+  box.className = "market-box";
+  box.innerHTML = `<div class="market-title">${title}</div>`;
 
-  const changed = JSON.stringify(oldGame.best) !== JSON.stringify(newGame.best);
-
-  if (!changed) return;
-
-  const fresh = createCard(newGame);
-  card.replaceWith(fresh);
-
-  fresh.classList.add("updated");
-  setTimeout(() => fresh.classList.remove("updated"), 1200);
-}
-
-/* ============================================================
-   MAIN MARKETS ACCORDION
-   ============================================================ */
-
-function buildMainAccordion(game) {
-  const acc = document.createElement("div");
-  acc.className = "accordion";
-  acc.innerHTML = `<div class="accordion-title">Main Markets (All Books)</div>`;
-
-  const panel = document.createElement("div");
-  panel.className = "panel";
-
-  panel.innerHTML = buildMarketsTable(game);
-
-  acc.onclick = () => toggle(panel);
-  acc.appendChild(panel);
-  return acc;
-}
-
-function buildMarketsTable(game) {
-  const b = game.books;
-  let html = "";
-
-  ["h2h", "spreads", "totals"].forEach(key => {
-    if (!b[key] || !b[key].length) return;
-
-    html += `<h3>${key.toUpperCase()}</h3>`;
-
-    b[key].forEach(row => {
-      html += `
-        <div class="prop-item">
-          <div><strong>${row.bookmaker}</strong></div>
-
-          <div>
-            ${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
-            <span class="${evClass(row.outcome1.edge)}">EV ${fmtEV(row.outcome1.edge)}</span>
-          </div>
-
-          <div>
-            ${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
-            <span class="${evClass(row.outcome2.edge)}">EV ${fmtEV(row.outcome2.edge)}</span>
-          </div>
-        </div>
+  rows.forEach(r => {
+    [r.outcome1, r.outcome2].forEach(o => {
+      const row = document.createElement("div");
+      row.className = "market-row";
+      row.innerHTML = `
+        <div>${o.name}: ${fmtOdds(o.odds)}</div>
+        <div class="${evClass(o.edge)}">EV ${pct(o.edge)}</div>
+        <button class="parlay-btn">+ Parlay</button>
       `;
+      row.querySelector("button").onclick = () =>
+        window.Parlay.addLeg({
+          label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
+          odds: o.odds,
+          prob: o.fair
+        });
+      box.appendChild(row);
     });
   });
 
-  return html;
+  return box;
 }
 
 /* ============================================================
-   PLAYER PROPS ACCORDION (WITH PARLAY BUTTONS)
+   PLAYER PROPS (FIXED)
    ============================================================ */
 
 function buildPropsAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
-  acc.dataset.id = game.id;
-  acc.innerHTML = `<div class="accordion-title">Player Props</div>`;
+
+  const header = document.createElement("div");
+  header.className = "accordion-title";
+  header.textContent = "Player Props";
 
   const panel = document.createElement("div");
   panel.className = "panel";
 
-  acc.onclick = async () => {
-    toggle(panel);
+  header.onclick = async e => {
+    e.stopPropagation();
 
     if (panel.classList.contains("open")) {
-      panel.innerHTML = `<div class="loading">Loading props…</div>`;
-      try {
-        const data = await fetchProps(game.id);
-        panel.innerHTML = buildPropsUI(data.categories);
-      } catch {
-        panel.innerHTML = `<div class="error">Failed to load props</div>`;
+      panel.classList.remove("open");
+      panel.style.maxHeight = null;
+      return;
+    }
+
+    panel.classList.add("open");
+    panel.innerHTML = `<div class="loading">Loading props…</div>`;
+    panel.style.maxHeight = "200px";
+
+    try {
+      const data = await fetchProps(game.id);
+      if (!data.categories || !Object.keys(data.categories).length) {
+        panel.innerHTML = `<div class="muted">Props not posted yet</div>`;
+      } else {
+        panel.innerHTML = buildPropsUI(data.categories, game);
+        panel.style.maxHeight = panel.scrollHeight + "px";
       }
+    } catch {
+      panel.innerHTML = `<div class="error">Unable to load props</div>`;
     }
   };
 
+  acc.appendChild(header);
   acc.appendChild(panel);
   return acc;
 }
 
-function buildPropsUI(cats) {
-  if (!cats) return `<div>No props available</div>`;
+/* ============================================================
+   PROPS UI
+   ============================================================ */
 
+function buildPropsUI(categories, game) {
   let html = "";
 
-  Object.keys(cats).forEach(cat => {
-    const arr = cats[cat];
-    if (!arr.length) return;
-
-    html += `<div class="prop-category"><h3>${cat}</h3>`;
-
-    arr.forEach(p => {
+  Object.entries(categories).forEach(([cat, props]) => {
+    html += `<h4>${cat}</h4>`;
+    props.forEach(p => {
       html += `
         <div class="prop-item">
           <div><strong>${p.player}</strong></div>
-          <div>${p.label}: ${p.point}</div>
+          <div>${p.label} ${p.point}</div>
 
           <div>
             Over ${fmtOdds(p.over_odds)}
-            <span class="${evClass(p.over_ev)}">EV ${fmtEV(p.over_ev)}</span>
-            <span style="opacity:.7;">(${fmtProb(p.over_prob)})</span>
+            <span class="${evClass(p.over_ev)}">EV ${pct(p.over_ev)}</span>
             <button class="parlay-btn"
               onclick='window.Parlay.addLeg({
                 label: "${p.player} Over ${p.point}",
                 odds: ${p.over_odds},
                 prob: ${p.over_prob}
-              })'>➕ Parlay</button>
+              })'>+ Parlay</button>
           </div>
 
           <div>
             Under ${fmtOdds(p.under_odds)}
-            <span class="${evClass(p.under_ev)}">EV ${fmtEV(p.under_ev)}</span>
-            <span style="opacity:.7;">(${fmtProb(p.under_prob)})</span>
+            <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>
             <button class="parlay-btn"
               onclick='window.Parlay.addLeg({
                 label: "${p.player} Under ${p.point}",
                 odds: ${p.under_odds},
                 prob: ${p.under_prob}
-              })'>➕ Parlay</button>
+              })'>+ Parlay</button>
           </div>
         </div>
       `;
     });
-
-    html += `</div>`;
   });
 
   return html;
 }
 
 /* ============================================================
-   ACCORDION LOGIC
+   PARLAY MODAL
    ============================================================ */
 
-function toggle(panel) {
-  if (panel.style.maxHeight) {
-    panel.style.maxHeight = null;
-    panel.classList.remove("open");
-  } else {
-    panel.style.maxHeight = panel.scrollHeight + "px";
-    panel.classList.add("open");
-  }
-}
+window.renderParlayModal = function () {
+  const modal = document.getElementById("parlay-modal");
+  const legsBox = document.getElementById("parlay-modal-legs");
+  const summary = document.getElementById("parlay-modal-summary");
+  const stake = Number(document.getElementById("parlay-stake-input")?.value || 0);
+
+  if (!modal) return;
+
+  modal.classList.add("visible");
+  legsBox.innerHTML = "";
+
+  window.Parlay.legs.forEach((l, i) => {
+    legsBox.innerHTML += `
+      <div class="parlay-leg-line">
+        ${l.label} (${fmtOdds(l.odds)})
+        <span onclick="window.Parlay.removeLeg(${i})">✖</span>
+      </div>
+    `;
+  });
+
+  const p = computeParlay(window.Parlay.legs);
+  const s = stakeReturn(stake, p.mult);
+
+  summary.innerHTML = `
+    <div>Payout: ${p.mult.toFixed(2)}x</div>
+    <div>Prob: ${pct(p.prob)}</div>
+    <div class="${evClass(p.ev)}">EV ${pct(p.ev)}</div>
+    <hr>
+    <div>You Win: $${s.win.toFixed(2)}</div>
+    <div>Total: $${s.total.toFixed(2)}</div>
+  `;
+};

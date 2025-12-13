@@ -1,6 +1,5 @@
 {
   "version": 2,
-
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },
@@ -10,35 +9,22 @@
     { "src": "api/events.js", "use": "@vercel/node" },
     { "src": "api/props.js", "use": "@vercel/node" }
   ],
-
   "routes": [
     {
-      "src": "/api/events",
+      "src": "/api/events(.*)",
       "dest": "/api/events.js",
       "headers": { "Cache-Control": "no-store" }
     },
     {
-      "src": "/api/props",
+      "src": "/api/props(.*)",
       "dest": "/api/props.js",
       "headers": { "Cache-Control": "no-store" }
     },
 
-    {
-      "src": "/(.*\\.css)",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*\\.js)",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*\\.(png|jpg|jpeg|svg|webp))",
-      "dest": "/$1"
-    },
+    { "src": "/(.*\\.css)", "dest": "/$1" },
+    { "src": "/(.*\\.js)", "dest": "/$1" },
+    { "src": "/(.*\\.(png|jpg|jpeg|svg|webp))", "dest": "/$1" },
 
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

@@ -275,16 +275,15 @@ function buildPropsUI(categories) {
   <button class="parlay-btn">+ Parlay</button>
 </div>
 
-          <div>
-            Under ${fmtOdds(p.under_odds)}
-            <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>
-            <button class="parlay-btn"
-              onclick='window.Parlay.addLeg({
-                label: "${p.player} Under ${p.point}",
-                odds: ${p.under_odds},
-                prob: ${p.under_prob}
-              })'>+ Parlay</button>
-          </div>
+         <div>
+  Under ${fmtOdds(p.under_odds)}
+  <div class="muted">
+    Prob (Book): ${pct(impliedProbFromOdds(p.under_odds))}
+    • Prob (Model): ${pct(p.under_prob)}
+  </div>
+  <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>
+  <button class="parlay-btn">+ Parlay</button>
+</div>
         </div>
       `;
     });

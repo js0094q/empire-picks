@@ -7,16 +7,21 @@ import { Teams } from "./teams.js";
 const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
-function impliedProbFromOdds(o) {
-  return o > 0
-    ? 100 / (o + 100)
-    : Math.abs(o) / (Math.abs(o) + 100);
+function impliedProb(o) {
+  return o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 }
 
-function evClass(e) {
-  if (e > 0.03) return "ev-green";
-  if (e < -0.03) return "ev-red";
+function evClass(ev) {
+  if (ev > 0.03) return "ev-green";
+  if (ev < -0.03) return "ev-red";
   return "ev-neutral";
+}
+
+function signalClass(delta) {
+  if (delta > 0.15) return "signal-strong";
+  if (delta > 0.08) return "signal-medium";
+  if (delta > 0.04) return "signal-light";
+  return "signal-neutral";
 }
 
 function kickoffLocal(utc) {
@@ -30,15 +35,14 @@ function kickoffLocal(utc) {
 }
 
 /* ============================================================
-   AUTO PICK SCORING
+   AUTO PICK ENGINE
    ============================================================ */
 
-// Composite score = realism × edge
+const autoPickCandidates = [];
+
 function pickScore(prob, ev) {
   return prob * ev;
 }
-
-const autoPickCandidates = [];
 
 /* ============================================================
    PARLAY ENGINE
@@ -46,14 +50,12 @@ const autoPickCandidates = [];
 
 window.Parlay = {
   legs: [],
-
   addLeg(leg) {
     if (!this.legs.some(l => l.label === leg.label)) {
       this.legs.push(leg);
+      renderParlay();
     }
-    renderParlay();
   },
-
   removeLeg(i) {
     this.legs.splice(i, 1);
     renderParlay();
@@ -98,8 +100,9 @@ async function fetchProps(id) {
    INIT
    ============================================================ */
 
-const container = document.getElementById("games-container");
+const gamesContainer = document.getElementById("games-container");
 document.getElementById("refresh-btn").onclick = loadGames;
+
 loadGames();
 
 /* ============================================================
@@ -107,13 +110,13 @@ loadGames();
    ============================================================ */
 
 async function loadGames() {
-  container.innerHTML = `<div class="loading">Loading…</div>`;
+  gamesContainer.innerHTML = `<div class="loading">Loading NFL games…</div>`;
   autoPickCandidates.length = 0;
 
   const games = await fetchGames();
-  container.innerHTML = "";
+  gamesContainer.innerHTML = "";
 
-  games.forEach(g => container.appendChild(createGameCard(g)));
+  games.forEach(g => gamesContainer.appendChild(createGameCard(g)));
 
   renderTopPicks();
 }
@@ -175,14 +178,8 @@ function buildMarket(title, rows, game) {
   );
 
   Object.values(best).forEach(o => {
-    const implied = impliedProbFromOdds(o.odds);
+    const implied = impliedProb(o.odds);
     const delta = o.fair - implied;
-
-    const strength =
-      delta > 0.15 ? "signal-strong" :
-      delta > 0.08 ? "signal-medium" :
-      delta > 0.04 ? "signal-light" :
-      "signal-neutral";
 
     if (o.edge > 0.03 && o.fair > 0.55) {
       autoPickCandidates.push({
@@ -195,7 +192,7 @@ function buildMarket(title, rows, game) {
     }
 
     const row = document.createElement("div");
-    row.className = `market-row ${strength}`;
+    row.className = `market-row ${signalClass(delta)}`;
     row.innerHTML = `
       <div>
         <strong>${o.name}</strong> ${fmtOdds(o.odds)}
@@ -235,7 +232,6 @@ function buildPropsAccordion(game) {
 
   title.onclick = async () => {
     if (!panel.classList.toggle("open")) return;
-
     const data = await fetchProps(game.id);
     panel.innerHTML = buildPropsUI(data.categories);
   };
@@ -252,8 +248,11 @@ function buildPropsUI(categories) {
     html += `<h4>${cat}</h4>`;
 
     props.forEach(p => {
-      const impO = impliedProbFromOdds(p.over_odds);
-      const impU = impliedProbFromOdds(p.under_odds);
+      const impO = impliedProb(p.over_odds);
+      const impU = impliedProb(p.under_odds);
+
+      const dO = p.over_prob - impO;
+      const dU = p.under_prob - impU;
 
       if (p.over_ev > 0.03 && p.over_prob > 0.55) {
         autoPickCandidates.push({
@@ -278,13 +277,11 @@ function buildPropsUI(categories) {
       html += `
         <div class="prop-item">
           <strong>${p.player}</strong>
-          <div>${p.label} ${p.point}</div>
+          <div class="muted">${p.label} ${p.point}</div>
 
-          <div class="prop-side">
+          <div class="prop-side ${signalClass(dO)}">
             Over ${fmtOdds(p.over_odds)}
-            <div class="muted">
-              Book: ${pct(impO)} • Model: ${pct(p.over_prob)}
-            </div>
+            <div class="muted">Book ${pct(impO)} • Model ${pct(p.over_prob)}</div>
             <span class="ev-green">EV ${pct(p.over_ev)}</span>
             <button class="parlay-btn"
               data-label="${p.player} Over ${p.point}"
@@ -294,11 +291,9 @@ function buildPropsUI(categories) {
             </button>
           </div>
 
-          <div class="prop-side">
+          <div class="prop-side ${signalClass(dU)}">
             Under ${fmtOdds(p.under_odds)}
-            <div class="muted">
-              Book: ${pct(impU)} • Model: ${pct(p.under_prob)}
-            </div>
+            <div class="muted">Book ${pct(impU)} • Model ${pct(p.under_prob)}</div>
             <span class="ev-green">EV ${pct(p.under_ev)}</span>
             <button class="parlay-btn"
               data-label="${p.player} Under ${p.point}"
@@ -348,7 +343,7 @@ function renderParlay() {
 
   sum.innerHTML = `
     <div>${stake.toFixed(2)} to win ${(stake * p.mult).toFixed(2)}</div>
-    <div>Prob: ${pct(p.prob)}</div>
+    <div>Prob ${pct(p.prob)}</div>
     <div class="${evClass(p.ev)}">EV ${pct(p.ev)}</div>
   `;
 }
@@ -356,7 +351,7 @@ function renderParlay() {
 document.getElementById("parlay-stake").oninput = renderParlay;
 
 /* ============================================================
-   TOP 3 PICKS
+   TOP PICKS
    ============================================================ */
 
 function renderTopPicks() {
@@ -367,19 +362,12 @@ function renderTopPicks() {
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
 
-  if (!picks.length) {
-    box.innerHTML = "";
-    return;
-  }
-
   box.innerHTML = `
     <h3>Top Picks (Model-Weighted)</h3>
     ${picks.map(p => `
       <div class="top-pick">
         <strong>${p.label}</strong>
-        <div class="muted">
-          Prob: ${pct(p.prob)} • EV: ${pct(p.ev)}
-        </div>
+        <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
         <button class="parlay-btn"
           data-label="${p.label}"
           data-odds="${p.odds}"

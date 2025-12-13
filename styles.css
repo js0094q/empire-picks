@@ -297,3 +297,76 @@ body {
   font-weight: 600;
   color: #e0f2fe;
 }
+/* =====================================================
+   PROP ROW BRIGHTNESS & CONTRAST FIX
+   ===================================================== */
+
+/* Lift each Over / Under row into a light card */
+.prop-side {
+  background: linear-gradient(
+    180deg,
+    rgba(226, 232, 240, 0.14),
+    rgba(148, 163, 184, 0.06)
+  );
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+  box-shadow:
+    inset 0 0 0 1px rgba(148,163,184,0.35),
+    0 8px 22px rgba(0,0,0,0.35);
+}
+
+/* Make text pop against lighter prop rows */
+.prop-side strong,
+.prop-side {
+  color: #f8fafc;
+}
+
+/* Probability text: readable, not muted to death */
+.prop-side .muted {
+  color: #e5e7eb;
+  font-size: 0.8rem;
+}
+
+/* EV for props: cooler, brighter blue */
+.prop-side .ev-green {
+  color: #7dd3fc;
+  font-weight: 600;
+  text-shadow: 0 0 12px rgba(125,211,252,0.6);
+}
+
+/* =====================================================
+   PROP PARLAY BUTTON – HIGH VISIBILITY
+   ===================================================== */
+
+.prop-side .parlay-btn {
+  background: linear-gradient(
+    90deg,
+    #38bdf8,
+    #6366f1
+  );
+  color: #020617;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.4),
+    0 0 22px rgba(56,189,248,0.75);
+}
+
+/* Hover = unmistakable */
+.prop-side .parlay-btn:hover {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.6),
+    0 0 32px rgba(56,189,248,0.95);
+}
+
+/* =====================================================
+   VISUAL RHYTHM BETWEEN OVER / UNDER
+   ===================================================== */
+
+.prop-side + .prop-side {
+  margin-top: 12px;
+}

@@ -1,66 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <title>EmpirePicks • NFL Odds & Props</title>
 
-  <link rel="stylesheet" href="styles.css?v=20251207-1">
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css?v=20251213-final" />
+
+  <!-- App Scripts -->
   <script type="module" src="teams.js"></script>
   <script type="module" src="script.js"></script>
 </head>
-  
-<!-- PARLAY SIDEBAR -->
-<aside id="parlay-sidebar" class="parlay-sidebar">
-  <h3>Parlay</h3>
 
-  <div id="parlay-legs" class="parlay-legs"></div>
-
-  <div class="parlay-stake">
-    <label>Stake</label>
-    <input id="parlay-stake" type="number" value="10" min="1" />
-  </div>
-
-  <div id="parlay-summary" class="parlay-summary"></div>
-
-  <button class="place-bet">Place Bet</button>
-</aside>
-  
 <body>
 
+  <!-- =====================================================
+       PARLAY SIDEBAR (FIXED LEFT)
+       ===================================================== -->
+  <aside id="parlay-sidebar" class="parlay-sidebar">
+    <h3>Parlay</h3>
+
+    <div id="parlay-legs" class="parlay-legs"></div>
+
+    <div class="parlay-stake">
+      <label for="parlay-stake">Stake</label>
+      <input
+        id="parlay-stake"
+        type="number"
+        value="10"
+        min="1"
+        step="1"
+      />
+    </div>
+
+    <div id="parlay-summary" class="parlay-summary"></div>
+
+    <button class="place-bet">Place Bet</button>
+  </aside>
+
+  <!-- =====================================================
+       HEADER (TOP BAR)
+       ===================================================== -->
   <header class="ep-header">
     <div class="logo">🏛️ EmpirePicks</div>
     <button id="refresh-btn">Refresh Odds</button>
   </header>
 
-<section class="hero">
-  <div class="hero-inner">
-    <h1>EmpirePicks</h1>
-    <p>
-      Consensus odds, no-vig probabilities, and model-weighted value.
-      Built from sharp and public books.
-    </p>
-  </div>
-</section>
-  
+  <!-- =====================================================
+       MAIN APPLICATION LAYOUT
+       ===================================================== -->
   <div class="layout">
-  <aside class="left-rail">
-    <section id="top-picks" class="top-picks">
-      <h3>Model Picks</h3>
-    </section>
-  </aside>
 
-  <main id="games-container" class="games-container">
-    <div class="loading">Loading NFL games…</div>
-  </main>
-</div>
+    <!-- =========================
+         LEFT RAIL (TOP PICKS)
+         ========================= -->
+    <aside class="left-rail">
+      <section id="top-picks" class="top-picks">
+        <h3>Top Picks (Model-Weighted)</h3>
+        <!-- JS injects picks here -->
+      </section>
+    </aside>
 
-  
-  <main id="games-container" class="games-container">
-    <div class="loading">Loading NFL games…</div>
-  </main>
+    <!-- =========================
+         MAIN CONTENT
+         ========================= -->
+    <main class="main-content">
 
+      <!-- HERO / BRANDING -->
+      <section class="hero">
+        <div class="hero-inner">
+          <h1>EmpirePicks</h1>
+          <p>
+            Consensus odds, no-vig probabilities, and model-weighted value.
+            Built from sharp and public books.
+          </p>
+        </div>
+      </section>
+
+      <!-- GAMES CONTAINER -->
+      <div id="games-container" class="games-container">
+        <div class="loading">Loading NFL games…</div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- =====================================================
+       FOOTER
+       ===================================================== -->
   <footer class="ep-footer">
     Data from The Odds API • EmpirePicks.com
   </footer>

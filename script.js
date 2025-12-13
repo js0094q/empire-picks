@@ -48,9 +48,18 @@ const Parlay = {
   add(leg) {
     if (!this.legs.find(l => l.label === leg.label)) {
       this.legs.push(leg);
-      openParlay();
-      renderParlay();
     }
+
+    // FORCE modal open every time (Safari-safe)
+    modal.classList.remove("open");
+    backdrop.classList.remove("open");
+
+    requestAnimationFrame(() => {
+      modal.classList.add("open");
+      backdrop.classList.add("open");
+    });
+
+    renderParlay();
   },
   remove(i) {
     this.legs.splice(i, 1);
@@ -262,21 +271,9 @@ document.addEventListener("click", e => {
   const btn = e.target.closest(".parlay-btn");
   if (!btn) return;
 
- add(leg) {
-  if (!this.legs.find(l => l.label === leg.label)) {
-    this.legs.push(leg);
-  }
-
-  // FORCE modal open every time
-  modal.classList.remove("open");
-  backdrop.classList.remove("open");
-
-  requestAnimationFrame(() => {
-    modal.classList.add("open");
-    backdrop.classList.add("open");
-  });
-
-  renderParlay();
-}
+  Parlay.add({
+    label: btn.dataset.label,
+    odds: Number(btn.dataset.odds),
+    prob: Number(btn.dataset.prob)
   });
 });

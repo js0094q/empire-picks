@@ -1,119 +1,97 @@
-/* =====================================================
-   TOP EV BANNER — EMPIREPICKS
-   ===================================================== */
-
-.top-ev-banner {
-  margin: 18px auto 28px;
-  padding: 16px 18px;
-  max-width: 1200px;
-
-  background: linear-gradient(
-    180deg,
-    rgba(17, 24, 39, 0.95),
-    rgba(2, 6, 23, 0.95)
-  );
-
-  border-radius: 18px;
-  box-shadow:
-    inset 0 0 0 1px rgba(245, 158, 11, 0.35),
-    0 14px 40px rgba(0, 0, 0, 0.55);
+:root {
+  --bg: #0b1220;
+  --panel: #121a2a;
+  --border: #1e2a44;
+  --gold: #f5c46b;
+  --green: #2fdc89;
+  --blue: #5da9ff;
 }
 
-/* Banner title */
-.top-ev-banner h3 {
-  margin: 0 0 14px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #fbbf24;
+body {
+  background: radial-gradient(circle at top, #111b34, #070c18);
+  color: #fff;
+  font-family: Manrope, system-ui;
 }
 
-/* Grid layout */
-.top-ev-grid {
+.game-card {
+  background: linear-gradient(180deg, #121a2a, #0c1324);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+.market-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
 
-/* Individual EV card */
-.top-ev-card {
-  position: relative;
-  padding: 14px 14px 16px;
-
-  background: linear-gradient(
-    180deg,
-    rgba(34, 197, 94, 0.12),
-    rgba(34, 197, 94, 0.05)
-  );
-
+.market-card {
+  background: var(--panel);
   border-radius: 14px;
-
-  box-shadow:
-    inset 0 0 0 1px rgba(34, 197, 94, 0.35),
-    0 10px 26px rgba(0, 0, 0, 0.45);
-
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 12px;
 }
 
-/* Hover micro-lift */
-.top-ev-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 0 0 1px rgba(34, 197, 94, 0.55),
-    0 16px 36px rgba(0, 0, 0, 0.65);
+.bet-row, .prop-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 8px;
+  transition: all .2s ease;
 }
 
-/* Pick label */
-.top-ev-card strong {
-  display: block;
-  font-size: 0.9rem;
-  margin-bottom: 6px;
-  color: #ecfdf5;
-}
-
-/* Probability + odds */
-.top-ev-card .muted {
-  font-size: 0.75rem;
-  color: #d1fae5;
-  margin-bottom: 6px;
-}
-
-/* EV highlight */
-.top-ev-card .ev-green {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #4ade80;
-  text-shadow: 0 0 14px rgba(74, 222, 128, 0.75);
-  margin-bottom: 10px;
-}
-
-/* Parlay button inside banner */
-.top-ev-card .parlay-btn {
-  width: 100%;
-  padding: 6px 0;
-
-  background: linear-gradient(
-    90deg,
-    #fbbf24,
-    #f59e0b
-  );
-
-  color: #020617;
-  font-weight: 700;
-  border-radius: 999px;
+.bet-row button,
+.prop-row button {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
   border: none;
-
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.35),
-    0 0 20px rgba(245, 158, 11, 0.6);
-
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.top-ev-card .parlay-btn:hover {
-  transform: scale(1.04);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.55),
-    0 0 28px rgba(245, 158, 11, 0.85);
+.ev-elite {
+  box-shadow: 0 0 18px rgba(47,220,137,.55);
+  background: linear-gradient(180deg, rgba(47,220,137,.25), transparent);
+}
+
+.ev-strong {
+  box-shadow: 0 0 12px rgba(47,220,137,.35);
+}
+
+.ev-positive {
+  box-shadow: inset 0 0 0 1px rgba(47,220,137,.35);
+}
+
+.top-ev-banner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.top-ev-card {
+  background: linear-gradient(135deg, #1f2937, #0f172a);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  box-shadow: 0 0 22px rgba(245,196,107,.45);
+}
+
+.parlay-header {
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.place-bet {
+  background: linear-gradient(135deg, #f5c46b, #facc15);
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  width: 100%;
+  font-weight: 800;
 }

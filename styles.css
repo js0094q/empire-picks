@@ -1,294 +1,82 @@
-/* Neon Noir Theme — Enhanced */
-
-:root {
-  --ep-bg: #090d14;
-  --ep-card: #1a2235;
-  --ep-gold: #f7c873;
-  --ep-green: #1ce5a0;
-  --ep-red: #ff4f4f;
-  --ep-neutral: #c7d1e0;
-  --ep-blue: #3ab4ff;
-  --radius: 14px;
-}
-
 body {
-  margin: 0;
-  font-family: "Manrope", sans-serif;
-  background: #090d14;
-  color: white;
-}
-
-/* HEADER */
-
-.ep-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 18px;
-  background: rgba(19, 26, 38, 0.8);
-  border-bottom: 2px solid var(--ep-gold);
-}
-
-.logo {
-  font-size: 1.7rem;
-  font-weight: 800;
-  color: var(--ep-gold);
-}
-
-/* MAIN */
-
-.games-container {
-  padding: 18px;
-}
-
-/* GAME CARD */
-
-.game-card {
-  background: linear-gradient(155deg, #111826, #1b2639);
-  padding: 18px;
-  margin-bottom: 22px;
-  border-radius: var(--radius);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-  position: relative;
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-.ev-badge {
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  background: rgba(255,255,255,0.08);
-  padding: 6px 10px;
-  border-radius: 8px;
-}
-
-/* TEAMS */
-
-.teams {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 1.15rem;
-  font-weight: 600;
-}
-
-.team-logo {
-  width: 42px;
-  height: 42px;
-}
-
-/* GRIDS */
-
-.market-grid {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
-  gap: 14px;
-}
-
-.market-box {
-  background: #1e2940;
-  padding: 14px;
-  border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-.box-title {
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-/* =========================
-   MAIN MARKETS HORIZONTAL
-   ========================= */
-
-.markets-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 10px;
+  background: #0b1020;
+  color: #f8fafc;
+  font-family: Manrope, system-ui, sans-serif;
 }
 
 .market-box {
   background: #0f172a;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px;
 }
 
-.market-title {
-  font-weight: 600;
-  margin-bottom: 6px;
-  text-align: center;
-  opacity: 0.85;
+.markets-row {
+  display: flex;
+  gap: 12px;
 }
 
 .market-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: 6px;
-  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.market-title {
+  text-align: center;
+  font-weight: 600;
+  opacity: 0.85;
   margin-bottom: 6px;
 }
 
-/* Mobile fallback */
-@media (max-width: 900px) {
-  .markets-row {
-    grid-template-columns: 1fr;
+.signal-strong {
+  background: linear-gradient(90deg, rgba(22,197,94,.25), transparent);
 }
 
-/* ACCORDION */
-
-.accordion {
-  margin-top: 16px;
-  background: #1f2a42;
-  padding: 14px;
-  border-radius: var(--radius);
-  cursor: pointer;
+.signal-medium {
+  background: linear-gradient(90deg, rgba(22,197,94,.15), transparent);
 }
 
-.accordion-title {
-  font-size: 1.1rem;
-  font-weight: 700;
+.signal-light {
+  background: linear-gradient(90deg, rgba(22,197,94,.07), transparent);
 }
-
-.panel {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.35s ease;
-}
-
-.panel.open {
-  padding-top: 10px;
-}
-
-/* PROPS */
-
-.prop-category {
-  background: #222f48;
-  padding: 14px;
-  margin-top: 14px;
-  border-radius: var(--radius);
-}
-
-.prop-item {
-  background: #283552;
-  padding: 12px;
-  border-radius: var(--radius);
-  margin-top: 12px;
-}
-
-/* EV COLORS */
 
 .ev-green {
-  color: var(--ep-green);
-  font-weight: bold;
-}
-
-.ev-red {
-  color: var(--ep-red);
-  font-weight: bold;
+  color: #22c55e;
+  text-shadow: 0 0 8px rgba(34,197,94,.4);
 }
 
 .ev-neutral {
-  color: var(--ep-neutral);
-}
-/* ============================================
-   Dynamic Update Glow Animation
-   ============================================ */
-
-.game-card.updated {
-  box-shadow: 0 0 22px rgba(58,180,255,0.55);
-  transition: box-shadow 0.8s ease;
+  color: #94a3b8;
 }
 
-.game-card.updated .market-box {
-  transition: transform 0.4s ease;
-  transform: scale(1.02);
-}
-/* =========================
-   PARLAY SIDEBAR
-   ========================= */
-
-.parlay-sidebar {
-  position: fixed;
-  right: 0;
-  top: 64px;
-  width: 300px;
-  height: calc(100vh - 64px);
-  background: #0f172a;
-  border-left: 2px solid var(--ep-gold);
-  padding: 14px;
-  z-index: 999;
-}
-
-.parlay-legs {
-  margin-bottom: 14px;
-}
-
-.parlay-leg {
-  background: #1e293b;
-  padding: 8px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
-}
-
-.parlay-leg span {
+.parlay-btn {
+  background: rgba(255,255,255,.08);
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,.15);
   cursor: pointer;
-  color: var(--ep-red);
+  transition: all .15s;
 }
 
-.parlay-stake input {
-  width: 100%;
-  padding: 6px;
-  border-radius: 6px;
-  border: none;
+.parlay-btn:hover {
+  background: linear-gradient(90deg, rgba(234,179,8,.4), rgba(234,179,8,.15));
+  box-shadow: 0 0 12px rgba(234,179,8,.5);
+}
+
+.prop-item {
+  background: rgba(255,255,255,.03);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.prop-side {
   margin-top: 6px;
 }
 
-.parlay-summary {
-  margin-top: 12px;
-  font-size: 0.9rem;
-}
-
-.place-bet {
-  margin-top: 12px;
-  width: 100%;
-  background: var(--ep-gold);
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-/* ===== FORCE MAIN MARKETS HORIZONTAL ===== */
-
-.markets-row {
-  display: flex !important;
-  gap: 12px !important;
-  align-items: stretch !important;
-  margin-top: 10px !important;
-}
-
-.markets-row .market-box {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  width: auto !important;
-}
-
-/* Make sure content inside market boxes doesn't blow up the flex row */
-.markets-row .market-row {
-  display: grid !important;
-  grid-template-columns: 1fr auto auto !important;
-  gap: 8px !important;
-  align-items: center !important;
-}
-
-/* Mobile: stack */
-@media (max-width: 900px) {
-  .markets-row {
-    flex-direction: column !important;
-  }
+.muted {
+  font-size: .8rem;
+  color: #9ca3af;
 }

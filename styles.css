@@ -68,6 +68,57 @@ body {
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
 
+/* PARLAY MODAL */
+
+.parlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.parlay-backdrop.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.parlay-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -48%);
+  width: 340px;
+  background: #020617;
+  border-radius: 18px;
+  padding: 20px;
+  z-index: 101;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.parlay-modal.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translate(-50%, -50%);
+}
+
+.parlay-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
 /* GAME CARDS */
 
 .game-card {

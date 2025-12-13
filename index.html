@@ -11,7 +11,7 @@
 
   <!-- App Scripts -->
   <script type="module" src="teams.js"></script>
-  <script type="module" src="script.js"></script>
+  <script type="module" src="script.js" defer></script>
 </head>
 
 <body>
@@ -35,7 +35,7 @@
     <aside class="left-rail">
       <section id="top-picks" class="top-picks">
         <h3>Top Picks (Model-Weighted)</h3>
-        <!-- JS injects picks here -->
+        <!-- Injected by JS -->
       </section>
     </aside>
 
@@ -55,13 +55,33 @@
         </div>
       </section>
 
-      <!-- GAMES CONTAINER -->
+      <!-- GAMES -->
       <div id="games-container" class="games-container">
         <div class="loading">Loading NFL games…</div>
       </div>
 
     </main>
 
+  </div>
+
+  <!-- =====================================================
+       PARLAY MODAL (REQUIRED)
+       ===================================================== -->
+  <div id="parlay-backdrop" class="parlay-backdrop"></div>
+
+  <div id="parlay-modal" class="parlay-modal">
+    <button id="close-parlay" class="parlay-close">✕</button>
+
+    <h3>Parlay</h3>
+
+    <div id="parlay-legs" class="parlay-legs"></div>
+
+    <label for="parlay-stake">Stake</label>
+    <input id="parlay-stake" type="number" value="10" min="1" />
+
+    <div id="parlay-summary" class="parlay-summary"></div>
+
+    <button class="place-bet">Place Bet</button>
   </div>
 
   <!-- =====================================================

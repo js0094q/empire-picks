@@ -186,3 +186,114 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 0 16px rgba(234,179,8,0.55);
 }
+/* =====================================================
+   PROP VISUAL RESET – HIGH CONTRAST
+   ===================================================== */
+
+/* Entire props section gets a soft slate panel */
+.accordion .panel {
+  background: linear-gradient(
+    180deg,
+    #0b1224,
+    #070b16
+  );
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+/* Each player prop card */
+.prop-item {
+  background: linear-gradient(
+    180deg,
+    rgba(56, 189, 248, 0.12),
+    rgba(56, 189, 248, 0.05)
+  );
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(56,189,248,0.25),
+    0 10px 28px rgba(0,0,0,0.45);
+}
+
+/* Player name stands out */
+.prop-item > strong {
+  font-size: 1rem;
+  color: #e0f2fe;
+}
+
+/* Prop category headers */
+.panel h4 {
+  margin: 18px 0 8px;
+  color: #7dd3fc;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+/* Over / Under blocks */
+.prop-side {
+  background: rgba(2, 6, 23, 0.6);
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Prop probability text */
+.prop-side .muted {
+  color: #bae6fd;
+  font-size: 0.78rem;
+}
+
+/* EV in props is calmer than markets */
+.prop-side .ev-green {
+  color: #60a5fa;
+  text-shadow: 0 0 10px rgba(96,165,250,0.45);
+}
+
+/* =====================================================
+   PROP PARLAY BUTTON – DISTINCT COLOR
+   ===================================================== */
+
+.prop-side .parlay-btn {
+  background: linear-gradient(
+    90deg,
+    rgba(56,189,248,0.45),
+    rgba(99,102,241,0.45)
+  );
+  border: none;
+  color: #020617;
+  font-weight: 600;
+  box-shadow: 0 0 16px rgba(56,189,248,0.55);
+}
+
+.prop-side .parlay-btn:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 0 26px rgba(56,189,248,0.75);
+}
+
+/* =====================================================
+   VISUAL SEPARATION FROM MAIN MARKETS
+   ===================================================== */
+
+.market-box {
+  margin-bottom: 6px;
+}
+
+.accordion-title {
+  margin-top: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(56,189,248,0.25),
+    transparent
+  );
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #e0f2fe;
+}

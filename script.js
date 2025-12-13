@@ -215,73 +215,38 @@ function buildMarket(title, rows, game) {
   return box;
 }
 
-/* ============================================================
-   PLAYER PROPS
-   ============================================================ */
+function isValidOdds(o) {
+  return typeof o === "number" && isFinite(o) && o !== 0;
+}
 
-function buildPropsAccordion(game) {
-  const acc = document.createElement("div");
-  acc.className = "accordion";
-
-  const title = document.createElement("div");
-  title.className = "accordion-title";
-  title.textContent = "Player Props";
-
-  const panel = document.createElement("div");
-  panel.className = "panel";
-
-  title.onclick = async () => {
-    if (!panel.classList.toggle("open")) return;
-    const data = await fetchProps(game.id);
-    panel.innerHTML = buildPropsUI(data.categories);
-  };
-
-  acc.appendChild(title);
-  acc.appendChild(panel);
-  return acc;
+function isMeaningfulSide(odds, prob) {
+  if (!isValidOdds(odds)) return false;
+  if (!isFinite(prob) || prob <= 0.01 || prob >= 0.99) return false;
+  return true;
 }
 
 function buildPropsUI(categories) {
   let html = "";
 
   Object.entries(categories).forEach(([cat, props]) => {
-    html += `<h4>${cat}</h4>`;
+    let renderedAny = false;
+
+    let section = `<h4>${cat}</h4>`;
 
     props.forEach(p => {
-      const impO = impliedProb(p.over_odds);
-      const impU = impliedProb(p.under_odds);
+      const sides = [];
 
-      const dO = p.over_prob - impO;
-      const dU = p.under_prob - impU;
+      // ---- OVER ----
+      if (isMeaningfulSide(p.over_odds, p.over_prob)) {
+        const impO = impliedProb(p.over_odds);
+        const dO = p.over_prob - impO;
 
-      if (p.over_ev > 0.03 && p.over_prob > 0.55) {
-        autoPickCandidates.push({
-          label: `${p.player} Over ${p.point}`,
-          odds: p.over_odds,
-          prob: p.over_prob,
-          ev: p.over_ev,
-          score: pickScore(p.over_prob, p.over_ev)
-        });
-      }
-
-      if (p.under_ev > 0.03 && p.under_prob > 0.55) {
-        autoPickCandidates.push({
-          label: `${p.player} Under ${p.point}`,
-          odds: p.under_odds,
-          prob: p.under_prob,
-          ev: p.under_ev,
-          score: pickScore(p.under_prob, p.under_ev)
-        });
-      }
-
-      html += `
-        <div class="prop-item">
-          <strong>${p.player}</strong>
-          <div class="muted">${p.label} ${p.point}</div>
-
+        sides.push(`
           <div class="prop-side ${signalClass(dO)}">
             Over ${fmtOdds(p.over_odds)}
-            <div class="muted">Book ${pct(impO)} • Model ${pct(p.over_prob)}</div>
+            <div class="muted">
+              Book ${pct(impO)} • Model ${pct(p.over_prob)}
+            </div>
             <span class="ev-green">EV ${pct(p.over_ev)}</span>
             <button class="parlay-btn"
               data-label="${p.player} Over ${p.point}"
@@ -290,10 +255,31 @@ function buildPropsUI(categories) {
               + Parlay
             </button>
           </div>
+        `);
 
+        // Top-pick candidate
+        if (p.over_ev > 0.03 && p.over_prob > 0.55) {
+          autoPickCandidates.push({
+            label: `${p.player} Over ${p.point}`,
+            odds: p.over_odds,
+            prob: p.over_prob,
+            ev: p.over_ev,
+            score: pickScore(p.over_prob, p.over_ev)
+          });
+        }
+      }
+
+      // ---- UNDER ----
+      if (isMeaningfulSide(p.under_odds, p.under_prob)) {
+        const impU = impliedProb(p.under_odds);
+        const dU = p.under_prob - impU;
+
+        sides.push(`
           <div class="prop-side ${signalClass(dU)}">
             Under ${fmtOdds(p.under_odds)}
-            <div class="muted">Book ${pct(impU)} • Model ${pct(p.under_prob)}</div>
+            <div class="muted">
+              Book ${pct(impU)} • Model ${pct(p.under_prob)}
+            </div>
             <span class="ev-green">EV ${pct(p.under_ev)}</span>
             <button class="parlay-btn"
               data-label="${p.player} Under ${p.point}"
@@ -302,12 +288,40 @@ function buildPropsUI(categories) {
               + Parlay
             </button>
           </div>
+        `);
+
+        if (p.under_ev > 0.03 && p.under_prob > 0.55) {
+          autoPickCandidates.push({
+            label: `${p.player} Under ${p.point}`,
+            odds: p.under_odds,
+            prob: p.under_prob,
+            ev: p.under_ev,
+            score: pickScore(p.under_prob, p.under_ev)
+          });
+        }
+      }
+
+      // If neither side is real, skip player entirely
+      if (!sides.length) return;
+
+      renderedAny = true;
+
+      section += `
+        <div class="prop-item">
+          <strong>${p.player}</strong>
+          <div class="muted">${p.label} ${p.point}</div>
+          ${sides.join("")}
         </div>
       `;
     });
+
+    // Only add category if it rendered something real
+    if (renderedAny) {
+      html += section;
+    }
   });
 
-  return html;
+  return html || `<div class="muted">No playable props available.</div>`;
 }
 
 /* ============================================================

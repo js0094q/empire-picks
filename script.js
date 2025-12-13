@@ -29,17 +29,19 @@ function kickoffLocal(utc) {
 }
 
 /* ============================================================
-   PARLAY ENGINE
+   PARLAY ENGINE + STATE
    ============================================================ */
 
 window.Parlay = {
   legs: [],
+
   addLeg(leg) {
     if (!this.legs.some(l => l.label === leg.label)) {
       this.legs.push(leg);
     }
     renderParlay();
   },
+
   removeLeg(i) {
     this.legs.splice(i, 1);
     renderParlay();
@@ -51,7 +53,9 @@ function americanToDecimal(o) {
 }
 
 function computeParlay() {
-  if (!window.Parlay.legs.length) return { mult: 0, prob: 0, ev: 0 };
+  if (!window.Parlay.legs.length) {
+    return { mult: 0, prob: 0, ev: 0 };
+  }
 
   let mult = 1;
   let prob = 1;
@@ -61,7 +65,11 @@ function computeParlay() {
     prob *= l.prob ?? 0.5;
   });
 
-  return { mult, prob, ev: (prob * mult) - 1 };
+  return {
+    mult,
+    prob,
+    ev: (prob * mult) - 1
+  };
 }
 
 /* ============================================================
@@ -137,7 +145,7 @@ function createGameCard(game) {
 }
 
 /* ============================================================
-   AGGREGATED MARKET (BEST PRICE ONLY)
+   AGGREGATED MARKET (BEST PRICE PER SIDE)
    ============================================================ */
 
 function buildMarket(title, rows = [], game) {
@@ -181,7 +189,7 @@ function buildMarket(title, rows = [], game) {
 }
 
 /* ============================================================
-   PLAYER PROPS (FIXED)
+   PLAYER PROPS (FIXED ACCORDION)
    ============================================================ */
 
 function buildPropsAccordion(game) {
@@ -270,17 +278,20 @@ function buildPropsUI(categories) {
 }
 
 /* ============================================================
-   PARLAY SIDEBAR (BASIC)
+   PARLAY SIDEBAR RENDER
    ============================================================ */
 
 function renderParlay() {
-  const box = document.getElementById("parlay-legs");
-  const sum = document.getElementById("parlay-summary");
-  if (!box || !sum) return;
+  const legsBox = document.getElementById("parlay-legs");
+  const summary = document.getElementById("parlay-summary");
+  const stakeInput = document.getElementById("parlay-stake");
 
-  box.innerHTML = "";
+  if (!legsBox || !summary || !stakeInput) return;
+
+  legsBox.innerHTML = "";
+
   window.Parlay.legs.forEach((l, i) => {
-    box.innerHTML += `
+    legsBox.innerHTML += `
       <div class="parlay-leg">
         ${l.label} (${fmtOdds(l.odds)})
         <span onclick="window.Parlay.removeLeg(${i})">✖</span>
@@ -288,10 +299,17 @@ function renderParlay() {
     `;
   });
 
+  const stake = Number(stakeInput.value || 0);
   const p = computeParlay();
-  sum.innerHTML = `
-    <div>Payout: ${p.mult.toFixed(2)}x</div>
+  const payout = stake * p.mult;
+
+  summary.innerHTML = `
+    <div>${stake.toFixed(2)} to win ${payout.toFixed(2)}</div>
     <div>Prob: ${pct(p.prob)}</div>
     <div class="${evClass(p.ev)}">EV ${pct(p.ev)}</div>
   `;
 }
+
+document
+  .getElementById("parlay-stake")
+  ?.addEventListener("input", renderParlay);

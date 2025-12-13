@@ -1,372 +1,119 @@
-body {
-  background: #0b1020;
-  color: #f8fafc;
-  font-family: Manrope, system-ui, sans-serif;
+/* =====================================================
+   TOP EV BANNER — EMPIREPICKS
+   ===================================================== */
+
+.top-ev-banner {
+  margin: 18px auto 28px;
+  padding: 16px 18px;
+  max-width: 1200px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(17, 24, 39, 0.95),
+    rgba(2, 6, 23, 0.95)
+  );
+
+  border-radius: 18px;
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.35),
+    0 14px 40px rgba(0, 0, 0, 0.55);
 }
 
-.market-box {
-  background: #0f172a;
-  border-radius: 12px;
-  padding: 10px;
-}
-
-.markets-row {
-  display: flex;
-  gap: 12px;
-}
-
-.market-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  padding: 6px;
-  border-radius: 8px;
-}
-
-.market-title {
-  text-align: center;
+/* Banner title */
+.top-ev-banner h3 {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
   font-weight: 600;
-  opacity: 0.85;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fbbf24;
+}
+
+/* Grid layout */
+.top-ev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+/* Individual EV card */
+.top-ev-card {
+  position: relative;
+  padding: 14px 14px 16px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(34, 197, 94, 0.12),
+    rgba(34, 197, 94, 0.05)
+  );
+
+  border-radius: 14px;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(34, 197, 94, 0.35),
+    0 10px 26px rgba(0, 0, 0, 0.45);
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Hover micro-lift */
+.top-ev-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(34, 197, 94, 0.55),
+    0 16px 36px rgba(0, 0, 0, 0.65);
+}
+
+/* Pick label */
+.top-ev-card strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  color: #ecfdf5;
+}
+
+/* Probability + odds */
+.top-ev-card .muted {
+  font-size: 0.75rem;
+  color: #d1fae5;
   margin-bottom: 6px;
 }
 
-.signal-strong {
-  background: linear-gradient(90deg, rgba(22,197,94,.25), transparent);
-}
-
-.signal-medium {
-  background: linear-gradient(90deg, rgba(22,197,94,.15), transparent);
-}
-
-.signal-light {
-  background: linear-gradient(90deg, rgba(22,197,94,.07), transparent);
-}
-
-.ev-green {
-  color: #22c55e;
-  text-shadow: 0 0 8px rgba(34,197,94,.4);
-}
-
-.ev-neutral {
-  color: #94a3b8;
-}
-
-.parlay-btn {
-  background: rgba(255,255,255,.08);
-  border-radius: 999px;
-  padding: 4px 10px;
-  border: 1px solid rgba(255,255,255,.15);
-  cursor: pointer;
-  transition: all .15s;
-}
-
-.parlay-btn:hover {
-  background: linear-gradient(90deg, rgba(234,179,8,.4), rgba(234,179,8,.15));
-  box-shadow: 0 0 12px rgba(234,179,8,.5);
-}
-
-.prop-item {
-  background: rgba(255,255,255,.03);
-  border-radius: 10px;
-  padding: 10px;
+/* EV highlight */
+.top-ev-card .ev-green {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4ade80;
+  text-shadow: 0 0 14px rgba(74, 222, 128, 0.75);
   margin-bottom: 10px;
 }
 
-.prop-side {
-  margin-top: 6px;
-}
+/* Parlay button inside banner */
+.top-ev-card .parlay-btn {
+  width: 100%;
+  padding: 6px 0;
 
-.muted {
-  font-size: .8rem;
-  color: #9ca3af;
-}
-/* =====================================================
-   TEAM LOGO CONTROL
-   ===================================================== */
-
-.teams img {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  margin: 0 6px;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
-}
-
-@media (max-width: 900px) {
-  .teams img {
-    width: 36px;
-    height: 36px;
-  }
-}
-
-/* =====================================================
-   EV / PROBABILITY SIGNAL INTENSITY
-   ===================================================== */
-
-.signal-strong {
   background: linear-gradient(
     90deg,
-    rgba(34,197,94,0.38),
-    rgba(34,197,94,0.12)
+    #fbbf24,
+    #f59e0b
   );
-  box-shadow:
-    inset 0 0 0 1px rgba(34,197,94,0.45),
-    0 0 22px rgba(34,197,94,0.35);
-}
 
-.signal-medium {
-  background: linear-gradient(
-    90deg,
-    rgba(34,197,94,0.22),
-    rgba(34,197,94,0.06)
-  );
-  box-shadow:
-    inset 0 0 0 1px rgba(34,197,94,0.28);
-}
-
-.signal-light {
-  background: linear-gradient(
-    90deg,
-    rgba(34,197,94,0.12),
-    transparent
-  );
-}
-
-.signal-neutral {
-  background: transparent;
-}
-
-/* =====================================================
-   PROBABILITY GAP EMPHASIS
-   ===================================================== */
-
-.signal-strong .muted {
-  color: #ecfdf5;
-  font-weight: 600;
-}
-
-.signal-medium .muted {
-  color: #d1fae5;
-}
-
-.signal-light .muted {
-  color: #a7f3d0;
-}
-
-/* =====================================================
-   MICRO-ANIMATIONS (SUBTLE, ADDICTIVE)
-   ===================================================== */
-
-.market-row,
-.prop-side {
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
-}
-
-.market-row:hover,
-.prop-side:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
-}
-
-/* =====================================================
-   PARLAY BUTTON JUICE
-   ===================================================== */
-
-.parlay-btn {
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease,
-    background 0.12s ease;
-}
-
-.parlay-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 16px rgba(234,179,8,0.55);
-}
-/* =====================================================
-   PROP VISUAL RESET – HIGH CONTRAST
-   ===================================================== */
-
-/* Entire props section gets a soft slate panel */
-.accordion .panel {
-  background: linear-gradient(
-    180deg,
-    #0b1224,
-    #070b16
-  );
-  border-radius: 14px;
-  padding: 12px;
-  margin-top: 10px;
-}
-
-/* Each player prop card */
-.prop-item {
-  background: linear-gradient(
-    180deg,
-    rgba(56, 189, 248, 0.12),
-    rgba(56, 189, 248, 0.05)
-  );
-  border-radius: 14px;
-  padding: 12px;
-  margin-bottom: 14px;
-  box-shadow:
-    inset 0 0 0 1px rgba(56,189,248,0.25),
-    0 10px 28px rgba(0,0,0,0.45);
-}
-
-/* Player name stands out */
-.prop-item > strong {
-  font-size: 1rem;
-  color: #e0f2fe;
-}
-
-/* Prop category headers */
-.panel h4 {
-  margin: 18px 0 8px;
-  color: #7dd3fc;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-}
-
-/* Over / Under blocks */
-.prop-side {
-  background: rgba(2, 6, 23, 0.6);
-  border-radius: 12px;
-  padding: 10px;
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: center;
-}
-
-/* Prop probability text */
-.prop-side .muted {
-  color: #bae6fd;
-  font-size: 0.78rem;
-}
-
-/* EV in props is calmer than markets */
-.prop-side .ev-green {
-  color: #60a5fa;
-  text-shadow: 0 0 10px rgba(96,165,250,0.45);
-}
-
-/* =====================================================
-   PROP PARLAY BUTTON – DISTINCT COLOR
-   ===================================================== */
-
-.prop-side .parlay-btn {
-  background: linear-gradient(
-    90deg,
-    rgba(56,189,248,0.45),
-    rgba(99,102,241,0.45)
-  );
-  border: none;
-  color: #020617;
-  font-weight: 600;
-  box-shadow: 0 0 16px rgba(56,189,248,0.55);
-}
-
-.prop-side .parlay-btn:hover {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 0 26px rgba(56,189,248,0.75);
-}
-
-/* =====================================================
-   VISUAL SEPARATION FROM MAIN MARKETS
-   ===================================================== */
-
-.market-box {
-  margin-bottom: 6px;
-}
-
-.accordion-title {
-  margin-top: 16px;
-  background: linear-gradient(
-    90deg,
-    rgba(56,189,248,0.25),
-    transparent
-  );
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  color: #e0f2fe;
-}
-/* =====================================================
-   PROP ROW BRIGHTNESS & CONTRAST FIX
-   ===================================================== */
-
-/* Lift each Over / Under row into a light card */
-.prop-side {
-  background: linear-gradient(
-    180deg,
-    rgba(226, 232, 240, 0.14),
-    rgba(148, 163, 184, 0.06)
-  );
-  border-radius: 12px;
-  padding: 12px;
-  margin-top: 10px;
-  box-shadow:
-    inset 0 0 0 1px rgba(148,163,184,0.35),
-    0 8px 22px rgba(0,0,0,0.35);
-}
-
-/* Make text pop against lighter prop rows */
-.prop-side strong,
-.prop-side {
-  color: #f8fafc;
-}
-
-/* Probability text: readable, not muted to death */
-.prop-side .muted {
-  color: #e5e7eb;
-  font-size: 0.8rem;
-}
-
-/* EV for props: cooler, brighter blue */
-.prop-side .ev-green {
-  color: #7dd3fc;
-  font-weight: 600;
-  text-shadow: 0 0 12px rgba(125,211,252,0.6);
-}
-
-/* =====================================================
-   PROP PARLAY BUTTON – HIGH VISIBILITY
-   ===================================================== */
-
-.prop-side .parlay-btn {
-  background: linear-gradient(
-    90deg,
-    #38bdf8,
-    #6366f1
-  );
   color: #020617;
   font-weight: 700;
-  border: none;
   border-radius: 999px;
-  padding: 6px 14px;
+  border: none;
+
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.4),
-    0 0 22px rgba(56,189,248,0.75);
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 0 20px rgba(245, 158, 11, 0.6);
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Hover = unmistakable */
-.prop-side .parlay-btn:hover {
-  transform: translateY(-1px) scale(1.04);
+.top-ev-card .parlay-btn:hover {
+  transform: scale(1.04);
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.6),
-    0 0 32px rgba(56,189,248,0.95);
-}
-
-/* =====================================================
-   VISUAL RHYTHM BETWEEN OVER / UNDER
-   ===================================================== */
-
-.prop-side + .prop-side {
-  margin-top: 12px;
+    0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 0 28px rgba(245, 158, 11, 0.85);
 }

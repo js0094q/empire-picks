@@ -10,7 +10,23 @@
   <script type="module" src="teams.js"></script>
   <script type="module" src="script.js"></script>
 </head>
+  
+<!-- PARLAY SIDEBAR -->
+<aside id="parlay-sidebar" class="parlay-sidebar">
+  <h3>Parlay</h3>
 
+  <div id="parlay-legs" class="parlay-legs"></div>
+
+  <div class="parlay-stake">
+    <label>Stake</label>
+    <input id="parlay-stake" type="number" value="10" min="1" />
+  </div>
+
+  <div id="parlay-summary" class="parlay-summary"></div>
+
+  <button class="place-bet">Place Bet</button>
+</aside>
+  
 <body>
 
   <header class="ep-header">

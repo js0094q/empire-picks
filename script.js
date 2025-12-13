@@ -1,73 +1,41 @@
-/******************************************************
- * EMPIREPICKS — CORE APP LOGIC
- ******************************************************/
-
 const API_EVENTS = "/api/events";
-const API_PROPS  = "/api/props";
+const API_PROPS = "/api/props";
 
 let PARLAY = [];
 
-/******************************************************
- * UTILITIES
- ******************************************************/
+/* ------------------ UTIL ------------------ */
 
-function americanToImplied(odds) {
-  return odds > 0
-    ? 100 / (odds + 100)
-    : Math.abs(odds) / (Math.abs(odds) + 100);
-}
+const americanToImplied = o =>
+  o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 
-function formatPct(x) {
-  return (x * 100).toFixed(1) + "%";
-}
+const decOdds = o => (o > 0 ? 1 + o / 100 : 1 + 100 / Math.abs(o));
 
-function decimalOdds(odds) {
-  return odds > 0
-    ? 1 + odds / 100
-    : 1 + 100 / Math.abs(odds);
-}
+const pct = x => (x * 100).toFixed(1) + "%";
 
-/******************************************************
- * MODEL PROBABILITY (IMPORTANT)
- *
- * Model Prob = normalized, no-vig consensus
- *
- * Steps:
- * 1. Convert all bookmaker odds → implied probs
- * 2. Average them
- * 3. Normalize so outcomes sum to 100%
- *
- * This reflects "what the books think will happen"
- ******************************************************/
+/* ------------------ MODEL ------------------ */
+/*
+Model probability = no-vig normalized consensus
 
-function modelProbability(outcomes) {
-  const total = outcomes.reduce((s, o) => s + o.implied, 0);
+Steps:
+1. Convert odds → implied
+2. Sum implied
+3. Normalize so outcomes sum to 1
+*/
+
+function normalize(outcomes) {
+  const sum = outcomes.reduce((s, o) => s + o.implied, 0);
   return outcomes.map(o => ({
     ...o,
-    modelProb: o.implied / total
+    modelProb: o.implied / sum
   }));
 }
 
-/******************************************************
- * EV CALCULATION
- *
- * EV = (Model Prob × Decimal Odds) − 1
- ******************************************************/
+const EV = (p, odds) => (p * decOdds(odds) - 1) * 100;
 
-function expectedValue(modelProb, odds) {
-  return (modelProb * decimalOdds(odds)) - 1;
-}
-
-/******************************************************
- * PARLAY LOGIC
- ******************************************************/
+/* ------------------ PARLAY ------------------ */
 
 function addToParlay(leg) {
-  const exists = PARLAY.some(
-    p => p.id === leg.id
-  );
-  if (exists) return;
-
+  if (PARLAY.some(p => p.id === leg.id)) return;
   PARLAY.push(leg);
   renderParlay();
 }
@@ -78,70 +46,56 @@ function removeFromParlay(id) {
 }
 
 function renderParlay() {
-  const el = document.getElementById("parlay-items");
-  const stakeInput = document.getElementById("stake");
+  const box = document.getElementById("parlay-items");
+  const stake = +document.getElementById("stake")?.value || 0;
+  const math = document.getElementById("parlay-math");
 
-  if (!el) return;
-  el.innerHTML = "";
+  if (!box) return;
+
+  box.innerHTML = "";
 
   if (!PARLAY.length) {
-    el.innerHTML = `<div class="muted">No selections</div>`;
-    updateParlayMath();
+    math.innerHTML = "";
     return;
   }
 
+  let prob = 1;
+  let odds = 1;
+
   PARLAY.forEach(p => {
+    prob *= p.modelProb;
+    odds *= decOdds(p.odds);
+
     const row = document.createElement("div");
     row.className = "parlay-row";
     row.innerHTML = `
       <span>${p.label}</span>
       <button onclick="removeFromParlay('${p.id}')">✕</button>
     `;
-    el.appendChild(row);
+    box.appendChild(row);
   });
 
-  updateParlayMath();
-}
+  const win = (stake * (odds - 1)).toFixed(2);
+  const ev = ((prob * odds) - 1) * 100;
 
-function updateParlayMath() {
-  const stake = Number(document.getElementById("stake")?.value || 0);
-
-  if (!PARLAY.length || !stake) {
-    document.getElementById("parlay-math").innerHTML = "";
-    return;
-  }
-
-  let combinedProb = 1;
-  let combinedOdds = 1;
-
-  PARLAY.forEach(p => {
-    combinedProb *= p.modelProb;
-    combinedOdds *= decimalOdds(p.odds);
-  });
-
-  const win = (stake * (combinedOdds - 1)).toFixed(2);
-  const ev  = ((combinedProb * combinedOdds) - 1) * 100;
-
-  document.getElementById("parlay-math").innerHTML = `
+  math.innerHTML = `
     <div>To win: $${win}</div>
-    <div>Prob: ${formatPct(combinedProb)}</div>
+    <div>Prob: ${pct(prob)}</div>
     <div class="${ev > 0 ? "ev-green" : "ev-red"}">EV ${ev.toFixed(1)}%</div>
   `;
 }
 
-/******************************************************
- * RENDER MAIN MARKETS
- ******************************************************/
+/* ------------------ MARKETS ------------------ */
 
-function renderMainMarkets(event) {
-  const container = document.createElement("div");
-  container.className = "market-row";
+function renderMarkets(ev) {
+  const row = document.createElement("div");
+  row.className = "market-row";
 
   ["h2h", "spreads", "totals"].forEach(type => {
-    const market = event.books[type];
+    const market = ev.books[type];
     if (!market) return;
 
-    const modeled = modelProbability(
+    const modeled = normalize(
       Object.values(market).map(o => ({
         ...o,
         implied: americanToImplied(o.odds)
@@ -153,39 +107,35 @@ function renderMainMarkets(event) {
     box.innerHTML = `<h4>${type === "h2h" ? "Moneyline" : type}</h4>`;
 
     modeled.forEach(o => {
-      const ev = expectedValue(o.modelProb, o.odds) * 100;
-      const id = `${event.id}-${type}-${o.name}`;
+      const evp = EV(o.modelProb, o.odds);
+      const id = `${ev.id}-${type}-${o.name}`;
 
-      const row = document.createElement("div");
-      row.className = `market-leg ${ev > 0 ? "good" : ""}`;
-      row.innerHTML = `
+      const leg = document.createElement("div");
+      leg.className = "market-leg";
+      leg.innerHTML = `
         <strong>${o.name} ${o.odds > 0 ? "+" : ""}${o.odds}</strong>
         <div class="muted">
-          Book: ${formatPct(o.implied)} · Model: ${formatPct(o.modelProb)}
+          Book ${pct(o.implied)} · Model ${pct(o.modelProb)}
         </div>
-        <div class="ev-green">EV ${ev.toFixed(1)}%</div>
-        <button
-          class="parlay-btn"
+        <div class="ev-green">EV ${evp.toFixed(1)}%</div>
+        <button class="parlay-btn"
           onclick='addToParlay({
             id:"${id}",
-            label:"${event.away_team} @ ${event.home_team} — ${o.name}",
+            label:"${ev.away_team} @ ${ev.home_team} — ${o.name}",
             odds:${o.odds},
             modelProb:${o.modelProb}
-          })'
-        >+ Parlay</button>
+          })'>+ Parlay</button>
       `;
-      box.appendChild(row);
+      box.appendChild(leg);
     });
 
-    container.appendChild(box);
+    row.appendChild(box);
   });
 
-  return container;
+  return row;
 }
 
-/******************************************************
- * RENDER PROPS
- ******************************************************/
+/* ------------------ PROPS (FIXED) ------------------ */
 
 function renderProps(props, eventId) {
   const panel = document.createElement("div");
@@ -196,30 +146,36 @@ function renderProps(props, eventId) {
     h.textContent = category;
     panel.appendChild(h);
 
-    players.forEach(p => {
+    // players is OBJECT, not array
+    Object.entries(players).forEach(([player, data]) => {
       const item = document.createElement("div");
       item.className = "prop-item";
-      item.innerHTML = `<strong>${p.player}</strong>`;
+      item.innerHTML = `<strong>${player}</strong>`;
 
-      p.outcomes.forEach(o => {
-        const ev = expectedValue(o.modelProb, o.odds) * 100;
-        const id = `${eventId}-prop-${p.player}-${o.label}`;
+      const modeled = normalize(
+        data.outcomes.map(o => ({
+          ...o,
+          implied: americanToImplied(o.odds)
+        }))
+      );
+
+      modeled.forEach(o => {
+        const evp = EV(o.modelProb, o.odds);
+        const id = `${eventId}-prop-${player}-${o.label}`;
 
         const row = document.createElement("div");
         row.className = "prop-side";
         row.innerHTML = `
           <span>${o.label} ${o.odds > 0 ? "+" : ""}${o.odds}</span>
-          <span class="muted">Book ${formatPct(o.implied)} · Model ${formatPct(o.modelProb)}</span>
-          <span class="ev-green">EV ${ev.toFixed(1)}%</span>
-          <button
-            class="parlay-btn"
+          <span class="muted">Book ${pct(o.implied)} · Model ${pct(o.modelProb)}</span>
+          <span class="ev-green">EV ${evp.toFixed(1)}%</span>
+          <button class="parlay-btn"
             onclick='addToParlay({
               id:"${id}",
-              label:"${p.player} ${o.label}",
+              label:"${player} ${o.label}",
               odds:${o.odds},
               modelProb:${o.modelProb}
-            })'
-          >+ Parlay</button>
+            })'>+ Parlay</button>
         `;
         item.appendChild(row);
       });
@@ -231,9 +187,7 @@ function renderProps(props, eventId) {
   return panel;
 }
 
-/******************************************************
- * LOAD EVENTS
- ******************************************************/
+/* ------------------ LOAD ------------------ */
 
 async function load() {
   const root = document.getElementById("games-container");
@@ -252,10 +206,14 @@ async function load() {
       </div>
     `;
 
-    card.appendChild(renderMainMarkets(ev));
+    card.appendChild(renderMarkets(ev));
 
-    const props = await fetch(`${API_PROPS}?eventId=${ev.id}`).then(r => r.json());
-    card.appendChild(renderProps(props, ev.id));
+    try {
+      const props = await fetch(`${API_PROPS}?eventId=${ev.id}`).then(r => r.json());
+      card.appendChild(renderProps(props, ev.id));
+    } catch {
+      /* props optional */
+    }
 
     root.appendChild(card);
   }

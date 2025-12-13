@@ -8,6 +8,7 @@ const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
 function impliedProb(o) {
+  if (o == null) return NaN;
   return o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 }
 
@@ -88,11 +89,13 @@ function computeParlay() {
 
 async function fetchGames() {
   const r = await fetch("/api/events");
+  if (!r.ok) throw new Error("Failed to fetch /api/events");
   return r.json();
 }
 
 async function fetchProps(id) {
-  const r = await fetch(`/api/props?id=${id}`);
+  const r = await fetch(`/api/props?id=${encodeURIComponent(id)}`);
+  if (!r.ok) throw new Error("Failed to fetch /api/props");
   return r.json();
 }
 
@@ -101,7 +104,8 @@ async function fetchProps(id) {
    ============================================================ */
 
 const gamesContainer = document.getElementById("games-container");
-document.getElementById("refresh-btn").onclick = loadGames;
+const refreshBtn = document.getElementById("refresh-btn");
+if (refreshBtn) refreshBtn.onclick = loadGames;
 
 loadGames();
 
@@ -113,12 +117,23 @@ async function loadGames() {
   gamesContainer.innerHTML = `<div class="loading">Loading NFL games…</div>`;
   autoPickCandidates.length = 0;
 
-  const games = await fetchGames();
-  gamesContainer.innerHTML = "";
+  try {
+    const games = await fetchGames();
+    gamesContainer.innerHTML = "";
 
-  games.forEach(g => gamesContainer.appendChild(createGameCard(g)));
+    if (!Array.isArray(games) || !games.length) {
+      gamesContainer.innerHTML = `<div class="muted">No games available.</div>`;
+      renderTopPicks();
+      return;
+    }
 
-  renderTopPicks();
+    games.forEach(g => gamesContainer.appendChild(createGameCard(g)));
+    renderTopPicks();
+  } catch (e) {
+    console.error(e);
+    gamesContainer.innerHTML = `<div class="muted">Failed to load games. Check API key/quota.</div>`;
+    renderTopPicks();
+  }
 }
 
 /* ============================================================
@@ -129,28 +144,31 @@ function createGameCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
 
-  const home = Teams[game.home_team];
-  const away = Teams[game.away_team];
+  const home = Teams?.[game.home_team] || { logo: "" };
+  const away = Teams?.[game.away_team] || { logo: "" };
 
   card.innerHTML = `
     <div class="game-header">
       <div class="teams">
-        <img src="${away.logo}">
-        ${game.away_team}
+        ${away.logo ? `<img src="${away.logo}" alt="${game.away_team}">` : ""}
+        ${game.away_team || "Away"}
         <span>@</span>
-        <img src="${home.logo}">
-        ${game.home_team}
+        ${home.logo ? `<img src="${home.logo}" alt="${game.home_team}">` : ""}
+        ${game.home_team || "Home"}
       </div>
-      <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
+      <div class="kickoff">${game.commence_time ? kickoffLocal(game.commence_time) : ""}</div>
     </div>
   `;
 
   const markets = document.createElement("div");
   markets.className = "markets-row";
 
-  markets.appendChild(buildMarket("Moneyline", game.books.h2h, game));
-  markets.appendChild(buildMarket("Spread", game.books.spreads, game));
-  markets.appendChild(buildMarket("Total", game.books.totals, game));
+  // Guard if API returns missing books
+  const books = game.books || { h2h: [], spreads: [], totals: [] };
+
+  markets.appendChild(buildMarket("Moneyline", books.h2h || [], game));
+  markets.appendChild(buildMarket("Spread", books.spreads || [], game));
+  markets.appendChild(buildMarket("Total", books.totals || [], game));
 
   card.appendChild(markets);
   card.appendChild(buildPropsAccordion(game));
@@ -167,27 +185,37 @@ function buildMarket(title, rows, game) {
   box.className = "market-box";
   box.innerHTML = `<div class="market-title">${title}</div>`;
 
+  if (!Array.isArray(rows) || !rows.length) {
+    box.innerHTML += `<div class="muted" style="padding:8px;">No lines</div>`;
+    return box;
+  }
+
   const best = {};
 
-  rows.forEach(r =>
+  rows.forEach(r => {
+    if (!r) return;
     [r.outcome1, r.outcome2].forEach(o => {
-      if (!best[o.name] || o.odds > best[o.name].odds) {
-        best[o.name] = o;
-      }
-    })
-  );
+      if (!o || o.odds == null) return;
+      if (!best[o.name] || o.odds > best[o.name].odds) best[o.name] = o;
+    });
+  });
 
   Object.values(best).forEach(o => {
-    const implied = impliedProb(o.odds);
-    const delta = o.fair - implied;
+    const imp = impliedProb(o.odds);
+    const fair = Number(o.fair);
+    const edge = Number(o.edge);
 
-    if (o.edge > 0.03 && o.fair > 0.55) {
+    if (!isFinite(imp) || !isFinite(fair) || !isFinite(edge)) return;
+
+    const delta = fair - imp;
+
+    if (edge > 0.03 && fair > 0.55) {
       autoPickCandidates.push({
         label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
         odds: o.odds,
-        prob: o.fair,
-        ev: o.edge,
-        score: pickScore(o.fair, o.edge)
+        prob: fair,
+        ev: edge,
+        score: pickScore(fair, edge)
       });
     }
 
@@ -197,14 +225,14 @@ function buildMarket(title, rows, game) {
       <div>
         <strong>${o.name}</strong> ${fmtOdds(o.odds)}
         <div class="muted">
-          Book: ${pct(implied)} • Model: ${pct(o.fair)}
+          Book: ${pct(imp)} • Model: ${pct(fair)}
         </div>
       </div>
-      <div class="${evClass(o.edge)}">EV ${pct(o.edge)}</div>
+      <div class="${evClass(edge)}">EV ${pct(edge)}</div>
       <button class="parlay-btn"
         data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
         data-odds="${o.odds}"
-        data-prob="${o.fair}">
+        data-prob="${fair}">
         + Parlay
       </button>
     `;
@@ -214,6 +242,10 @@ function buildMarket(title, rows, game) {
 
   return box;
 }
+
+/* ============================================================
+   PLAYER PROPS (FILTER OUT NULL / NON-PLAYABLE)
+   ============================================================ */
 
 function isValidOdds(o) {
   return typeof o === "number" && isFinite(o) && o !== 0;
@@ -225,18 +257,61 @@ function isMeaningfulSide(odds, prob) {
   return true;
 }
 
+/* Accordion wrapper restored (this was the crash) */
+function buildPropsAccordion(game) {
+  const acc = document.createElement("div");
+  acc.className = "accordion";
+
+  const title = document.createElement("div");
+  title.className = "accordion-title";
+  title.textContent = "Player Props";
+
+  const panel = document.createElement("div");
+  panel.className = "panel";
+
+  let loaded = false;
+
+  title.onclick = async () => {
+    const open = panel.classList.toggle("open");
+    if (!open) return;
+
+    if (loaded) return;
+    loaded = true;
+
+    panel.innerHTML = `<div class="muted">Loading props…</div>`;
+
+    try {
+      const data = await fetchProps(game.id);
+      const categories = data?.categories || {};
+      panel.innerHTML = buildPropsUI(categories);
+      renderTopPicks(); // update picks after props populate
+    } catch (e) {
+      console.error(e);
+      panel.innerHTML = `<div class="muted">Props unavailable for this game.</div>`;
+    }
+  };
+
+  acc.appendChild(title);
+  acc.appendChild(panel);
+  return acc;
+}
+
 function buildPropsUI(categories) {
   let html = "";
 
-  Object.entries(categories).forEach(([cat, props]) => {
-    let renderedAny = false;
+  const entries = Object.entries(categories || {});
+  if (!entries.length) return `<div class="muted">No playable props available.</div>`;
+
+  entries.forEach(([cat, props]) => {
+    if (!Array.isArray(props) || !props.length) return;
 
     let section = `<h4>${cat}</h4>`;
+    let renderedAny = false;
 
     props.forEach(p => {
       const sides = [];
 
-      // ---- OVER ----
+      // OVER
       if (isMeaningfulSide(p.over_odds, p.over_prob)) {
         const impO = impliedProb(p.over_odds);
         const dO = p.over_prob - impO;
@@ -244,9 +319,7 @@ function buildPropsUI(categories) {
         sides.push(`
           <div class="prop-side ${signalClass(dO)}">
             Over ${fmtOdds(p.over_odds)}
-            <div class="muted">
-              Book ${pct(impO)} • Model ${pct(p.over_prob)}
-            </div>
+            <div class="muted">Book ${pct(impO)} • Model ${pct(p.over_prob)}</div>
             <span class="ev-green">EV ${pct(p.over_ev)}</span>
             <button class="parlay-btn"
               data-label="${p.player} Over ${p.point}"
@@ -257,7 +330,6 @@ function buildPropsUI(categories) {
           </div>
         `);
 
-        // Top-pick candidate
         if (p.over_ev > 0.03 && p.over_prob > 0.55) {
           autoPickCandidates.push({
             label: `${p.player} Over ${p.point}`,
@@ -269,7 +341,7 @@ function buildPropsUI(categories) {
         }
       }
 
-      // ---- UNDER ----
+      // UNDER
       if (isMeaningfulSide(p.under_odds, p.under_prob)) {
         const impU = impliedProb(p.under_odds);
         const dU = p.under_prob - impU;
@@ -277,9 +349,7 @@ function buildPropsUI(categories) {
         sides.push(`
           <div class="prop-side ${signalClass(dU)}">
             Under ${fmtOdds(p.under_odds)}
-            <div class="muted">
-              Book ${pct(impU)} • Model ${pct(p.under_prob)}
-            </div>
+            <div class="muted">Book ${pct(impU)} • Model ${pct(p.under_prob)}</div>
             <span class="ev-green">EV ${pct(p.under_ev)}</span>
             <button class="parlay-btn"
               data-label="${p.player} Under ${p.point}"
@@ -301,11 +371,10 @@ function buildPropsUI(categories) {
         }
       }
 
-      // If neither side is real, skip player entirely
+      // Skip prop entirely if neither side is playable
       if (!sides.length) return;
 
       renderedAny = true;
-
       section += `
         <div class="prop-item">
           <strong>${p.player}</strong>
@@ -315,10 +384,7 @@ function buildPropsUI(categories) {
       `;
     });
 
-    // Only add category if it rendered something real
-    if (renderedAny) {
-      html += section;
-    }
+    if (renderedAny) html += section;
   });
 
   return html || `<div class="muted">No playable props available.</div>`;
@@ -346,10 +412,12 @@ document.addEventListener("click", e => {
 function renderParlay() {
   const legs = document.getElementById("parlay-legs");
   const sum = document.getElementById("parlay-summary");
-  const stake = Number(document.getElementById("parlay-stake").value || 0);
+  const stake = Number(document.getElementById("parlay-stake")?.value || 0);
+
+  if (!legs || !sum) return;
 
   legs.innerHTML = "";
-  window.Parlay.legs.forEach((l, i) => {
+  window.Parlay.legs.forEach(l => {
     legs.innerHTML += `<div>${l.label} (${fmtOdds(l.odds)})</div>`;
   });
 
@@ -362,7 +430,8 @@ function renderParlay() {
   `;
 }
 
-document.getElementById("parlay-stake").oninput = renderParlay;
+const stakeInput = document.getElementById("parlay-stake");
+if (stakeInput) stakeInput.oninput = renderParlay;
 
 /* ============================================================
    TOP PICKS
@@ -373,12 +442,13 @@ function renderTopPicks() {
   if (!box) return;
 
   const picks = [...autoPickCandidates]
+    .filter(p => isFinite(p.score) && isFinite(p.prob) && isFinite(p.ev))
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
 
   box.innerHTML = `
     <h3>Top Picks (Model-Weighted)</h3>
-    ${picks.map(p => `
+    ${picks.length ? picks.map(p => `
       <div class="top-pick">
         <strong>${p.label}</strong>
         <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
@@ -389,6 +459,6 @@ function renderTopPicks() {
           + Parlay
         </button>
       </div>
-    `).join("")}
+    `).join("") : `<div class="muted">No picks yet.</div>`}
   `;
 }

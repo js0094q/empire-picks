@@ -1,8 +1,8 @@
 import { Teams } from "./teams.js";
 
-/* ================================
+/* ============================================================
    HELPERS
-================================ */
+   ============================================================ */
 
 const pct = x => `${(x * 100).toFixed(1)}%`;
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
@@ -29,9 +29,9 @@ function signalClass(delta) {
   return "signal-neutral";
 }
 
-/* ================================
+/* ============================================================
    CONSENSUS STRENGTH
-================================ */
+   ============================================================ */
 
 function consensusStrength(prob, ev) {
   const p = Math.min(Math.max((prob - 0.55) / 0.20, 0), 1);
@@ -48,39 +48,98 @@ function consensusClass(label) {
   return `consensus-${label.toLowerCase()}`;
 }
 
-/* ================================
+/* ============================================================
    STATE
-================================ */
+   ============================================================ */
 
 const autoPickCandidates = [];
 const gamesContainer = document.getElementById("games-container");
 
-/* ================================
+/* ============================================================
+   PARLAY STATE (MODAL)
+   ============================================================ */
+
+window.Parlay = {
+  legs: [],
+  addLeg(leg) {
+    if (!this.legs.some(l => l.label === leg.label)) {
+      this.legs.push(leg);
+      renderParlay();
+    }
+  },
+  removeLeg(i) {
+    this.legs.splice(i, 1);
+    renderParlay();
+  }
+};
+
+function americanToDecimal(o) {
+  return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
+}
+
+function computeParlay() {
+  let mult = 1;
+  let prob = 1;
+
+  window.Parlay.legs.forEach(l => {
+    mult *= americanToDecimal(l.odds);
+    prob *= l.prob;
+  });
+
+  return {
+    mult,
+    prob,
+    ev: prob * mult - 1
+  };
+}
+
+/* ============================================================
+   PARLAY MODAL CONTROLS
+   ============================================================ */
+
+const parlayModal = document.getElementById("parlay-modal");
+const parlayBackdrop = document.getElementById("parlay-backdrop");
+const closeParlayBtn = document.getElementById("close-parlay");
+
+function openParlay() {
+  parlayBackdrop?.classList.add("open");
+  parlayModal?.classList.add("open");
+}
+
+function closeParlay() {
+  parlayBackdrop?.classList.remove("open");
+  parlayModal?.classList.remove("open");
+}
+
+parlayBackdrop?.addEventListener("click", closeParlay);
+closeParlayBtn?.addEventListener("click", closeParlay);
+
+/* ============================================================
    FETCH
-================================ */
+   ============================================================ */
 
 async function fetchGames() {
   const r = await fetch("/api/events");
-  if (!r.ok) throw new Error("Events fetch failed");
+  if (!r.ok) throw new Error("Failed to fetch events");
   return r.json();
 }
 
 async function fetchProps(id) {
   const r = await fetch(`/api/props?id=${encodeURIComponent(id)}`);
-  if (!r.ok) throw new Error("Props fetch failed");
+  if (!r.ok) throw new Error("Failed to fetch props");
   return r.json();
 }
 
-/* ================================
+/* ============================================================
    INIT
-================================ */
+   ============================================================ */
 
 document.getElementById("refresh-btn")?.addEventListener("click", loadGames);
 loadGames();
 
-/* ================================
+/* ============================================================
    LOAD GAMES
-================================ */
+   ============================================================ */
 
 async function loadGames() {
   gamesContainer.innerHTML = `<div class="muted">Loading NFL games…</div>`;
@@ -97,9 +156,9 @@ async function loadGames() {
   }
 }
 
-/* ================================
+/* ============================================================
    GAME CARD
-================================ */
+   ============================================================ */
 
 function createGameCard(game) {
   const card = document.createElement("div");
@@ -133,9 +192,9 @@ function createGameCard(game) {
   return card;
 }
 
-/* ================================
+/* ============================================================
    MARKETS
-================================ */
+   ============================================================ */
 
 function buildMarket(title, rows, game) {
   const box = document.createElement("div");
@@ -182,12 +241,12 @@ function buildMarket(title, rows, game) {
   return box;
 }
 
-/* ================================
+/* ============================================================
    PROPS
-================================ */
+   ============================================================ */
 
 function isMeaningful(odds, prob) {
-  return isFinite(odds) && isFinite(prob) && prob > 0.05 && prob < 0.85;
+  return isFinite(odds) && isFinite(prob) && prob > 0.55 && prob < 0.75;
 }
 
 function buildPropsAccordion(game) {
@@ -281,9 +340,9 @@ function propSide(p, side) {
   `;
 }
 
-/* ================================
-   PICK FILTER (CRITICAL)
-================================ */
+/* ============================================================
+   PICK FILTER
+   ============================================================ */
 
 function trackPick(label, odds, prob, ev) {
   if (!isFinite(prob) || !isFinite(ev)) return;
@@ -294,9 +353,9 @@ function trackPick(label, odds, prob, ev) {
   autoPickCandidates.push({ label, odds, prob, ev });
 }
 
-/* ================================
+/* ============================================================
    TOP PICKS
-================================ */
+   ============================================================ */
 
 function renderTopPicks() {
   const box = document.getElementById("top-picks");
@@ -323,17 +382,19 @@ function renderTopPicks() {
   `;
 }
 
-/* ================================
-   PARLAY
-================================ */
+/* ============================================================
+   GLOBAL PARLAY CLICK
+   ============================================================ */
 
 document.addEventListener("click", e => {
   const btn = e.target.closest(".parlay-btn");
   if (!btn) return;
 
-  window.Parlay?.addLeg({
+  window.Parlay.addLeg({
     label: btn.dataset.label,
     odds: Number(btn.dataset.odds),
     prob: Number(btn.dataset.prob)
   });
+
+  openParlay();
 });

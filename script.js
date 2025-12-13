@@ -41,77 +41,6 @@ function kickoffLocal(utc) {
 }
 
 /* ============================================================
-   PARLAY ENGINE
-   ============================================================ */
-
-window.Parlay = {
-  legs: [],
-
-  addLeg(leg) {
-    // Prevent duplicate exact legs
-    if (!this.legs.some(l => l.label === leg.label && l.odds === leg.odds)) {
-      this.legs.push(leg);
-    }
-    renderParlay();
-  },
-
-  removeLeg(i) {
-    this.legs.splice(i, 1);
-    renderParlay();
-  }
-};
-
-function americanToDecimal(odds) {
-  if (odds > 0) return (odds / 100) + 1;
-  return (100 / Math.abs(odds)) + 1;
-}
-
-function computeParlay() {
-  if (!window.Parlay.legs.length) return { payout: 0, prob: 0, ev: 0 };
-
-  let payout = 1;
-  let prob = 1;
-
-  window.Parlay.legs.forEach(l => {
-    payout *= americanToDecimal(l.odds);
-    prob *= l.prob || 0.5;
-  });
-
-  const ev = (prob * payout) - 1;
-
-  return { payout, prob, ev };
-}
-
-function renderParlay() {
-  const box = document.getElementById("parlay-legs");
-  const sum = document.getElementById("parlay-summary");
-
-  if (!box || !sum) return;
-
-  box.innerHTML = "";
-  window.Parlay.legs.forEach((l, i) => {
-    box.innerHTML += `
-      <div class="parlay-leg">
-        ${l.label} (${fmtOdds(l.odds)})
-        <span class="remove-leg" onclick="window.Parlay.removeLeg(${i})">✖</span>
-      </div>
-    `;
-  });
-
-  const { payout, prob, ev } = computeParlay();
-
-  sum.innerHTML = `
-    <hr>
-    <div><strong>Legs:</strong> ${window.Parlay.legs.length}</div>
-    <div><strong>Payout Multiplier:</strong> ${payout.toFixed(2)}x</div>
-    <div><strong>Probability:</strong> ${fmtProb(prob)}</div>
-    <div><strong>Expected Value:</strong> 
-      <span class="${evClass(ev)}">${fmtEV(ev)}</span>
-    </div>
-  `;
-}
-
-/* ============================================================
    FETCH HELPERS
    ============================================================ */
 
@@ -133,7 +62,7 @@ const container = document.getElementById("games-container");
 document.getElementById("refresh-btn").onclick = () => loadGames();
 
 window.AppState = {
-  games: {},
+  games: {},            // eventId -> last known snapshot
   lastUpdated: null
 };
 
@@ -165,10 +94,10 @@ async function loadGames() {
 }
 
 /* ============================================================
-   AUTO REFRESH ENGINE
+   DYNAMIC UPDATE ENGINE (AUTO REFRESH)
    ============================================================ */
 
-const REFRESH_MS = 30000;
+const REFRESH_MS = 30000; // 30 seconds
 
 setInterval(async () => {
   try {
@@ -178,6 +107,7 @@ setInterval(async () => {
       const old = window.AppState.games[g.id];
 
       if (!old) {
+        // First-time event appears mid-session
         window.AppState.games[g.id] = g;
         container.appendChild(createCard(g));
         return;
@@ -225,96 +155,51 @@ function createCard(game) {
 
     <div class="market-grid">
 
-      <!-- MONEYLINE -->
       <div class="market-box">
         <div>Moneyline</div>
-
         <div>
           ${awayAbbr}: ${fmtOdds(best.ml.away.odds)}
           <div class="${evClass(best.ml.away.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(best.ml.away.ev)} • Prob ${fmtProb(best.ml.away.consensus_prob)}
           </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${awayAbbr} ML",
-              odds: ${best.ml.away.odds},
-              prob: ${best.ml.away.consensus_prob}
-            })'>➕ Parlay</button>
         </div>
-
         <div>
           ${homeAbbr}: ${fmtOdds(best.ml.home.odds)}
           <div class="${evClass(best.ml.home.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(best.ml.home.ev)} • Prob ${fmtProb(best.ml.home.consensus_prob)}
           </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${homeAbbr} ML",
-              odds: ${best.ml.home.odds},
-              prob: ${best.ml.home.consensus_prob}
-            })'>➕ Parlay</button>
         </div>
       </div>
 
-      <!-- SPREAD -->
       <div class="market-box">
         <div>Spread</div>
-
         <div>
           ${awayAbbr} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})
           <div class="${evClass(best.spread.away.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(best.spread.away.ev)} • Prob ${fmtProb(best.spread.away.consensus_prob)}
           </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${awayAbbr} Spread ${best.spread.away.point}",
-              odds: ${best.spread.away.odds},
-              prob: ${best.spread.away.consensus_prob}
-            })'>➕ Parlay</button>
         </div>
-
         <div>
           ${homeAbbr} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})
           <div class="${evClass(best.spread.home.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(best.spread.home.ev)} • Prob ${fmtProb(best.spread.home.consensus_prob)}
           </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "${homeAbbr} Spread ${best.spread.home.point}",
-              odds: ${best.spread.home.odds},
-              prob: ${best.spread.home.consensus_prob}
-            })'>➕ Parlay</button>
         </div>
       </div>
 
-      <!-- TOTAL -->
       <div class="market-box">
         <div>Total</div>
-
         <div>
           Over ${best.total.over.point} (${fmtOdds(best.total.over.odds)})
           <div class="${evClass(best.total.over.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(best.total.over.ev)} • Prob ${fmtProb(best.total.over.consensus_prob)}
           </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "Over ${best.total.over.point}",
-              odds: ${best.total.over.odds},
-              prob: ${best.total.over.consensus_prob}
-            })'>➕ Parlay</button>
         </div>
-
         <div>
           Under ${best.total.under.point} (${fmtOdds(best.total.under.odds)})
           <div class="${evClass(best.total.under.ev)}" style="font-size:.75rem;">
             EV ${fmtEV(best.total.under.ev)} • Prob ${fmtProb(best.total.under.consensus_prob)}
           </div>
-          <button class="parlay-btn"
-            onclick='window.Parlay.addLeg({
-              label: "Under ${best.total.under.point}",
-              odds: ${best.total.under.odds},
-              prob: ${best.total.under.consensus_prob}
-            })'>➕ Parlay</button>
         </div>
       </div>
 
@@ -328,26 +213,30 @@ function createCard(game) {
 }
 
 /* ============================================================
-   UPDATE CARD
+   UPDATE EXISTING CARD (NO FULL PAGE RELOAD)
    ============================================================ */
 
 function updateCard(oldGame, newGame) {
   const card = document.querySelector(`.game-card[data-id="${newGame.id}"]`);
   if (!card) return;
 
-  const changed = JSON.stringify(oldGame.best) !== JSON.stringify(newGame.best);
+  // Detect changes that should trigger animation
+  const hasChanged =
+    JSON.stringify(oldGame.best) !== JSON.stringify(newGame.best);
 
-  if (!changed) return;
+  if (!hasChanged) return;
 
-  const fresh = createCard(newGame);
-  card.replaceWith(fresh);
+  // Build a fresh card and replace the old one in-place
+  const freshCard = createCard(newGame);
+  card.replaceWith(freshCard);
 
-  fresh.classList.add("updated");
-  setTimeout(() => fresh.classList.remove("updated"), 1200);
+  // Highlight animation
+  freshCard.classList.add("updated");
+  setTimeout(() => freshCard.classList.remove("updated"), 1200);
 }
 
 /* ============================================================
-   MAIN MARKETS ACCORDION
+   MAIN MARKET ACCORDION
    ============================================================ */
 
 function buildMainAccordion(game) {
@@ -381,12 +270,16 @@ function buildMarketsTable(game) {
 
           <div>
             ${row.outcome1.name}: ${fmtOdds(row.outcome1.odds)}
-            <span class="${evClass(row.outcome1.edge)}">EV ${fmtEV(row.outcome1.edge)}</span>
+            <span class="${evClass(row.outcome1.edge)}">
+              EV ${fmtEV(row.outcome1.edge)}
+            </span>
           </div>
 
           <div>
             ${row.outcome2.name}: ${fmtOdds(row.outcome2.odds)}
-            <span class="${evClass(row.outcome2.edge)}">EV ${fmtEV(row.outcome2.edge)}</span>
+            <span class="${evClass(row.outcome2.edge)}">
+              EV ${fmtEV(row.outcome2.edge)}
+            </span>
           </div>
         </div>
       `;
@@ -397,7 +290,7 @@ function buildMarketsTable(game) {
 }
 
 /* ============================================================
-   PLAYER PROPS ACCORDION (WITH PARLAY BUTTONS)
+   PLAYER PROPS (REFRESHES EACH TIME YOU OPEN)
    ============================================================ */
 
 function buildPropsAccordion(game) {
@@ -412,6 +305,7 @@ function buildPropsAccordion(game) {
   acc.onclick = async () => {
     toggle(panel);
 
+    // Only refresh when accordion is open
     if (panel.classList.contains("open")) {
       panel.innerHTML = `<div class="loading">Loading props…</div>`;
       try {
@@ -426,6 +320,10 @@ function buildPropsAccordion(game) {
   acc.appendChild(panel);
   return acc;
 }
+
+/* ============================================================
+   BUILD PROPS UI
+   ============================================================ */
 
 function buildPropsUI(cats) {
   if (!cats) return `<div>No props available</div>`;
@@ -448,24 +346,12 @@ function buildPropsUI(cats) {
             Over ${fmtOdds(p.over_odds)}
             <span class="${evClass(p.over_ev)}">EV ${fmtEV(p.over_ev)}</span>
             <span style="opacity:.7;">(${fmtProb(p.over_prob)})</span>
-            <button class="parlay-btn"
-              onclick='window.Parlay.addLeg({
-                label: "${p.player} Over ${p.point}",
-                odds: ${p.over_odds},
-                prob: ${p.over_prob}
-              })'>➕ Parlay</button>
           </div>
 
           <div>
             Under ${fmtOdds(p.under_odds)}
             <span class="${evClass(p.under_ev)}">EV ${fmtEV(p.under_ev)}</span>
             <span style="opacity:.7;">(${fmtProb(p.under_prob)})</span>
-            <button class="parlay-btn"
-              onclick='window.Parlay.addLeg({
-                label: "${p.player} Under ${p.point}",
-                odds: ${p.under_odds},
-                prob: ${p.under_prob}
-              })'>➕ Parlay</button>
           </div>
         </div>
       `;

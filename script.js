@@ -2,6 +2,7 @@ const API_EVENTS = "/api/events";
 const API_PROPS = "/api/props";
 
 let PARLAY = [];
+let ALL_CANDIDATES = [];
 
 /* ------------------ UTIL ------------------ */
 
@@ -9,18 +10,9 @@ const americanToImplied = o =>
   o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 
 const decOdds = o => (o > 0 ? 1 + o / 100 : 1 + 100 / Math.abs(o));
-
 const pct = x => (x * 100).toFixed(1) + "%";
 
 /* ------------------ MODEL ------------------ */
-/*
-Model probability = no-vig normalized consensus
-
-Steps:
-1. Convert odds → implied
-2. Sum implied
-3. Normalize so outcomes sum to 1
-*/
 
 function normalize(outcomes) {
   const sum = outcomes.reduce((s, o) => s + o.implied, 0);
@@ -51,7 +43,6 @@ function renderParlay() {
   const math = document.getElementById("parlay-math");
 
   if (!box) return;
-
   box.innerHTML = "";
 
   if (!PARLAY.length) {
@@ -66,13 +57,12 @@ function renderParlay() {
     prob *= p.modelProb;
     odds *= decOdds(p.odds);
 
-    const row = document.createElement("div");
-    row.className = "parlay-row";
-    row.innerHTML = `
-      <span>${p.label}</span>
-      <button onclick="removeFromParlay('${p.id}')">✕</button>
+    box.innerHTML += `
+      <div class="parlay-row">
+        <span>${p.label}</span>
+        <button onclick="removeFromParlay('${p.id}')">✕</button>
+      </div>
     `;
-    box.appendChild(row);
   });
 
   const win = (stake * (odds - 1)).toFixed(2);
@@ -85,22 +75,47 @@ function renderParlay() {
   `;
 }
 
-/* ------------------ MARKETS ------------------ */
+/* ------------------ MARKET AGGREGATION ------------------ */
+
+function aggregateMarket(books, key) {
+  const map = {};
+
+  books.forEach(b => {
+    const o1 = b.outcome1;
+    const o2 = b.outcome2;
+
+    if (!map[o1.name]) map[o1.name] = [];
+    if (!map[o2.name]) map[o2.name] = [];
+
+    map[o1.name].push(o1.odds);
+    map[o2.name].push(o2.odds);
+  });
+
+  return Object.entries(map).map(([name, oddsList]) => {
+    const implied = oddsList
+      .map(americanToImplied)
+      .reduce((a, b) => a + b, 0) / oddsList.length;
+
+    const bestOdds =
+      oddsList.reduce((a, b) =>
+        decOdds(b) > decOdds(a) ? b : a
+      );
+
+    return { name, odds: bestOdds, implied };
+  });
+}
+
+/* ------------------ RENDER MARKETS ------------------ */
 
 function renderMarkets(ev) {
   const row = document.createElement("div");
   row.className = "market-row";
 
   ["h2h", "spreads", "totals"].forEach(type => {
-    const market = ev.books[type];
-    if (!market) return;
+    if (!ev.books[type]) return;
 
-    const modeled = normalize(
-      Object.values(market).map(o => ({
-        ...o,
-        implied: americanToImplied(o.odds)
-      }))
-    );
+    const aggregated = aggregateMarket(ev.books[type], type);
+    const modeled = normalize(aggregated);
 
     const box = document.createElement("div");
     box.className = "market-box";
@@ -110,23 +125,31 @@ function renderMarkets(ev) {
       const evp = EV(o.modelProb, o.odds);
       const id = `${ev.id}-${type}-${o.name}`;
 
-      const leg = document.createElement("div");
-      leg.className = "market-leg";
-      leg.innerHTML = `
-        <strong>${o.name} ${o.odds > 0 ? "+" : ""}${o.odds}</strong>
-        <div class="muted">
-          Book ${pct(o.implied)} · Model ${pct(o.modelProb)}
+      ALL_CANDIDATES.push({
+        id,
+        label: `${ev.away_team} @ ${ev.home_team} — ${o.name}`,
+        odds: o.odds,
+        modelProb: o.modelProb,
+        ev: evp,
+        eventId: ev.id
+      });
+
+      box.innerHTML += `
+        <div class="market-leg">
+          <strong>${o.name} ${o.odds > 0 ? "+" : ""}${o.odds}</strong>
+          <div class="muted">
+            Book ${pct(o.implied)} · Model ${pct(o.modelProb)}
+          </div>
+          <div class="ev-green">EV ${evp.toFixed(1)}%</div>
+          <button class="parlay-btn"
+            onclick='addToParlay(${JSON.stringify({
+              id,
+              label: `${ev.away_team} @ ${ev.home_team} — ${o.name}`,
+              odds: o.odds,
+              modelProb: o.modelProb
+            })})'>+ Parlay</button>
         </div>
-        <div class="ev-green">EV ${evp.toFixed(1)}%</div>
-        <button class="parlay-btn"
-          onclick='addToParlay({
-            id:"${id}",
-            label:"${ev.away_team} @ ${ev.home_team} — ${o.name}",
-            odds:${o.odds},
-            modelProb:${o.modelProb}
-          })'>+ Parlay</button>
       `;
-      box.appendChild(leg);
     });
 
     row.appendChild(box);
@@ -135,61 +158,10 @@ function renderMarkets(ev) {
   return row;
 }
 
-/* ------------------ PROPS (FIXED) ------------------ */
-
-function renderProps(props, eventId) {
-  const panel = document.createElement("div");
-  panel.className = "props-panel";
-
-  Object.entries(props).forEach(([category, players]) => {
-    const h = document.createElement("h4");
-    h.textContent = category;
-    panel.appendChild(h);
-
-    // players is OBJECT, not array
-    Object.entries(players).forEach(([player, data]) => {
-      const item = document.createElement("div");
-      item.className = "prop-item";
-      item.innerHTML = `<strong>${player}</strong>`;
-
-      const modeled = normalize(
-        data.outcomes.map(o => ({
-          ...o,
-          implied: americanToImplied(o.odds)
-        }))
-      );
-
-      modeled.forEach(o => {
-        const evp = EV(o.modelProb, o.odds);
-        const id = `${eventId}-prop-${player}-${o.label}`;
-
-        const row = document.createElement("div");
-        row.className = "prop-side";
-        row.innerHTML = `
-          <span>${o.label} ${o.odds > 0 ? "+" : ""}${o.odds}</span>
-          <span class="muted">Book ${pct(o.implied)} · Model ${pct(o.modelProb)}</span>
-          <span class="ev-green">EV ${evp.toFixed(1)}%</span>
-          <button class="parlay-btn"
-            onclick='addToParlay({
-              id:"${id}",
-              label:"${player} ${o.label}",
-              odds:${o.odds},
-              modelProb:${o.modelProb}
-            })'>+ Parlay</button>
-        `;
-        item.appendChild(row);
-      });
-
-      panel.appendChild(item);
-    });
-  });
-
-  return panel;
-}
-
 /* ------------------ LOAD ------------------ */
 
 async function load() {
+  ALL_CANDIDATES = [];
   const root = document.getElementById("games-container");
   root.innerHTML = "";
 
@@ -207,16 +179,10 @@ async function load() {
     `;
 
     card.appendChild(renderMarkets(ev));
-
-    try {
-      const props = await fetch(`${API_PROPS}?eventId=${ev.id}`).then(r => r.json());
-      card.appendChild(renderProps(props, ev.id));
-    } catch {
-      /* props optional */
-    }
-
     root.appendChild(card);
   }
+
+  renderTopEVBanner();
 }
 
 document.addEventListener("DOMContentLoaded", load);

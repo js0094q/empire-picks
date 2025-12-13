@@ -262,3 +262,33 @@ body {
   font-weight: bold;
   cursor: pointer;
 }
+
+/* ===== FORCE MAIN MARKETS HORIZONTAL ===== */
+
+.markets-row {
+  display: flex !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+  margin-top: 10px !important;
+}
+
+.markets-row .market-box {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+/* Make sure content inside market boxes doesn't blow up the flex row */
+.markets-row .market-row {
+  display: grid !important;
+  grid-template-columns: 1fr auto auto !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+/* Mobile: stack */
+@media (max-width: 900px) {
+  .markets-row {
+    flex-direction: column !important;
+  }
+}

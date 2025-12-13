@@ -166,3 +166,61 @@ body {
   transition: transform 0.4s ease;
   transform: scale(1.02);
 }
+/* =========================
+   PARLAY SIDEBAR
+   ========================= */
+
+.parlay-sidebar {
+  position: fixed;
+  right: 0;
+  top: 64px;
+  width: 300px;
+  height: calc(100vh - 64px);
+  background: #0f172a;
+  border-left: 2px solid var(--ep-gold);
+  padding: 14px;
+  z-index: 999;
+}
+
+.parlay-legs {
+  margin-bottom: 14px;
+}
+
+.parlay-leg {
+  background: #1e293b;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.parlay-leg span {
+  cursor: pointer;
+  color: var(--ep-red);
+}
+
+.parlay-stake input {
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  border: none;
+  margin-top: 6px;
+}
+
+.parlay-summary {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.place-bet {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--ep-gold);
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}

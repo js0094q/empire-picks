@@ -125,3 +125,51 @@ body {
   pointer-events:auto;
   transform:translate(50%,-50%) scale(1);
 }
+
+/* =====================================================
+   PARLAY MODAL HARD FIX (SAFARI / WEBKIT)
+   ===================================================== */
+
+.parlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.75);
+  z-index: 9998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+.parlay-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #020617;
+  border-radius: 18px;
+  padding: 20px;
+  width: 320px;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+}
+
+/* OPEN STATE */
+.parlay-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.parlay-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* IMPORTANT: prevent parent stacking context bleed */
+.layout,
+.hero,
+.game-card {
+  transform: none !important;
+  filter: none !important;
+}

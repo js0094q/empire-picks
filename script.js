@@ -1,14 +1,14 @@
 import { Teams } from "./teams.js";
 
-/* ============================================================
+/* ================================
    HELPERS
-   ============================================================ */
+================================ */
 
 const pct = x => `${(x * 100).toFixed(1)}%`;
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
 function impliedProb(o) {
-  if (o == null || !isFinite(o)) return NaN;
+  if (!isFinite(o)) return NaN;
   return o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 }
 
@@ -29,54 +29,61 @@ function signalClass(delta) {
   return "signal-neutral";
 }
 
+/* ================================
+   CONSENSUS STRENGTH
+================================ */
+
 function consensusStrength(prob, ev) {
-  const score = prob * 0.7 + ev * 0.3;
-  if (score > 0.45) return "Very High";
-  if (score > 0.35) return "High";
-  if (score > 0.25) return "Medium";
-  return "Low";
+  const p = Math.min(Math.max((prob - 0.55) / 0.20, 0), 1);
+  const e = Math.min(Math.max(ev / 0.25, 0), 1);
+  const score = p * 0.6 + e * 0.4;
+
+  if (score > 0.75) return "Strong";
+  if (score > 0.5) return "Moderate";
+  if (score > 0.3) return "Lean";
+  return "Weak";
 }
 
 function consensusClass(label) {
-  return `consensus-${label.toLowerCase().replace(" ", "-")}`;
+  return `consensus-${label.toLowerCase()}`;
 }
 
-/* ============================================================
+/* ================================
    STATE
-   ============================================================ */
+================================ */
 
 const autoPickCandidates = [];
 const gamesContainer = document.getElementById("games-container");
 
-/* ============================================================
+/* ================================
    FETCH
-   ============================================================ */
+================================ */
 
 async function fetchGames() {
   const r = await fetch("/api/events");
-  if (!r.ok) throw new Error("Failed to load events");
+  if (!r.ok) throw new Error("Events fetch failed");
   return r.json();
 }
 
 async function fetchProps(id) {
   const r = await fetch(`/api/props?id=${encodeURIComponent(id)}`);
-  if (!r.ok) throw new Error("Failed to load props");
+  if (!r.ok) throw new Error("Props fetch failed");
   return r.json();
 }
 
-/* ============================================================
+/* ================================
    INIT
-   ============================================================ */
+================================ */
 
 document.getElementById("refresh-btn")?.addEventListener("click", loadGames);
 loadGames();
 
-/* ============================================================
+/* ================================
    LOAD GAMES
-   ============================================================ */
+================================ */
 
 async function loadGames() {
-  gamesContainer.innerHTML = `<div class="loading">Loading NFL games…</div>`;
+  gamesContainer.innerHTML = `<div class="muted">Loading NFL games…</div>`;
   autoPickCandidates.length = 0;
 
   try {
@@ -86,13 +93,13 @@ async function loadGames() {
     renderTopPicks();
   } catch (e) {
     console.error(e);
-    gamesContainer.innerHTML = `<div class="muted">Unable to load games.</div>`;
+    gamesContainer.innerHTML = `<div class="muted">Failed to load games.</div>`;
   }
 }
 
-/* ============================================================
+/* ================================
    GAME CARD
-   ============================================================ */
+================================ */
 
 function createGameCard(game) {
   const card = document.createElement("div");
@@ -104,10 +111,10 @@ function createGameCard(game) {
   card.innerHTML = `
     <div class="game-header">
       <div class="teams">
-        <img src="${away.logo}" />
+        <img src="${away.logo}">
         ${game.away_team}
         <span>@</span>
-        <img src="${home.logo}" />
+        <img src="${home.logo}">
         ${game.home_team}
       </div>
       <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
@@ -126,9 +133,9 @@ function createGameCard(game) {
   return card;
 }
 
-/* ============================================================
-   MAIN MARKETS
-   ============================================================ */
+/* ================================
+   MARKETS
+================================ */
 
 function buildMarket(title, rows, game) {
   const box = document.createElement("div");
@@ -148,14 +155,12 @@ function buildMarket(title, rows, game) {
     const imp = impliedProb(o.odds);
     const delta = o.fair - imp;
 
-    if (o.edge > 0.03 && o.fair > 0.55) {
-      autoPickCandidates.push({
-        label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
-        odds: o.odds,
-        prob: o.fair,
-        ev: o.edge
-      });
-    }
+    trackPick(
+      `${game.away_team} @ ${game.home_team} — ${o.name}`,
+      o.odds,
+      o.fair,
+      o.edge
+    );
 
     box.innerHTML += `
       <div class="market-row ${signalClass(delta)}">
@@ -177,12 +182,12 @@ function buildMarket(title, rows, game) {
   return box;
 }
 
-/* ============================================================
+/* ================================
    PROPS
-   ============================================================ */
+================================ */
 
 function isMeaningful(odds, prob) {
-  return isFinite(odds) && isFinite(prob) && prob > 0.02 && prob < 0.98;
+  return isFinite(odds) && isFinite(prob) && prob > 0.05 && prob < 0.85;
 }
 
 function buildPropsAccordion(game) {
@@ -196,16 +201,18 @@ function buildPropsAccordion(game) {
   const panel = document.createElement("div");
   panel.className = "panel";
 
+  let loaded = false;
+
   title.onclick = async () => {
-    if (panel.classList.toggle("open")) {
-      panel.innerHTML = `<div class="muted">Loading props…</div>`;
-      try {
-        const data = await fetchProps(game.id);
-        panel.innerHTML = renderProps(data.categories || {});
-        renderTopPicks();
-      } catch {
-        panel.innerHTML = `<div class="muted">No props available.</div>`;
-      }
+    if (!panel.classList.toggle("open") || loaded) return;
+    loaded = true;
+    panel.innerHTML = `<div class="muted">Loading props…</div>`;
+
+    try {
+      const data = await fetchProps(game.id);
+      panel.innerHTML = renderProps(data.categories || {});
+    } catch {
+      panel.innerHTML = `<div class="muted">Props unavailable.</div>`;
     }
   };
 
@@ -274,30 +281,22 @@ function propSide(p, side) {
   `;
 }
 
+/* ================================
+   PICK FILTER (CRITICAL)
+================================ */
+
 function trackPick(label, odds, prob, ev) {
-  if (ev > 0.03 && prob > 0.55) {
-    autoPickCandidates.push({ label, odds, prob, ev });
-  }
+  if (!isFinite(prob) || !isFinite(ev)) return;
+  if (prob < 0.55 || prob > 0.75) return;
+  if (ev <= 0.02 || ev > 0.25) return;
+  if (/D\/ST|Defense|DST/i.test(label)) return;
+
+  autoPickCandidates.push({ label, odds, prob, ev });
 }
 
-/* ============================================================
-   PARLAY
-   ============================================================ */
-
-document.addEventListener("click", e => {
-  const b = e.target.closest(".parlay-btn");
-  if (!b) return;
-
-  window.Parlay?.addLeg({
-    label: b.dataset.label,
-    odds: Number(b.dataset.odds),
-    prob: Number(b.dataset.prob)
-  });
-});
-
-/* ============================================================
-   TOP PICKS (FEATURED)
-   ============================================================ */
+/* ================================
+   TOP PICKS
+================================ */
 
 function renderTopPicks() {
   const box = document.getElementById("top-picks");
@@ -323,3 +322,18 @@ function renderTopPicks() {
     }).join("")}
   `;
 }
+
+/* ================================
+   PARLAY
+================================ */
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".parlay-btn");
+  if (!btn) return;
+
+  window.Parlay?.addLeg({
+    label: btn.dataset.label,
+    odds: Number(btn.dataset.odds),
+    prob: Number(btn.dataset.prob)
+  });
+});

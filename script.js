@@ -4,25 +4,12 @@ import { Teams } from "./teams.js";
    HELPERS
    ============================================================ */
 
-const pct = x => (x * 100).toFixed(1) + "%";
+const pct = x => `${(x * 100).toFixed(1)}%`;
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
 function impliedProb(o) {
-  if (o == null) return NaN;
+  if (o == null || !isFinite(o)) return NaN;
   return o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
-}
-
-function evClass(ev) {
-  if (ev > 0.03) return "ev-green";
-  if (ev < -0.03) return "ev-red";
-  return "ev-neutral";
-}
-
-function signalClass(delta) {
-  if (delta > 0.15) return "signal-strong";
-  if (delta > 0.08) return "signal-medium";
-  if (delta > 0.04) return "signal-light";
-  return "signal-neutral";
 }
 
 function kickoffLocal(utc) {
@@ -35,53 +22,31 @@ function kickoffLocal(utc) {
   });
 }
 
+function signalClass(delta) {
+  if (delta > 0.15) return "signal-strong";
+  if (delta > 0.08) return "signal-medium";
+  if (delta > 0.04) return "signal-light";
+  return "signal-neutral";
+}
+
+function consensusStrength(prob, ev) {
+  const score = prob * 0.7 + ev * 0.3;
+  if (score > 0.45) return "Very High";
+  if (score > 0.35) return "High";
+  if (score > 0.25) return "Medium";
+  return "Low";
+}
+
+function consensusClass(label) {
+  return `consensus-${label.toLowerCase().replace(" ", "-")}`;
+}
+
 /* ============================================================
-   AUTO PICK ENGINE
+   STATE
    ============================================================ */
 
 const autoPickCandidates = [];
-
-function pickScore(prob, ev) {
-  return prob * ev;
-}
-
-/* ============================================================
-   PARLAY ENGINE
-   ============================================================ */
-
-window.Parlay = {
-  legs: [],
-  addLeg(leg) {
-    if (!this.legs.some(l => l.label === leg.label)) {
-      this.legs.push(leg);
-      renderParlay();
-    }
-  },
-  removeLeg(i) {
-    this.legs.splice(i, 1);
-    renderParlay();
-  }
-};
-
-function americanToDecimal(o) {
-  return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
-}
-
-function computeParlay() {
-  let mult = 1;
-  let prob = 1;
-
-  window.Parlay.legs.forEach(l => {
-    mult *= americanToDecimal(l.odds);
-    prob *= l.prob;
-  });
-
-  return {
-    mult,
-    prob,
-    ev: prob * mult - 1
-  };
-}
+const gamesContainer = document.getElementById("games-container");
 
 /* ============================================================
    FETCH
@@ -89,13 +54,13 @@ function computeParlay() {
 
 async function fetchGames() {
   const r = await fetch("/api/events");
-  if (!r.ok) throw new Error("Failed to fetch /api/events");
+  if (!r.ok) throw new Error("Failed to load events");
   return r.json();
 }
 
 async function fetchProps(id) {
   const r = await fetch(`/api/props?id=${encodeURIComponent(id)}`);
-  if (!r.ok) throw new Error("Failed to fetch /api/props");
+  if (!r.ok) throw new Error("Failed to load props");
   return r.json();
 }
 
@@ -103,10 +68,7 @@ async function fetchProps(id) {
    INIT
    ============================================================ */
 
-const gamesContainer = document.getElementById("games-container");
-const refreshBtn = document.getElementById("refresh-btn");
-if (refreshBtn) refreshBtn.onclick = loadGames;
-
+document.getElementById("refresh-btn")?.addEventListener("click", loadGames);
 loadGames();
 
 /* ============================================================
@@ -120,19 +82,11 @@ async function loadGames() {
   try {
     const games = await fetchGames();
     gamesContainer.innerHTML = "";
-
-    if (!Array.isArray(games) || !games.length) {
-      gamesContainer.innerHTML = `<div class="muted">No games available.</div>`;
-      renderTopPicks();
-      return;
-    }
-
     games.forEach(g => gamesContainer.appendChild(createGameCard(g)));
     renderTopPicks();
   } catch (e) {
     console.error(e);
-    gamesContainer.innerHTML = `<div class="muted">Failed to load games. Check API key/quota.</div>`;
-    renderTopPicks();
+    gamesContainer.innerHTML = `<div class="muted">Unable to load games.</div>`;
   }
 }
 
@@ -144,35 +98,31 @@ function createGameCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
 
-  const home = Teams?.[game.home_team] || { logo: "" };
-  const away = Teams?.[game.away_team] || { logo: "" };
+  const home = Teams[game.home_team];
+  const away = Teams[game.away_team];
 
   card.innerHTML = `
     <div class="game-header">
       <div class="teams">
-        ${away.logo ? `<img src="${away.logo}" alt="${game.away_team}">` : ""}
-        ${game.away_team || "Away"}
+        <img src="${away.logo}" />
+        ${game.away_team}
         <span>@</span>
-        ${home.logo ? `<img src="${home.logo}" alt="${game.home_team}">` : ""}
-        ${game.home_team || "Home"}
+        <img src="${home.logo}" />
+        ${game.home_team}
       </div>
-      <div class="kickoff">${game.commence_time ? kickoffLocal(game.commence_time) : ""}</div>
+      <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
     </div>
   `;
 
   const markets = document.createElement("div");
   markets.className = "markets-row";
 
-  // Guard if API returns missing books
-  const books = game.books || { h2h: [], spreads: [], totals: [] };
-
-  markets.appendChild(buildMarket("Moneyline", books.h2h || [], game));
-  markets.appendChild(buildMarket("Spread", books.spreads || [], game));
-  markets.appendChild(buildMarket("Total", books.totals || [], game));
+  markets.appendChild(buildMarket("Moneyline", game.books.h2h, game));
+  markets.appendChild(buildMarket("Spread", game.books.spreads, game));
+  markets.appendChild(buildMarket("Total", game.books.totals, game));
 
   card.appendChild(markets);
   card.appendChild(buildPropsAccordion(game));
-
   return card;
 }
 
@@ -185,79 +135,56 @@ function buildMarket(title, rows, game) {
   box.className = "market-box";
   box.innerHTML = `<div class="market-title">${title}</div>`;
 
-  if (!Array.isArray(rows) || !rows.length) {
-    box.innerHTML += `<div class="muted" style="padding:8px;">No lines</div>`;
-    return box;
-  }
-
   const best = {};
 
   rows.forEach(r => {
-    if (!r) return;
     [r.outcome1, r.outcome2].forEach(o => {
-      if (!o || o.odds == null) return;
+      if (!o || !isFinite(o.odds)) return;
       if (!best[o.name] || o.odds > best[o.name].odds) best[o.name] = o;
     });
   });
 
   Object.values(best).forEach(o => {
     const imp = impliedProb(o.odds);
-    const fair = Number(o.fair);
-    const edge = Number(o.edge);
+    const delta = o.fair - imp;
 
-    if (!isFinite(imp) || !isFinite(fair) || !isFinite(edge)) return;
-
-    const delta = fair - imp;
-
-    if (edge > 0.03 && fair > 0.55) {
+    if (o.edge > 0.03 && o.fair > 0.55) {
       autoPickCandidates.push({
         label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
         odds: o.odds,
-        prob: fair,
-        ev: edge,
-        score: pickScore(fair, edge)
+        prob: o.fair,
+        ev: o.edge
       });
     }
 
-    const row = document.createElement("div");
-    row.className = `market-row ${signalClass(delta)}`;
-    row.innerHTML = `
-      <div>
-        <strong>${o.name}</strong> ${fmtOdds(o.odds)}
-        <div class="muted">
-          Book: ${pct(imp)} • Model: ${pct(fair)}
+    box.innerHTML += `
+      <div class="market-row ${signalClass(delta)}">
+        <div>
+          <strong>${o.name}</strong> ${fmtOdds(o.odds)}
+          <div class="muted">Book ${pct(imp)} • Model ${pct(o.fair)}</div>
         </div>
+        <div class="ev-green">EV ${pct(o.edge)}</div>
+        <button class="parlay-btn"
+          data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
+          data-odds="${o.odds}"
+          data-prob="${o.fair}">
+          + Parlay
+        </button>
       </div>
-      <div class="${evClass(edge)}">EV ${pct(edge)}</div>
-      <button class="parlay-btn"
-        data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
-        data-odds="${o.odds}"
-        data-prob="${fair}">
-        + Parlay
-      </button>
     `;
-
-    box.appendChild(row);
   });
 
   return box;
 }
 
 /* ============================================================
-   PLAYER PROPS (FILTER OUT NULL / NON-PLAYABLE)
+   PROPS
    ============================================================ */
 
-function isValidOdds(o) {
-  return typeof o === "number" && isFinite(o) && o !== 0;
+function isMeaningful(odds, prob) {
+  return isFinite(odds) && isFinite(prob) && prob > 0.02 && prob < 0.98;
 }
 
-function isMeaningfulSide(odds, prob) {
-  if (!isValidOdds(odds)) return false;
-  if (!isFinite(prob) || prob <= 0.01 || prob >= 0.99) return false;
-  return true;
-}
-
-/* Accordion wrapper restored (this was the crash) */
 function buildPropsAccordion(game) {
   const acc = document.createElement("div");
   acc.className = "accordion";
@@ -269,25 +196,16 @@ function buildPropsAccordion(game) {
   const panel = document.createElement("div");
   panel.className = "panel";
 
-  let loaded = false;
-
   title.onclick = async () => {
-    const open = panel.classList.toggle("open");
-    if (!open) return;
-
-    if (loaded) return;
-    loaded = true;
-
-    panel.innerHTML = `<div class="muted">Loading props…</div>`;
-
-    try {
-      const data = await fetchProps(game.id);
-      const categories = data?.categories || {};
-      panel.innerHTML = buildPropsUI(categories);
-      renderTopPicks(); // update picks after props populate
-    } catch (e) {
-      console.error(e);
-      panel.innerHTML = `<div class="muted">Props unavailable for this game.</div>`;
+    if (panel.classList.toggle("open")) {
+      panel.innerHTML = `<div class="muted">Loading props…</div>`;
+      try {
+        const data = await fetchProps(game.id);
+        panel.innerHTML = renderProps(data.categories || {});
+        renderTopPicks();
+      } catch {
+        panel.innerHTML = `<div class="muted">No props available.</div>`;
+      }
     }
   };
 
@@ -296,169 +214,112 @@ function buildPropsAccordion(game) {
   return acc;
 }
 
-function buildPropsUI(categories) {
+function renderProps(categories) {
   let html = "";
 
-  const entries = Object.entries(categories || {});
-  if (!entries.length) return `<div class="muted">No playable props available.</div>`;
-
-  entries.forEach(([cat, props]) => {
-    if (!Array.isArray(props) || !props.length) return;
-
+  Object.entries(categories).forEach(([cat, props]) => {
     let section = `<h4>${cat}</h4>`;
-    let renderedAny = false;
+    let any = false;
 
     props.forEach(p => {
       const sides = [];
 
-      // OVER
-      if (isMeaningfulSide(p.over_odds, p.over_prob)) {
-        const impO = impliedProb(p.over_odds);
-        const dO = p.over_prob - impO;
-
-        sides.push(`
-          <div class="prop-side ${signalClass(dO)}">
-            Over ${fmtOdds(p.over_odds)}
-            <div class="muted">Book ${pct(impO)} • Model ${pct(p.over_prob)}</div>
-            <span class="ev-green">EV ${pct(p.over_ev)}</span>
-            <button class="parlay-btn"
-              data-label="${p.player} Over ${p.point}"
-              data-odds="${p.over_odds}"
-              data-prob="${p.over_prob}">
-              + Parlay
-            </button>
-          </div>
-        `);
-
-        if (p.over_ev > 0.03 && p.over_prob > 0.55) {
-          autoPickCandidates.push({
-            label: `${p.player} Over ${p.point}`,
-            odds: p.over_odds,
-            prob: p.over_prob,
-            ev: p.over_ev,
-            score: pickScore(p.over_prob, p.over_ev)
-          });
-        }
+      if (isMeaningful(p.over_odds, p.over_prob)) {
+        sides.push(propSide(p, "Over"));
+        trackPick(`${p.player} Over ${p.point}`, p.over_odds, p.over_prob, p.over_ev);
+        any = true;
       }
 
-      // UNDER
-      if (isMeaningfulSide(p.under_odds, p.under_prob)) {
-        const impU = impliedProb(p.under_odds);
-        const dU = p.under_prob - impU;
-
-        sides.push(`
-          <div class="prop-side ${signalClass(dU)}">
-            Under ${fmtOdds(p.under_odds)}
-            <div class="muted">Book ${pct(impU)} • Model ${pct(p.under_prob)}</div>
-            <span class="ev-green">EV ${pct(p.under_ev)}</span>
-            <button class="parlay-btn"
-              data-label="${p.player} Under ${p.point}"
-              data-odds="${p.under_odds}"
-              data-prob="${p.under_prob}">
-              + Parlay
-            </button>
-          </div>
-        `);
-
-        if (p.under_ev > 0.03 && p.under_prob > 0.55) {
-          autoPickCandidates.push({
-            label: `${p.player} Under ${p.point}`,
-            odds: p.under_odds,
-            prob: p.under_prob,
-            ev: p.under_ev,
-            score: pickScore(p.under_prob, p.under_ev)
-          });
-        }
+      if (isMeaningful(p.under_odds, p.under_prob)) {
+        sides.push(propSide(p, "Under"));
+        trackPick(`${p.player} Under ${p.point}`, p.under_odds, p.under_prob, p.under_ev);
+        any = true;
       }
 
-      // Skip prop entirely if neither side is playable
-      if (!sides.length) return;
-
-      renderedAny = true;
-      section += `
-        <div class="prop-item">
-          <strong>${p.player}</strong>
-          <div class="muted">${p.label} ${p.point}</div>
-          ${sides.join("")}
-        </div>
-      `;
+      if (sides.length) {
+        section += `
+          <div class="prop-item">
+            <strong>${p.player}</strong>
+            <div class="muted">${p.label} ${p.point}</div>
+            ${sides.join("")}
+          </div>
+        `;
+      }
     });
 
-    if (renderedAny) html += section;
+    if (any) html += section;
   });
 
-  return html || `<div class="muted">No playable props available.</div>`;
+  return html || `<div class="muted">No playable props.</div>`;
+}
+
+function propSide(p, side) {
+  const odds = side === "Over" ? p.over_odds : p.under_odds;
+  const prob = side === "Over" ? p.over_prob : p.under_prob;
+  const ev = side === "Over" ? p.over_ev : p.under_ev;
+  const delta = prob - impliedProb(odds);
+
+  return `
+    <div class="prop-side ${signalClass(delta)}">
+      ${side} ${fmtOdds(odds)}
+      <div class="muted">Model ${pct(prob)}</div>
+      <span class="ev-green">EV ${pct(ev)}</span>
+      <button class="parlay-btn"
+        data-label="${p.player} ${side} ${p.point}"
+        data-odds="${odds}"
+        data-prob="${prob}">
+        + Parlay
+      </button>
+    </div>
+  `;
+}
+
+function trackPick(label, odds, prob, ev) {
+  if (ev > 0.03 && prob > 0.55) {
+    autoPickCandidates.push({ label, odds, prob, ev });
+  }
 }
 
 /* ============================================================
-   GLOBAL EVENTS
+   PARLAY
    ============================================================ */
 
 document.addEventListener("click", e => {
-  const btn = e.target.closest(".parlay-btn");
-  if (!btn) return;
+  const b = e.target.closest(".parlay-btn");
+  if (!b) return;
 
-  window.Parlay.addLeg({
-    label: btn.dataset.label,
-    odds: Number(btn.dataset.odds),
-    prob: Number(btn.dataset.prob)
+  window.Parlay?.addLeg({
+    label: b.dataset.label,
+    odds: Number(b.dataset.odds),
+    prob: Number(b.dataset.prob)
   });
 });
 
 /* ============================================================
-   PARLAY UI
-   ============================================================ */
-
-function renderParlay() {
-  const legs = document.getElementById("parlay-legs");
-  const sum = document.getElementById("parlay-summary");
-  const stake = Number(document.getElementById("parlay-stake")?.value || 0);
-
-  if (!legs || !sum) return;
-
-  legs.innerHTML = "";
-  window.Parlay.legs.forEach(l => {
-    legs.innerHTML += `<div>${l.label} (${fmtOdds(l.odds)})</div>`;
-  });
-
-  const p = computeParlay();
-
-  sum.innerHTML = `
-    <div>${stake.toFixed(2)} to win ${(stake * p.mult).toFixed(2)}</div>
-    <div>Prob ${pct(p.prob)}</div>
-    <div class="${evClass(p.ev)}">EV ${pct(p.ev)}</div>
-  `;
-}
-
-const stakeInput = document.getElementById("parlay-stake");
-if (stakeInput) stakeInput.oninput = renderParlay;
-
-/* ============================================================
-   TOP PICKS
+   TOP PICKS (FEATURED)
    ============================================================ */
 
 function renderTopPicks() {
   const box = document.getElementById("top-picks");
   if (!box) return;
 
-  const picks = [...autoPickCandidates]
-    .filter(p => isFinite(p.score) && isFinite(p.prob) && isFinite(p.ev))
-    .sort((a, b) => b.score - a.score)
+  const picks = autoPickCandidates
+    .sort((a, b) => b.prob * b.ev - a.prob * a.ev)
     .slice(0, 3);
 
   box.innerHTML = `
     <h3>Top Picks (Model-Weighted)</h3>
-    ${picks.length ? picks.map(p => `
-      <div class="top-pick">
-        <strong>${p.label}</strong>
-        <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
-        <button class="parlay-btn"
-          data-label="${p.label}"
-          data-odds="${p.odds}"
-          data-prob="${p.prob}">
-          + Parlay
-        </button>
-      </div>
-    `).join("") : `<div class="muted">No picks yet.</div>`}
+    ${picks.map(p => {
+      const badge = consensusStrength(p.prob, p.ev);
+      return `
+        <div class="top-pick">
+          <div>
+            <strong>${p.label}</strong>
+            <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
+          </div>
+          <span class="consensus-badge ${consensusClass(badge)}">${badge}</span>
+        </div>
+      `;
+    }).join("")}
   `;
 }

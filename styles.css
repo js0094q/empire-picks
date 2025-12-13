@@ -1,321 +1,199 @@
+body {
+  background: #020617;
+  color: #f8fafc;
+  font-family: Manrope, system-ui, sans-serif;
+  margin: 0;
+}
+
+/* =====================================================
+   LAYOUT
+   ===================================================== */
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 18px;
+  padding: 16px;
+}
+
+.left-rail {
+  position: sticky;
+  top: 90px;
+}
+
+.games-container {
+  max-width: 1200px;
+}
+
+/* =====================================================
+   HERO
+   ===================================================== */
+
 .hero {
-  background: radial-gradient(
-    circle at top,
-    rgba(56,189,248,0.18),
-    #020617 70%
-  );
+  background: radial-gradient(circle at top, rgba(56,189,248,0.2), #020617 70%);
   padding: 28px 24px;
-  margin-bottom: 18px;
   border-bottom: 1px solid rgba(148,163,184,0.15);
 }
 
 .hero h1 {
   font-size: 1.6rem;
-  font-weight: 700;
 }
 
 .hero p {
-  max-width: 620px;
   color: #cbd5f5;
-  font-size: 0.95rem;
+  max-width: 640px;
 }
 
-body {
-  background: #0b1020;
-  color: #f8fafc;
-  font-family: Manrope, system-ui, sans-serif;
+/* =====================================================
+   TOP PICKS
+   ===================================================== */
+
+.top-picks {
+  background: #020617;
+  border-radius: 14px;
+  padding: 14px;
 }
 
-.market-box {
-  background: #0f172a;
+.top-pick {
+  background: rgba(255,255,255,0.04);
   border-radius: 12px;
   padding: 10px;
+  margin-top: 10px;
 }
+
+/* =====================================================
+   GAME CARDS
+   ===================================================== */
+
+.game-card {
+  background: #020617;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 22px;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.teams img {
+  width: 40px;
+  height: 40px;
+  margin: 0 6px;
+}
+
+/* =====================================================
+   MARKETS
+   ===================================================== */
 
 .markets-row {
   display: flex;
   gap: 12px;
 }
 
-.market-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  padding: 6px;
-  border-radius: 8px;
+.market-box {
+  flex: 1;
+  background: #020617;
+  border-radius: 14px;
+  padding: 10px;
 }
 
 .market-title {
   text-align: center;
   font-weight: 600;
   opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 10px;
   margin-bottom: 6px;
 }
 
+/* =====================================================
+   SIGNALS
+   ===================================================== */
+
 .signal-strong {
-  background: linear-gradient(90deg, rgba(22,197,94,.25), transparent);
+  background: linear-gradient(90deg, rgba(34,197,94,0.4), transparent);
 }
 
 .signal-medium {
-  background: linear-gradient(90deg, rgba(22,197,94,.15), transparent);
+  background: linear-gradient(90deg, rgba(34,197,94,0.22), transparent);
 }
 
 .signal-light {
-  background: linear-gradient(90deg, rgba(22,197,94,.07), transparent);
+  background: linear-gradient(90deg, rgba(34,197,94,0.12), transparent);
 }
+
+/* =====================================================
+   EV COLORS
+   ===================================================== */
 
 .ev-green {
   color: #22c55e;
-  text-shadow: 0 0 8px rgba(34,197,94,.4);
 }
 
 .ev-neutral {
   color: #94a3b8;
 }
 
+/* =====================================================
+   PARLAY BUTTON
+   ===================================================== */
+
 .parlay-btn {
-  background: rgba(255,255,255,.08);
+  background: rgba(255,255,255,0.08);
   border-radius: 999px;
   padding: 4px 10px;
-  border: 1px solid rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,0.15);
   cursor: pointer;
-  transition: all .15s;
 }
 
-.parlay-btn:hover {
-  background: linear-gradient(90deg, rgba(234,179,8,.4), rgba(234,179,8,.15));
-  box-shadow: 0 0 12px rgba(234,179,8,.5);
-}
+/* =====================================================
+   PROPS
+   ===================================================== */
 
-.prop-item {
-  background: rgba(255,255,255,.03);
-  border-radius: 10px;
+.accordion-title {
+  margin-top: 14px;
+  background: rgba(56,189,248,0.2);
   padding: 10px;
-  margin-bottom: 10px;
+  border-radius: 12px;
+  cursor: pointer;
 }
 
-.prop-side {
-  margin-top: 6px;
-}
-
-.muted {
-  font-size: .8rem;
-  color: #9ca3af;
-}
-/* =====================================================
-   TEAM LOGO CONTROL
-   ===================================================== */
-
-.teams img {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  margin: 0 6px;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
-}
-
-@media (max-width: 900px) {
-  .teams img {
-    width: 36px;
-    height: 36px;
-  }
-}
-
-/* =====================================================
-   EV / PROBABILITY SIGNAL INTENSITY
-   ===================================================== */
-
-.signal-strong {
-  background: linear-gradient(
-    90deg,
-    rgba(34,197,94,0.38),
-    rgba(34,197,94,0.12)
-  );
-  box-shadow:
-    inset 0 0 0 1px rgba(34,197,94,0.45),
-    0 0 22px rgba(34,197,94,0.35);
-}
-
-.signal-medium {
-  background: linear-gradient(
-    90deg,
-    rgba(34,197,94,0.22),
-    rgba(34,197,94,0.06)
-  );
-  box-shadow:
-    inset 0 0 0 1px rgba(34,197,94,0.28);
-}
-
-.signal-light {
-  background: linear-gradient(
-    90deg,
-    rgba(34,197,94,0.12),
-    transparent
-  );
-}
-
-.signal-neutral {
-  background: transparent;
-}
-
-/* =====================================================
-   PROBABILITY GAP EMPHASIS
-   ===================================================== */
-
-.signal-strong .muted {
-  color: #ecfdf5;
-  font-weight: 600;
-}
-
-.signal-medium .muted {
-  color: #d1fae5;
-}
-
-.signal-light .muted {
-  color: #a7f3d0;
-}
-
-/* =====================================================
-   MICRO-ANIMATIONS (SUBTLE, ADDICTIVE)
-   ===================================================== */
-
-.market-row,
-.prop-side {
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
-}
-
-.market-row:hover,
-.prop-side:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
-}
-
-/* =====================================================
-   PARLAY BUTTON JUICE
-   ===================================================== */
-
-.parlay-btn {
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease,
-    background 0.12s ease;
-}
-
-.parlay-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 16px rgba(234,179,8,0.55);
-}
-/* =====================================================
-   PROP VISUAL RESET – HIGH CONTRAST
-   ===================================================== */
-
-/* Entire props section gets a soft slate panel */
-.accordion .panel {
-  background: linear-gradient(
-    180deg,
-    #0b1224,
-    #070b16
-  );
-  border-radius: 14px;
-  padding: 12px;
+.panel {
   margin-top: 10px;
 }
 
-/* Each player prop card */
 .prop-item {
-  background: linear-gradient(
-    180deg,
-    rgba(56, 189, 248, 0.12),
-    rgba(56, 189, 248, 0.05)
-  );
+  background: rgba(255,255,255,0.04);
   border-radius: 14px;
   padding: 12px;
   margin-bottom: 14px;
-  box-shadow:
-    inset 0 0 0 1px rgba(56,189,248,0.25),
-    0 10px 28px rgba(0,0,0,0.45);
 }
 
-/* Player name stands out */
-.prop-item > strong {
-  font-size: 1rem;
-  color: #e0f2fe;
-}
-
-/* Prop category headers */
-.panel h4 {
-  margin: 18px 0 8px;
-  color: #7dd3fc;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-}
-
-/* Over / Under blocks */
 .prop-side {
-  background: rgba(2, 6, 23, 0.6);
+  background: rgba(2,6,23,0.6);
   border-radius: 12px;
   padding: 10px;
   margin-top: 8px;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 8px;
-  align-items: center;
-}
-
-/* Prop probability text */
-.prop-side .muted {
-  color: #bae6fd;
-  font-size: 0.78rem;
-}
-
-/* EV in props is calmer than markets */
-.prop-side .ev-green {
-  color: #60a5fa;
-  text-shadow: 0 0 10px rgba(96,165,250,0.45);
 }
 
 /* =====================================================
-   PROP PARLAY BUTTON – DISTINCT COLOR
+   MISC
    ===================================================== */
 
-.prop-side .parlay-btn {
-  background: linear-gradient(
-    90deg,
-    rgba(56,189,248,0.45),
-    rgba(99,102,241,0.45)
-  );
-  border: none;
-  color: #020617;
-  font-weight: 600;
-  box-shadow: 0 0 16px rgba(56,189,248,0.55);
-}
-
-.prop-side .parlay-btn:hover {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 0 26px rgba(56,189,248,0.75);
-}
-
-/* =====================================================
-   VISUAL SEPARATION FROM MAIN MARKETS
-   ===================================================== */
-
-.market-box {
-  margin-bottom: 6px;
-}
-
-.accordion-title {
-  margin-top: 16px;
-  background: linear-gradient(
-    90deg,
-    rgba(56,189,248,0.25),
-    transparent
-  );
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  color: #e0f2fe;
+.muted {
+  font-size: 0.8rem;
+  color: #9ca3af;
 }

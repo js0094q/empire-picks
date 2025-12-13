@@ -262,9 +262,21 @@ document.addEventListener("click", e => {
   const btn = e.target.closest(".parlay-btn");
   if (!btn) return;
 
-  Parlay.add({
-    label: btn.dataset.label,
-    odds: Number(btn.dataset.odds),
-    prob: Number(btn.dataset.prob)
+ add(leg) {
+  if (!this.legs.find(l => l.label === leg.label)) {
+    this.legs.push(leg);
+  }
+
+  // FORCE modal open every time
+  modal.classList.remove("open");
+  backdrop.classList.remove("open");
+
+  requestAnimationFrame(() => {
+    modal.classList.add("open");
+    backdrop.classList.add("open");
+  });
+
+  renderParlay();
+}
   });
 });

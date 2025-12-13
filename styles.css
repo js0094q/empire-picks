@@ -97,6 +97,44 @@ body {
   margin-bottom: 8px;
 }
 
+/* =========================
+   MAIN MARKETS HORIZONTAL
+   ========================= */
+
+.markets-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.market-box {
+  background: #0f172a;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.market-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* Mobile fallback */
+@media (max-width: 900px) {
+  .markets-row {
+    grid-template-columns: 1fr;
+}
+
 /* ACCORDION */
 
 .accordion {

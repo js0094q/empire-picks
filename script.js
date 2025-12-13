@@ -141,10 +141,14 @@ function createGameCard(game) {
       <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
     </div>
   `;
+const marketsRow = document.createElement("div");
+marketsRow.className = "markets-row";
 
-  card.appendChild(buildMarket("Moneyline", game.books.h2h, game));
-  card.appendChild(buildMarket("Spread", game.books.spreads, game));
-  card.appendChild(buildMarket("Total", game.books.totals, game));
+marketsRow.appendChild(buildMarket("Moneyline", game.books.h2h, game));
+marketsRow.appendChild(buildMarket("Spread", game.books.spreads, game));
+marketsRow.appendChild(buildMarket("Total", game.books.totals, game));
+
+card.appendChild(marketsRow);
   card.appendChild(buildPropsAccordion(game));
 
   return card;

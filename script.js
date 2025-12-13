@@ -18,6 +18,12 @@ function evClass(e) {
   return "ev-neutral";
 }
 
+function impliedProbFromOdds(odds) {
+  return odds > 0
+    ? 100 / (odds + 100)
+    : Math.abs(odds) / (Math.abs(odds) + 100);
+}
+
 function kickoffLocal(utc) {
   return new Date(utc).toLocaleString("en-US", {
     timeZone: "America/New_York",
@@ -169,12 +175,23 @@ function buildMarket(title, rows = [], game) {
     const row = document.createElement("div");
     row.className = "market-row";
 
-    row.innerHTML = `
-      <div>${o.name}: ${fmtOdds(o.odds)}</div>
-      <div class="${evClass(o.edge)}">EV ${pct(o.edge)}</div>
-      <button class="parlay-btn">+ Parlay</button>
-    `;
+   const implied = impliedProbFromOdds(o.odds);
+const fair = o.fair;
 
+row.innerHTML = `
+  <div>
+    <strong>${o.name}</strong> ${fmtOdds(o.odds)}
+    <div class="muted">
+      Prob (Book): ${pct(implied)} • Prob (Model): ${pct(fair)}
+    </div>
+  </div>
+
+  <div class="${evClass(o.edge)}">
+    EV ${pct(o.edge)}
+  </div>
+
+  <button class="parlay-btn">+ Parlay</button>
+`;
     row.querySelector("button").onclick = () =>
       window.Parlay.addLeg({
         label: `${game.away_team} @ ${game.home_team} — ${o.name}`,

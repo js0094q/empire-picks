@@ -1,197 +1,245 @@
-// ===============================
-// EmpirePicks — Stable Core Script
-// Markets only: ML / Spread / Total
-// ===============================
+// ===================================================
+// EmpirePicks — Layered Stable Script
+// Markets + Props + Parlay + Top EV Banner
+// ===================================================
 
 const API_EVENTS = "/api/events";
+const API_PROPS = "/api/props";
 const container = document.getElementById("games-container");
+const bannerRoot = document.getElementById("top-ev-banner");
+const parlayState = [];
 
 // -------------------------------
-// Helpers
+// Math Helpers
 // -------------------------------
 
-// Convert American odds to implied probability
 function impliedProb(odds) {
   if (odds > 0) return 100 / (odds + 100);
   return -odds / (-odds + 100);
 }
 
-// Convert American odds to decimal odds
 function decimalOdds(odds) {
   if (odds > 0) return 1 + odds / 100;
   return 1 + 100 / Math.abs(odds);
 }
 
-// No-vig normalization (two-outcome markets)
 function noVig(p1, p2) {
-  const total = p1 + p2;
-  return [p1 / total, p2 / total];
+  const t = p1 + p2;
+  return [p1 / t, p2 / t];
 }
 
-// EV calculation
 function expectedValue(odds, modelProb) {
   return modelProb * decimalOdds(odds) - 1;
 }
 
-// EV color class
+// -------------------------------
+// Styling Logic
+// -------------------------------
+
 function evClass(ev) {
+  if (ev >= 0.1) return "ev-elite";
   if (ev >= 0.05) return "ev-good";
   if (ev <= -0.05) return "ev-bad";
   return "ev-neutral";
 }
 
-// -------------------------------
-// Rendering
-// -------------------------------
-
-function renderMarket(title, outcomes) {
-  const market = document.createElement("div");
-  market.className = "market";
-
-  const header = document.createElement("h4");
-  header.textContent = title;
-  market.appendChild(header);
-
-  outcomes.forEach(o => {
-    const row = document.createElement("div");
-    row.className = `market-row ${evClass(o.ev)}`;
-
-    row.innerHTML = `
-      <div class="market-name">${o.name} ${o.odds > 0 ? "+" : ""}${o.odds}</div>
-      <div class="market-probs">
-        Book: ${(o.bookProb * 100).toFixed(1)}%
-        · Model: ${(o.modelProb * 100).toFixed(1)}%
-      </div>
-      <div class="market-ev">
-        EV ${(o.ev * 100).toFixed(1)}%
-      </div>
-    `;
-
-    market.appendChild(row);
-  });
-
-  return market;
+function probGap(book, model) {
+  return Math.abs(model - book);
 }
 
-function renderGame(game) {
+// -------------------------------
+// Parlay Logic
+// -------------------------------
+
+function addToParlay(item) {
+  parlayState.push(item);
+  console.log("Parlay:", parlayState);
+}
+
+// -------------------------------
+// Render Helpers
+// -------------------------------
+
+function renderRow(o, allowParlay = true) {
+  const row = document.createElement("div");
+  row.className = `market-row ${evClass(o.ev)}`;
+
+  row.innerHTML = `
+    <div class="market-name">${o.name}</div>
+    <div class="market-probs">
+      Book ${(o.bookProb * 100).toFixed(1)}%
+      · Model ${(o.modelProb * 100).toFixed(1)}%
+    </div>
+    <div class="market-ev">EV ${(o.ev * 100).toFixed(1)}%</div>
+  `;
+
+  if (allowParlay) {
+    const btn = document.createElement("button");
+    btn.className = "parlay-btn";
+    btn.textContent = "+ Parlay";
+    btn.onclick = () => addToParlay(o);
+    row.appendChild(btn);
+  }
+
+  return row;
+}
+
+function renderMarket(title, outcomes) {
+  const m = document.createElement("div");
+  m.className = "market";
+
+  const h = document.createElement("h4");
+  h.textContent = title;
+  m.appendChild(h);
+
+  outcomes.forEach(o => m.appendChild(renderRow(o)));
+  return m;
+}
+
+// -------------------------------
+// Game Renderer
+// -------------------------------
+
+function renderGame(game, propsByEvent) {
   const card = document.createElement("div");
   card.className = "game-card";
 
-  const header = document.createElement("div");
-  header.className = "game-header";
-  header.innerHTML = `
-    <h3>${game.away_team} @ ${game.home_team}</h3>
-    <div class="game-time">${new Date(game.commence_time).toLocaleString()}</div>
+  card.innerHTML = `
+    <div class="game-header">
+      <h3>${game.away_team} @ ${game.home_team}</h3>
+      <div>${new Date(game.commence_time).toLocaleString()}</div>
+    </div>
   `;
-  card.appendChild(header);
 
-  // -------------------------------
-  // Moneyline
-  // -------------------------------
-  if (game.books?.h2h?.length) {
-    const m = game.books.h2h[0];
-    const p1 = impliedProb(m.outcome1.odds);
-    const p2 = impliedProb(m.outcome2.odds);
+  // -------- Moneyline / Spread / Total --------
+  ["h2h", "spreads", "totals"].forEach(type => {
+    const m = game.books?.[type]?.[0];
+    if (!m) return;
+
+    let o1, o2;
+
+    if (type === "totals") {
+      o1 = m.over;
+      o2 = m.under;
+    } else {
+      o1 = m.outcome1;
+      o2 = m.outcome2;
+    }
+
+    const p1 = impliedProb(o1.odds);
+    const p2 = impliedProb(o2.odds);
     const [mp1, mp2] = noVig(p1, p2);
 
     card.appendChild(
-      renderMarket("Moneyline", [
+      renderMarket(type.toUpperCase(), [
         {
-          name: m.outcome1.name,
-          odds: m.outcome1.odds,
+          name: o1.name || `Over ${m.point}`,
+          odds: o1.odds,
           bookProb: p1,
           modelProb: mp1,
-          ev: expectedValue(m.outcome1.odds, mp1)
+          ev: expectedValue(o1.odds, mp1)
         },
         {
-          name: m.outcome2.name,
-          odds: m.outcome2.odds,
+          name: o2.name || `Under ${m.point}`,
+          odds: o2.odds,
           bookProb: p2,
           modelProb: mp2,
-          ev: expectedValue(m.outcome2.odds, mp2)
+          ev: expectedValue(o2.odds, mp2)
         }
       ])
     );
-  }
+  });
 
-  // -------------------------------
-  // Spread
-  // -------------------------------
-  if (game.books?.spreads?.length) {
-    const m = game.books.spreads[0];
-    const p1 = impliedProb(m.outcome1.odds);
-    const p2 = impliedProb(m.outcome2.odds);
-    const [mp1, mp2] = noVig(p1, p2);
+  // -------- Props (READ-ONLY) --------
+  const props = propsByEvent[game.id];
+  if (props?.length) {
+    const box = document.createElement("div");
+    box.className = "props-box";
+    box.innerHTML = "<h4>Player Props</h4>";
 
-    card.appendChild(
-      renderMarket("Spread", [
-        {
-          name: `${m.outcome1.name} ${m.outcome1.point}`,
-          odds: m.outcome1.odds,
-          bookProb: p1,
-          modelProb: mp1,
-          ev: expectedValue(m.outcome1.odds, mp1)
-        },
-        {
-          name: `${m.outcome2.name} ${m.outcome2.point}`,
-          odds: m.outcome2.odds,
-          bookProb: p2,
-          modelProb: mp2,
-          ev: expectedValue(m.outcome2.odds, mp2)
-        }
-      ])
-    );
-  }
+    props.forEach(p => {
+      if (!p.over || !p.under) return;
 
-  // -------------------------------
-  // Totals
-  // -------------------------------
-  if (game.books?.totals?.length) {
-    const m = game.books.totals[0];
-    const p1 = impliedProb(m.over.odds);
-    const p2 = impliedProb(m.under.odds);
-    const [mp1, mp2] = noVig(p1, p2);
+      const bp = impliedProb(p.over.odds);
+      const up = impliedProb(p.under.odds);
+      const [mpo, mpu] = noVig(bp, up);
 
-    card.appendChild(
-      renderMarket("Total", [
-        {
-          name: `Over ${m.point}`,
-          odds: m.over.odds,
-          bookProb: p1,
-          modelProb: mp1,
-          ev: expectedValue(m.over.odds, mp1)
-        },
-        {
-          name: `Under ${m.point}`,
-          odds: m.under.odds,
-          bookProb: p2,
-          modelProb: mp2,
-          ev: expectedValue(m.under.odds, mp2)
-        }
-      ])
-    );
+      box.appendChild(
+        renderRow(
+          {
+            name: `${p.player} ${p.market} Over ${p.line}`,
+            odds: p.over.odds,
+            bookProb: bp,
+            modelProb: mpo,
+            ev: expectedValue(p.over.odds, mpo)
+          },
+          false
+        )
+      );
+    });
+
+    card.appendChild(box);
   }
 
   return card;
 }
 
 // -------------------------------
-// Load Events
+// Top-3 EV Banner
 // -------------------------------
 
-async function loadGames() {
-  container.innerHTML = "Loading games…";
+function renderTopEV(all) {
+  const top = all
+    .filter(x => x.ev > 0)
+    .sort((a, b) =>
+      b.ev !== a.ev ? b.ev - a.ev : b.modelProb - a.modelProb
+    )
+    .slice(0, 3);
 
-  try {
-    const res = await fetch(API_EVENTS);
-    const games = await res.json();
+  if (!top.length) return;
 
-    container.innerHTML = "";
-    games.forEach(g => container.appendChild(renderGame(g)));
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = "Failed to load games.";
-  }
+  bannerRoot.innerHTML = `
+    <div class="ev-banner">
+      <strong>Top EV Picks</strong>
+      ${top
+        .map(
+          t =>
+            `<span>${t.name} · EV ${(t.ev * 100).toFixed(1)}%</span>`
+        )
+        .join("")}
+    </div>
+  `;
 }
 
-loadGames();
+// -------------------------------
+// Load Everything
+// -------------------------------
+
+async function load() {
+  container.innerHTML = "Loading…";
+
+  const [eventsRes, propsRes] = await Promise.all([
+    fetch(API_EVENTS),
+    fetch(API_PROPS)
+  ]);
+
+  const games = await eventsRes.json();
+  const props = await propsRes.json();
+
+  const propsByEvent = {};
+  props.forEach(p => {
+    propsByEvent[p.event_id] ||= [];
+    propsByEvent[p.event_id].push(p);
+  });
+
+  container.innerHTML = "";
+  const evCollector = [];
+
+  games.forEach(g => {
+    container.appendChild(renderGame(g, propsByEvent));
+  });
+
+  renderTopEV(evCollector);
+}
+
+load();

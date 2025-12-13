@@ -80,3 +80,109 @@ body {
   font-size: .8rem;
   color: #9ca3af;
 }
+/* =====================================================
+   TEAM LOGO CONTROL
+   ===================================================== */
+
+.teams img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  margin: 0 6px;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
+}
+
+@media (max-width: 900px) {
+  .teams img {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* =====================================================
+   EV / PROBABILITY SIGNAL INTENSITY
+   ===================================================== */
+
+.signal-strong {
+  background: linear-gradient(
+    90deg,
+    rgba(34,197,94,0.38),
+    rgba(34,197,94,0.12)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(34,197,94,0.45),
+    0 0 22px rgba(34,197,94,0.35);
+}
+
+.signal-medium {
+  background: linear-gradient(
+    90deg,
+    rgba(34,197,94,0.22),
+    rgba(34,197,94,0.06)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(34,197,94,0.28);
+}
+
+.signal-light {
+  background: linear-gradient(
+    90deg,
+    rgba(34,197,94,0.12),
+    transparent
+  );
+}
+
+.signal-neutral {
+  background: transparent;
+}
+
+/* =====================================================
+   PROBABILITY GAP EMPHASIS
+   ===================================================== */
+
+.signal-strong .muted {
+  color: #ecfdf5;
+  font-weight: 600;
+}
+
+.signal-medium .muted {
+  color: #d1fae5;
+}
+
+.signal-light .muted {
+  color: #a7f3d0;
+}
+
+/* =====================================================
+   MICRO-ANIMATIONS (SUBTLE, ADDICTIVE)
+   ===================================================== */
+
+.market-row,
+.prop-side {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.market-row:hover,
+.prop-side:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+}
+
+/* =====================================================
+   PARLAY BUTTON JUICE
+   ===================================================== */
+
+.parlay-btn {
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease;
+}
+
+.parlay-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 16px rgba(234,179,8,0.55);
+}

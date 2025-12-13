@@ -1,245 +1,226 @@
-// ===================================================
-// EmpirePicks — Layered Stable Script
-// Markets + Props + Parlay + Top EV Banner
-// ===================================================
+/* ================================
+   EmpirePicks — Core Script
+   ================================ */
 
-const API_EVENTS = "/api/events";
-const API_PROPS = "/api/props";
-const container = document.getElementById("games-container");
-const bannerRoot = document.getElementById("top-ev-banner");
-const parlayState = [];
+const state = {
+  parlay: [],
+  stake: 10,
+  allBets: []
+};
 
-// -------------------------------
-// Math Helpers
-// -------------------------------
+/* ---------- Math helpers ---------- */
+
+function americanToDecimal(odds) {
+  return odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
+}
 
 function impliedProb(odds) {
-  if (odds > 0) return 100 / (odds + 100);
-  return -odds / (-odds + 100);
+  return odds > 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
 }
 
-function decimalOdds(odds) {
-  if (odds > 0) return 1 + odds / 100;
-  return 1 + 100 / Math.abs(odds);
+function evPercent(modelProb, odds) {
+  return ((modelProb * americanToDecimal(odds)) - 1) * 100;
 }
 
-function noVig(p1, p2) {
-  const t = p1 + p2;
-  return [p1 / t, p2 / t];
-}
-
-function expectedValue(odds, modelProb) {
-  return modelProb * decimalOdds(odds) - 1;
-}
-
-// -------------------------------
-// Styling Logic
-// -------------------------------
+/* ---------- UI helpers ---------- */
 
 function evClass(ev) {
-  if (ev >= 0.1) return "ev-elite";
-  if (ev >= 0.05) return "ev-good";
-  if (ev <= -0.05) return "ev-bad";
+  if (ev >= 15) return "ev-elite";
+  if (ev >= 8) return "ev-strong";
+  if (ev >= 3) return "ev-positive";
   return "ev-neutral";
 }
 
-function probGap(book, model) {
-  return Math.abs(model - book);
+/* ---------- Parlay ---------- */
+
+function addToParlay(bet) {
+  if (state.parlay.find(p => p.id === bet.id)) return;
+  state.parlay.push(bet);
+  renderParlay();
 }
 
-// -------------------------------
-// Parlay Logic
-// -------------------------------
-
-function addToParlay(item) {
-  parlayState.push(item);
-  console.log("Parlay:", parlayState);
+function removeFromParlay(id) {
+  state.parlay = state.parlay.filter(p => p.id !== id);
+  renderParlay();
 }
 
-// -------------------------------
-// Render Helpers
-// -------------------------------
+function renderParlay() {
+  const el = document.getElementById("parlay-sidebar");
+  if (!el) return;
 
-function renderRow(o, allowParlay = true) {
-  const row = document.createElement("div");
-  row.className = `market-row ${evClass(o.ev)}`;
-
-  row.innerHTML = `
-    <div class="market-name">${o.name}</div>
-    <div class="market-probs">
-      Book ${(o.bookProb * 100).toFixed(1)}%
-      · Model ${(o.modelProb * 100).toFixed(1)}%
+  el.innerHTML = `
+    <div class="parlay-header">
+      <span>🏛️ EmpirePicks Parlay</span>
     </div>
-    <div class="market-ev">EV ${(o.ev * 100).toFixed(1)}%</div>
+    <div class="parlay-legs">
+      ${state.parlay.map(p => `
+        <div class="parlay-leg">
+          <div>
+            <strong>${p.label}</strong>
+            <div class="muted">${p.market}</div>
+          </div>
+          <button onclick="removeFromParlay('${p.id}')">✕</button>
+        </div>
+      `).join("")}
+    </div>
+    <div class="parlay-stake">
+      <label>Stake</label>
+      <input type="number" value="${state.stake}" min="1"
+        onchange="state.stake=this.value; renderParlay()" />
+    </div>
+    ${renderParlayCalc()}
   `;
-
-  if (allowParlay) {
-    const btn = document.createElement("button");
-    btn.className = "parlay-btn";
-    btn.textContent = "+ Parlay";
-    btn.onclick = () => addToParlay(o);
-    row.appendChild(btn);
-  }
-
-  return row;
 }
 
-function renderMarket(title, outcomes) {
-  const m = document.createElement("div");
-  m.className = "market";
+function renderParlayCalc() {
+  if (!state.parlay.length) return "";
 
-  const h = document.createElement("h4");
-  h.textContent = title;
-  m.appendChild(h);
+  const decimalOdds = state.parlay
+    .map(p => americanToDecimal(p.odds))
+    .reduce((a, b) => a * b, 1);
 
-  outcomes.forEach(o => m.appendChild(renderRow(o)));
-  return m;
-}
+  const payout = (state.stake * decimalOdds).toFixed(2);
+  const prob = state.parlay
+    .map(p => p.modelProb)
+    .reduce((a, b) => a * b, 1);
 
-// -------------------------------
-// Game Renderer
-// -------------------------------
-
-function renderGame(game, propsByEvent) {
-  const card = document.createElement("div");
-  card.className = "game-card";
-
-  card.innerHTML = `
-    <div class="game-header">
-      <h3>${game.away_team} @ ${game.home_team}</h3>
-      <div>${new Date(game.commence_time).toLocaleString()}</div>
+  return `
+    <div class="parlay-summary">
+      <div>${state.stake} → <strong>${payout}</strong></div>
+      <div class="muted">Prob ${(prob * 100).toFixed(1)}%</div>
+      <button class="place-bet">Place Bet</button>
     </div>
   `;
-
-  // -------- Moneyline / Spread / Total --------
-  ["h2h", "spreads", "totals"].forEach(type => {
-    const m = game.books?.[type]?.[0];
-    if (!m) return;
-
-    let o1, o2;
-
-    if (type === "totals") {
-      o1 = m.over;
-      o2 = m.under;
-    } else {
-      o1 = m.outcome1;
-      o2 = m.outcome2;
-    }
-
-    const p1 = impliedProb(o1.odds);
-    const p2 = impliedProb(o2.odds);
-    const [mp1, mp2] = noVig(p1, p2);
-
-    card.appendChild(
-      renderMarket(type.toUpperCase(), [
-        {
-          name: o1.name || `Over ${m.point}`,
-          odds: o1.odds,
-          bookProb: p1,
-          modelProb: mp1,
-          ev: expectedValue(o1.odds, mp1)
-        },
-        {
-          name: o2.name || `Under ${m.point}`,
-          odds: o2.odds,
-          bookProb: p2,
-          modelProb: mp2,
-          ev: expectedValue(o2.odds, mp2)
-        }
-      ])
-    );
-  });
-
-  // -------- Props (READ-ONLY) --------
-  const props = propsByEvent[game.id];
-  if (props?.length) {
-    const box = document.createElement("div");
-    box.className = "props-box";
-    box.innerHTML = "<h4>Player Props</h4>";
-
-    props.forEach(p => {
-      if (!p.over || !p.under) return;
-
-      const bp = impliedProb(p.over.odds);
-      const up = impliedProb(p.under.odds);
-      const [mpo, mpu] = noVig(bp, up);
-
-      box.appendChild(
-        renderRow(
-          {
-            name: `${p.player} ${p.market} Over ${p.line}`,
-            odds: p.over.odds,
-            bookProb: bp,
-            modelProb: mpo,
-            ev: expectedValue(p.over.odds, mpo)
-          },
-          false
-        )
-      );
-    });
-
-    card.appendChild(box);
-  }
-
-  return card;
 }
 
-// -------------------------------
-// Top-3 EV Banner
-// -------------------------------
+/* ---------- Top-3 EV Banner ---------- */
 
-function renderTopEV(all) {
-  const top = all
-    .filter(x => x.ev > 0)
-    .sort((a, b) =>
-      b.ev !== a.ev ? b.ev - a.ev : b.modelProb - a.modelProb
-    )
+function renderTopEV() {
+  const top = [...state.allBets]
+    .filter(b => b.ev >= 8)
+    .sort((a, b) => b.ev - a.ev)
     .slice(0, 3);
 
-  if (!top.length) return;
+  if (!top.length) return "";
 
-  bannerRoot.innerHTML = `
-    <div class="ev-banner">
-      <strong>Top EV Picks</strong>
-      ${top
-        .map(
-          t =>
-            `<span>${t.name} · EV ${(t.ev * 100).toFixed(1)}%</span>`
-        )
-        .join("")}
+  return `
+    <div class="top-ev-banner">
+      ${top.map(b => `
+        <div class="top-ev-card">
+          <div>${b.label}</div>
+          <strong>EV ${b.ev.toFixed(1)}%</strong>
+        </div>
+      `).join("")}
     </div>
   `;
 }
 
-// -------------------------------
-// Load Everything
-// -------------------------------
+/* ---------- Rendering ---------- */
 
-async function load() {
-  container.innerHTML = "Loading…";
-
-  const [eventsRes, propsRes] = await Promise.all([
-    fetch(API_EVENTS),
-    fetch(API_PROPS)
-  ]);
-
-  const games = await eventsRes.json();
-  const props = await propsRes.json();
-
-  const propsByEvent = {};
-  props.forEach(p => {
-    propsByEvent[p.event_id] ||= [];
-    propsByEvent[p.event_id].push(p);
-  });
-
+function renderGames(games) {
+  const container = document.getElementById("games-container");
   container.innerHTML = "";
-  const evCollector = [];
 
-  games.forEach(g => {
-    container.appendChild(renderGame(g, propsByEvent));
+  state.allBets = [];
+
+  container.insertAdjacentHTML("afterbegin", renderTopEV());
+
+  games.forEach(game => {
+    container.insertAdjacentHTML("beforeend", renderGame(game));
   });
-
-  renderTopEV(evCollector);
 }
 
-load();
+function renderGame(game) {
+  return `
+    <div class="game-card">
+      <div class="game-header">
+        <img src="${game.away_logo}">
+        <span>@</span>
+        <img src="${game.home_logo}">
+        <span>${new Date(game.commence_time).toLocaleString()}</span>
+      </div>
+
+      <div class="market-grid">
+        ${["moneyline","spread","total"].map(m =>
+          renderMarket(game, m)
+        ).join("")}
+      </div>
+
+      ${renderProps(game)}
+    </div>
+  `;
+}
+
+function renderMarket(game, type) {
+  if (!game.markets[type]) return "";
+
+  return `
+    <div class="market-card">
+      <h4>${type.toUpperCase()}</h4>
+      ${game.markets[type].map(o => {
+        const ev = evPercent(o.fair, o.odds);
+        const bet = {
+          id: o.id,
+          label: `${o.name} ${o.odds}`,
+          market: type,
+          odds: o.odds,
+          modelProb: o.fair,
+          ev
+        };
+        state.allBets.push(bet);
+
+        return `
+          <div class="bet-row ${evClass(ev)}">
+            <div>
+              <strong>${o.name} ${o.odds}</strong>
+              <div class="muted">
+                Book ${(o.implied*100).toFixed(1)}% · Model ${(o.fair*100).toFixed(1)}%
+              </div>
+            </div>
+            <button onclick='addToParlay(${JSON.stringify(bet)})'>+ Parlay</button>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderProps(game) {
+  if (!game.props) return "";
+
+  return `
+    <div class="props-section">
+      <h4>Player Props</h4>
+      ${game.props.map(p => {
+        const ev = evPercent(p.fair, p.odds);
+        const bet = {
+          id: p.id,
+          label: `${p.player} ${p.line}`,
+          market: p.market,
+          odds: p.odds,
+          modelProb: p.fair,
+          ev
+        };
+        state.allBets.push(bet);
+
+        return `
+          <div class="prop-row ${evClass(ev)}">
+            <div>
+              <strong>${p.player}</strong> ${p.line}
+              <div class="muted">
+                Book ${(p.implied*100).toFixed(1)}% · Model ${(p.fair*100).toFixed(1)}%
+              </div>
+            </div>
+            <button onclick='addToParlay(${JSON.stringify(bet)})'>+ Parlay</button>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+/* ---------- Boot ---------- */
+
+fetch("/api/events")
+  .then(r => r.json())
+  .then(renderGames);

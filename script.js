@@ -172,32 +172,26 @@ function buildMarket(title, rows = [], game) {
   });
 
   Object.values(outcomes).forEach(o => {
+    const implied = impliedProbFromOdds(o.odds);
+
     const row = document.createElement("div");
     row.className = "market-row";
 
-   const implied = impliedProbFromOdds(o.odds);
-const fair = o.fair;
-
-row.innerHTML = `
-  <div>
-    <strong>${o.name}</strong> ${fmtOdds(o.odds)}
-    <div class="muted">
-      Prob (Book): ${pct(implied)} • Prob (Model): ${pct(fair)}
-    </div>
-  </div>
-
-  <div class="${evClass(o.edge)}">
-    EV ${pct(o.edge)}
-  </div>
-
-  <button class="parlay-btn">+ Parlay</button>
-`;
-    row.querySelector("button").onclick = () =>
-      window.Parlay.addLeg({
-        label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
-        odds: o.odds,
-        prob: o.fair
-      });
+    row.innerHTML = `
+      <div>
+        <strong>${o.name}</strong> ${fmtOdds(o.odds)}
+        <div class="muted">
+          Book: ${pct(implied)} • Model: ${pct(o.fair)}
+        </div>
+      </div>
+      <div class="${evClass(o.edge)}">EV ${pct(o.edge)}</div>
+      <button class="parlay-btn market-parlay-btn"
+        data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
+        data-odds="${o.odds}"
+        data-prob="${o.fair}">
+        + Parlay
+      </button>
+    `;
 
     box.appendChild(row);
   });
@@ -206,7 +200,7 @@ row.innerHTML = `
 }
 
 /* ============================================================
-   PLAYER PROPS (FIXED ACCORDION)
+   PLAYER PROPS
    ============================================================ */
 
 function buildPropsAccordion(game) {
@@ -251,7 +245,7 @@ function buildPropsAccordion(game) {
 }
 
 /* ============================================================
-   PROPS UI
+   PROPS UI (NO INLINE JS)
    ============================================================ */
 
 function buildPropsUI(categories) {
@@ -259,31 +253,42 @@ function buildPropsUI(categories) {
 
   Object.entries(categories).forEach(([cat, props]) => {
     html += `<h4>${cat}</h4>`;
+
     props.forEach(p => {
       html += `
         <div class="prop-item">
           <div><strong>${p.player}</strong></div>
           <div>${p.label} ${p.point}</div>
 
-          <div>
-  Over ${fmtOdds(p.over_odds)}
-  <div class="muted">
-    Prob (Book): ${pct(impliedProbFromOdds(p.over_odds))}
-    • Prob (Model): ${pct(p.over_prob)}
-  </div>
-  <span class="${evClass(p.over_ev)}">EV ${pct(p.over_ev)}</span>
-  <button class="parlay-btn">+ Parlay</button>
-</div>
+          <div class="prop-side">
+            Over ${fmtOdds(p.over_odds)}
+            <div class="muted">
+              Book: ${pct(impliedProbFromOdds(p.over_odds))}
+              • Model: ${pct(p.over_prob)}
+            </div>
+            <span class="${evClass(p.over_ev)}">EV ${pct(p.over_ev)}</span>
+            <button class="parlay-btn prop-parlay-btn"
+              data-label="${p.player} Over ${p.point}"
+              data-odds="${p.over_odds}"
+              data-prob="${p.over_prob}">
+              + Parlay
+            </button>
+          </div>
 
-         <div>
-  Under ${fmtOdds(p.under_odds)}
-  <div class="muted">
-    Prob (Book): ${pct(impliedProbFromOdds(p.under_odds))}
-    • Prob (Model): ${pct(p.under_prob)}
-  </div>
-  <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>
-  <button class="parlay-btn">+ Parlay</button>
-</div>
+          <div class="prop-side">
+            Under ${fmtOdds(p.under_odds)}
+            <div class="muted">
+              Book: ${pct(impliedProbFromOdds(p.under_odds))}
+              • Model: ${pct(p.under_prob)}
+            </div>
+            <span class="${evClass(p.under_ev)}">EV ${pct(p.under_ev)}</span>
+            <button class="parlay-btn prop-parlay-btn"
+              data-label="${p.player} Under ${p.point}"
+              data-odds="${p.under_odds}"
+              data-prob="${p.under_prob}">
+              + Parlay
+            </button>
+          </div>
         </div>
       `;
     });
@@ -291,6 +296,21 @@ function buildPropsUI(categories) {
 
   return html;
 }
+
+/* ============================================================
+   DELEGATED PARLAY BUTTON HANDLER (CRITICAL FIX)
+   ============================================================ */
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".market-parlay-btn, .prop-parlay-btn");
+  if (!btn) return;
+
+  window.Parlay.addLeg({
+    label: btn.dataset.label,
+    odds: Number(btn.dataset.odds),
+    prob: Number(btn.dataset.prob)
+  });
+});
 
 /* ============================================================
    PARLAY SIDEBAR RENDER

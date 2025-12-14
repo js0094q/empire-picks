@@ -189,7 +189,33 @@ function gameCard(game) {
       <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
     </div>
   `;
+  const propsToggle = document.createElement("button");
+  propsToggle.className = "props-toggle";
+  propsToggle.textContent = "Show Props";
 
+  const propsContainer = document.createElement("div");
+  propsContainer.className = "props-container";
+
+  let loaded = false;
+
+  propsToggle.onclick = async () => {
+    propsContainer.classList.toggle("open");
+
+    if (loaded) return;
+    loaded = true;
+
+    propsContainer.innerHTML = `<div class="muted">Loading props…</div>`;
+
+    try {
+      const data = await fetchProps(game.id);
+      renderProps(propsContainer, data.categories);
+    } catch (e) {
+      propsContainer.innerHTML =
+        `<div class="muted">Props unavailable</div>`;
+    }
+
+  card.appendChild(propsToggle);
+  card.appendChild(propsContainer);
   const row = document.createElement("div");
   row.className = "markets-row";
 

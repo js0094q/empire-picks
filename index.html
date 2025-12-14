@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EmpirePicks • NFL Odds & Props</title>
 
-  <link rel="stylesheet" href="styles.css?v=stable">
+  <link rel="stylesheet" href="styles.css" />
   <script type="module" src="script.js" defer></script>
 </head>
 
@@ -17,15 +17,18 @@
 
   <div class="layout">
     <aside class="left-rail">
-      <section id="top-picks"></section>
+      <section id="top-picks" class="top-picks"></section>
     </aside>
 
     <main class="main-content">
       <section class="hero">
         <h1>EmpirePicks</h1>
+        <p>Consensus odds, no-vig probabilities, model-weighted value.</p>
       </section>
 
-      <div id="games-container"></div>
+      <div id="games-container" class="games-container">
+        <div class="loading">Loading NFL games…</div>
+      </div>
     </main>
   </div>
 

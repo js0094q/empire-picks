@@ -1,225 +1,67 @@
-body {
-  background:#020617;
-  color:#f8fafc;
-  font-family:Manrope,system-ui,sans-serif;
-  margin:0;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-.layout {
-  display:grid;
-  grid-template-columns:260px 1fr;
-  gap:18px;
-  padding:16px;
-}
+  <title>EmpirePicks • NFL Odds & Props</title>
 
-.left-rail {
-  position:sticky;
-  top:90px;
-}
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
 
-.hero {
-  background:radial-gradient(circle at top, rgba(56,189,248,.25), #020617 70%);
-  padding:32px;
-  border-radius:18px;
-  margin-bottom:24px;
-}
+<body>
 
-.game-card {
-  background:#020617;
-  border-radius:18px;
-  padding:16px;
-  margin-bottom:24px;
-}
+  <!-- ================= HEADER ================= -->
+  <header class="ep-header">
+    <div class="logo">🏛️ EmpirePicks</div>
+    <button id="refresh-btn">Refresh Odds</button>
+  </header>
 
-.game-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:12px;
-}
+  <!-- ================= LAYOUT ================= -->
+  <div class="layout">
 
-.teams img {
-  width:48px;
-  height:48px;
-}
+    <!-- LEFT RAIL -->
+    <aside class="left-rail">
+      <section id="top-picks" class="top-picks">
+        <h3>Top Picks (Model-Weighted)</h3>
+      </section>
+    </aside>
 
-.markets-row {
-  display:flex;
-  gap:12px;
-}
+    <!-- MAIN -->
+    <main class="main-content">
 
-.market-box {
-  flex:1;
-}
+      <section class="hero">
+        <h1>EmpirePicks</h1>
+        <p>Consensus odds, no-vig probabilities, and model-weighted value.</p>
+      </section>
 
-.market-row {
-  display:grid;
-  grid-template-columns:1fr auto auto;
-  gap:10px;
-  padding:12px;
-  border-radius:14px;
-  margin-bottom:8px;
-}
+      <div id="games-container">
+        <div class="loading">Loading NFL games…</div>
+      </div>
 
-.signal-strong { background:linear-gradient(90deg, rgba(34,197,94,.35), transparent); }
-.signal-medium { background:linear-gradient(90deg, rgba(34,197,94,.22), transparent); }
-.signal-light  { background:linear-gradient(90deg, rgba(34,197,94,.12), transparent); }
+    </main>
+  </div>
 
-.parlay-btn {
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.2);
-  background:rgba(255,255,255,.08);
-  color:white;
-  padding:6px 12px;
-  cursor:pointer;
-}
+  <!-- ================= PARLAY MODAL ================= -->
+  <div id="parlay-backdrop" class="parlay-backdrop"></div>
 
-.top-pick {
-  background:linear-gradient(90deg, rgba(34,197,94,.25), transparent);
-  padding:12px;
-  border-radius:14px;
-  margin-bottom:10px;
-}
+  <div id="parlay-modal" class="parlay-modal">
+    <button id="close-parlay">✕</button>
+    <h3>Parlay</h3>
+    <div id="parlay-legs"></div>
+    <input id="parlay-stake" type="number" value="10" min="1" />
+    <div id="parlay-summary"></div>
+  </div>
 
-.badge {
-  background:#22c55e;
-  color:#022c22;
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:.75rem;
-  font-weight:700;
-}
+  <footer class="ep-footer">
+    Data from The Odds API • EmpirePicks.com
+  </footer>
 
-.ev-green { color:#22c55e; }
-.ev-neutral { color:#94a3b8; }
+  <!-- ✅ SINGLE MODULE ENTRY -->
+  <script type="module">
+    import "./script.js";
+  </script>
 
-.muted { color:#9ca3af; font-size:.8rem; }
-
-/* MODAL */
-.parlay-backdrop {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.6);
-  opacity:0;
-  pointer-events:none;
-  transition:.2s;
-}
-
-.parlay-modal {
-  position:fixed;
-  right:50%;
-  top:50%;
-  transform:translate(50%,-50%) scale(.95);
-  background:#020617;
-  border-radius:18px;
-  padding:20px;
-  width:320px;
-  opacity:0;
-  pointer-events:none;
-  transition:.2s;
-}
-
-.parlay-backdrop.open,
-.parlay-modal.open {
-  opacity:1;
-  pointer-events:auto;
-  transform:translate(50%,-50%) scale(1);
-}
-
-/* =====================================================
-   PARLAY MODAL HARD FIX (SAFARI / WEBKIT)
-   ===================================================== */
-
-.parlay-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(2,6,23,0.75);
-  z-index: 9998;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-}
-
-.parlay-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #020617;
-  border-radius: 18px;
-  padding: 20px;
-  width: 320px;
-  z-index: 9999;
-  opacity: 0;
-  pointer-events: none;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-}
-
-/* OPEN STATE */
-.parlay-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.parlay-modal.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* IMPORTANT: prevent parent stacking context bleed */
-.layout,
-.hero,
-.game-card {
-  transform: none !important;
-  filter: none !important;
-}
-
-/* ==========================
-   PROPS
-   ========================== */
-
-.props-toggle {
-  margin-top: 10px;
-  font-size: 0.85rem;
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.15);
-  border-radius: 999px;
-  padding: 6px 12px;
-  color: #e5e7eb;
-  cursor: pointer;
-}
-
-.props-container {
-  margin-top: 14px;
-  display: none;
-}
-
-.props-container.open {
-  display: block;
-}
-
-.prop-category {
-  margin-bottom: 14px;
-}
-
-.prop-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(15,23,42,.6);
-  margin-bottom: 6px;
-}
-
-.prop-player {
-  font-weight: 600;
-}
-
-.prop-line {
-  font-size: .85rem;
-}
-
-.prop-ev {
-  font-size: .85rem;
-}
+</body>
+</html>

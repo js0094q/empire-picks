@@ -12,6 +12,13 @@ async function fetchProps(eventId) {
   if (!r.ok) throw new Error("Props fetch failed");
   return r.json();
 }
+
+async function fetchProps(eventId) {
+  const r = await fetch(`/api/props?id=${eventId}`);
+  if (!r.ok) throw new Error("Props fetch failed");
+  return r.json();
+}
+
 const impliedProb = o =>
   o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 

@@ -134,53 +134,57 @@
     return card;
   }
 
-  /* =======================
-     MARKET RENDER
-     ======================= */
+ function renderMarket(title, rows = []) {
+  const box = document.createElement("div");
+  box.className = "market-box";
+  box.innerHTML = `<h4>${title}</h4>`;
 
-  function renderMarket(title, rows = []) {
-    const box = document.createElement("div");
-    box.className = "market-box";
-    box.innerHTML = `<h4>${title}</h4>`;
+  if (!Array.isArray(rows) || rows.length === 0) return box;
 
-    if (!rows.length) return box;
+  const sides = {};
 
-    const sides = {};
+  rows.forEach(r => {
+    if (!r || !Array.isArray(r.outcomes)) return;
 
-    rows.forEach(r => {
-      r.outcomes.forEach(o => {
-        if (!sides[o.name]) sides[o.name] = [];
-        sides[o.name].push({
-          odds: o.odds,
-          book: r.book
-        });
+    r.outcomes.forEach(o => {
+      if (!o || typeof o.odds !== "number" || !o.name) return;
+
+      if (!sides[o.name]) sides[o.name] = [];
+      sides[o.name].push({
+        odds: o.odds,
+        book: r.book || "default"
       });
     });
+  });
 
-    Object.entries(sides).forEach(([name, offers]) => {
-      const fair = weightedConsensus(offers);
-      const best = offers.reduce((a, b) =>
-        impliedProb(b.odds) < impliedProb(a.odds) ? b : a
-      );
+  Object.entries(sides).forEach(([name, offers]) => {
+    if (offers.length === 0) return;
 
-      const imp = impliedProb(best.odds);
-      const ev = fair - imp;
-      if (fair < MIN_PROB) return;
+    const fair = weightedConsensus(offers);
+    if (!isFinite(fair)) return;
 
-      const tier = strengthTier(fair, ev);
+    const best = offers.reduce((a, b) =>
+      impliedProb(b.odds) < impliedProb(a.odds) ? b : a
+    );
 
-      box.appendChild(renderPick({
-        label: name,
-        odds: best.odds,
-        fair,
-        ev,
-        tier
-      }));
-    });
+    const imp = impliedProb(best.odds);
+    const ev = fair - imp;
 
-    return box;
-  }
+    if (!isFinite(ev) || fair < MIN_PROB) return;
 
+    const tier = strengthTier(fair, ev);
+
+    box.appendChild(renderPick({
+      label: name,
+      odds: best.odds,
+      fair,
+      ev,
+      tier
+    }));
+  });
+
+  return box;
+}
   /* =======================
      PICK TILE
      ======================= */

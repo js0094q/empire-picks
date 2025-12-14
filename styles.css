@@ -1,67 +1,322 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+/* =========================================================
+   GLOBAL RESET + THEME
+   ========================================================= */
 
-  <title>EmpirePicks • NFL Odds & Props</title>
+* {
+  box-sizing: border-box;
+}
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="styles.css" />
-</head>
+html, body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(1200px 600px at 50% -20%, #0b1220, #020617);
+  color: #e5e7eb;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
 
-<body>
+/* =========================================================
+   HEADER
+   ========================================================= */
 
-  <!-- ================= HEADER ================= -->
-  <header class="ep-header">
-    <div class="logo">🏛️ EmpirePicks</div>
-    <button id="refresh-btn">Refresh Odds</button>
-  </header>
+.ep-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, #020617, #020617cc);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(10px);
+}
 
-  <!-- ================= LAYOUT ================= -->
-  <div class="layout">
+.ep-header .logo {
+  font-weight: 800;
+  letter-spacing: .4px;
+}
 
-    <!-- LEFT RAIL -->
-    <aside class="left-rail">
-      <section id="top-picks" class="top-picks">
-        <h3>Top Picks (Model-Weighted)</h3>
-      </section>
-    </aside>
+#refresh-btn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(37,99,235,.35);
+}
 
-    <!-- MAIN -->
-    <main class="main-content">
+#refresh-btn:hover {
+  filter: brightness(1.1);
+}
 
-      <section class="hero">
-        <h1>EmpirePicks</h1>
-        <p>Consensus odds, no-vig probabilities, and model-weighted value.</p>
-      </section>
+/* =========================================================
+   LAYOUT
+   ========================================================= */
 
-      <div id="games-container">
-        <div class="loading">Loading NFL games…</div>
-      </div>
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  padding: 20px;
+}
 
-    </main>
-  </div>
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
 
-  <!-- ================= PARLAY MODAL ================= -->
-  <div id="parlay-backdrop" class="parlay-backdrop"></div>
+/* =========================================================
+   LEFT RAIL (TOP PICKS)
+   ========================================================= */
 
-  <div id="parlay-modal" class="parlay-modal">
-    <button id="close-parlay">✕</button>
-    <h3>Parlay</h3>
-    <div id="parlay-legs"></div>
-    <input id="parlay-stake" type="number" value="10" min="1" />
-    <div id="parlay-summary"></div>
-  </div>
+.left-rail {
+  background: linear-gradient(180deg, #020617, #020617cc);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 18px;
+  padding: 16px;
+}
 
-  <footer class="ep-footer">
-    Data from The Odds API • EmpirePicks.com
-  </footer>
+.top-pick {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg,
+    rgba(16,185,129,.22),
+    rgba(16,185,129,.06)
+  );
+  border: 1px solid rgba(16,185,129,.4);
+}
 
-  <!-- ✅ SINGLE MODULE ENTRY -->
-  <script type="module">
-    import "./script.js";
-  </script>
+.top-pick strong {
+  display: block;
+  margin-bottom: 6px;
+}
 
-</body>
-</html>
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero {
+  margin-bottom: 20px;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  margin: 0;
+  font-weight: 800;
+}
+
+.hero p {
+  margin-top: 6px;
+  color: #94a3b8;
+}
+
+/* =========================================================
+   GAME CARDS
+   ========================================================= */
+
+.game-card {
+  margin-bottom: 22px;
+  padding: 18px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #020617, #020617cc);
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow:
+    0 12px 40px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.teams {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.teams img {
+  height: 30px;
+  width: auto;
+}
+
+.kickoff {
+  color: #94a3b8;
+  font-size: .85rem;
+}
+
+/* =========================================================
+   MARKETS
+   ========================================================= */
+
+.markets-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.market-box {
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(15,23,42,.95),
+    rgba(15,23,42,.7)
+  );
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.035);
+}
+
+/* =========================================================
+   STRENGTH / CONFIDENCE VISUAL
+   ========================================================= */
+
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.strength .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+}
+
+.strength .dot.on {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16,185,129,.8);
+}
+
+.badge {
+  margin-left: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  background: rgba(16,185,129,.2);
+  border: 1px solid rgba(16,185,129,.45);
+}
+
+/* =========================================================
+   PARLAY BUTTON
+   ========================================================= */
+
+.parlay-btn {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: .75rem;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.parlay-btn:hover {
+  background: rgba(255,255,255,.15);
+}
+
+/* =========================================================
+   PROPS TOGGLE
+   ========================================================= */
+
+.props-toggle {
+  margin-top: 18px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  font-weight: 600;
+  font-size: .85rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(37,99,235,.4);
+}
+
+.props-toggle:hover {
+  filter: brightness(1.1);
+}
+
+/* =========================================================
+   PROPS CONTAINER
+   ========================================================= */
+
+.props-container {
+  display: none;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(15,23,42,.98),
+    rgba(15,23,42,.75)
+  );
+  border: 1px solid rgba(255,255,255,.07);
+}
+
+.props-container.open {
+  display: block;
+}
+
+/* =========================================================
+   PROP ROWS
+   ========================================================= */
+
+.prop-category {
+  margin-bottom: 16px;
+}
+
+.prop-category strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #c7d2fe;
+}
+
+.prop-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+}
+
+/* =========================================================
+   TEXT + STATES
+   ========================================================= */
+
+.muted {
+  color: #94a3b8;
+  font-size: .8rem;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.ev-green { color: #10b981; }
+.ev-red { color: #ef4444; }
+.ev-neutral { color: #facc15; }

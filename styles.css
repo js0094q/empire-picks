@@ -173,3 +173,53 @@ body {
   transform: none !important;
   filter: none !important;
 }
+
+/* ==========================
+   PROPS
+   ========================== */
+
+.props-toggle {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.props-container {
+  margin-top: 14px;
+  display: none;
+}
+
+.props-container.open {
+  display: block;
+}
+
+.prop-category {
+  margin-bottom: 14px;
+}
+
+.prop-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(15,23,42,.6);
+  margin-bottom: 6px;
+}
+
+.prop-player {
+  font-weight: 600;
+}
+
+.prop-line {
+  font-size: .85rem;
+}
+
+.prop-ev {
+  font-size: .85rem;
+}

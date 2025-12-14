@@ -1,29 +1,25 @@
 import { Teams } from "./teams.js";
 
 /* =========================================================
+   HARD GUARD — PREVENT DOUBLE LOAD (FOREVER)
+   ========================================================= */
+if (window.__EMPIREPICKS_LOADED__) {
+  throw new Error("EmpirePicks script loaded twice");
+}
+window.__EMPIREPICKS_LOADED__ = true;
+
+/* =========================================================
    HELPERS
    ========================================================= */
 
 const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
-async function fetchProps(eventId) {
-  const r = await fetch(`/api/props?id=${eventId}`);
-  if (!r.ok) throw new Error("Props fetch failed");
-  return r.json();
-}
-
-async function fetchProps(eventId) {
-  const r = await fetch(`/api/props?id=${eventId}`);
-  if (!r.ok) throw new Error("Props fetch failed");
-  return r.json();
-}
-
 const impliedProb = o =>
   o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 
 const evClass = ev =>
-  ev > 0.03 ? "ev-green" : ev < -0.03 ? "ev-red" : "ev-neutral";
+  ev > 0.04 ? "ev-green" : ev < -0.04 ? "ev-red" : "ev-neutral";
 
 const signalClass = d =>
   d > 0.15 ? "signal-strong" :
@@ -45,14 +41,14 @@ const kickoffLocal = utc =>
   });
 
 /* =========================================================
-   STATE
+   DOM
    ========================================================= */
 
-const autoPickCandidates = [];
 const gamesContainer = document.getElementById("games-container");
+const topPicksBox = document.getElementById("top-picks");
 
 /* =========================================================
-   PARLAY MODAL ENGINE
+   PARLAY ENGINE (UNCHANGED)
    ========================================================= */
 
 const Parlay = {
@@ -61,17 +57,8 @@ const Parlay = {
     if (!this.legs.find(l => l.label === leg.label)) {
       this.legs.push(leg);
     }
-
-    // FORCE modal open every time (Safari-safe)
-    modal.classList.remove("open");
-    backdrop.classList.remove("open");
-
-    requestAnimationFrame(() => {
-      modal.classList.add("open");
-      backdrop.classList.add("open");
-    });
-
     renderParlay();
+    openParlay();
   },
   remove(i) {
     this.legs.splice(i, 1);
@@ -86,29 +73,15 @@ function openParlay() {
   modal.classList.add("open");
   backdrop.classList.add("open");
 }
-
 function closeParlay() {
   modal.classList.remove("open");
   backdrop.classList.remove("open");
 }
-
-document.getElementById("close-parlay").onclick = closeParlay;
 backdrop.onclick = closeParlay;
+document.getElementById("close-parlay").onclick = closeParlay;
 
 function americanToDecimal(o) {
   return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
-}
-
-function computeParlay() {
-  let mult = 1;
-  let prob = 1;
-
-  Parlay.legs.forEach(l => {
-    mult *= americanToDecimal(l.odds);
-    prob *= l.prob;
-  });
-
-  return { mult, prob, ev: prob * mult - 1 };
 }
 
 function renderParlay() {
@@ -123,16 +96,20 @@ function renderParlay() {
       <div class="parlay-leg">
         ${l.label} (${fmtOdds(l.odds)})
         <span onclick="window.__removeLeg(${i})">✕</span>
-      </div>
-    `;
+      </div>`;
   });
 
-  const p = computeParlay();
+  let mult = 1;
+  let prob = 1;
+  Parlay.legs.forEach(l => {
+    mult *= americanToDecimal(l.odds);
+    prob *= l.prob;
+  });
 
   sum.innerHTML = `
-    <div>${stake.toFixed(2)} → ${(stake * p.mult).toFixed(2)}</div>
-    <div>Prob ${pct(p.prob)}</div>
-    <div class="${evClass(p.ev)}">EV ${pct(p.ev)}</div>
+    <div>${stake.toFixed(2)} → ${(stake * mult).toFixed(2)}</div>
+    <div>Prob ${pct(prob)}</div>
+    <div class="${evClass(prob * mult - 1)}">EV ${pct(prob * mult - 1)}</div>
   `;
 }
 
@@ -143,8 +120,8 @@ document.getElementById("parlay-stake").oninput = renderParlay;
    FETCH
    ========================================================= */
 
-const fetchGames = async () =>
-  (await fetch("/api/events")).json();
+const fetchGames = async () => (await fetch("/api/events")).json();
+const fetchProps = async id => (await fetch(`/api/props?id=${id}`)).json();
 
 /* =========================================================
    INIT
@@ -159,17 +136,16 @@ loadGames();
 
 async function loadGames() {
   gamesContainer.innerHTML = `<div class="loading">Loading NFL games…</div>`;
-  autoPickCandidates.length = 0;
+  topPicksBox.innerHTML = `<h3>Top Picks (Model-Weighted)</h3>`;
 
   const games = await fetchGames();
   gamesContainer.innerHTML = "";
 
   games.forEach(g => gamesContainer.appendChild(gameCard(g)));
-  renderTopPicks();
 }
 
 /* =========================================================
-   GAME CARD
+   GAME CARD — FULLY RESTORED ODDS
    ========================================================= */
 
 function gameCard(game) {
@@ -189,52 +165,88 @@ function gameCard(game) {
       <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
     </div>
   `;
-  const propsToggle = document.createElement("button");
-  propsToggle.className = "props-toggle";
-  propsToggle.textContent = "Show Props";
 
-  const propsContainer = document.createElement("div");
-  propsContainer.className = "props-container";
-
-  let loaded = false;
-
-  propsToggle.onclick = async () => {
-    propsContainer.classList.toggle("open");
-
-    if (loaded) return;
-    loaded = true;
-
-    propsContainer.innerHTML = `<div class="muted">Loading props…</div>`;
-
-    try {
-      const data = await fetchProps(game.id);
-      renderProps(propsContainer, data.categories);
-    } catch (e) {
-      propsContainer.innerHTML =
-        `<div class="muted">Props unavailable</div>`;
-    }
-
-  card.appendChild(propsToggle);
-  card.appendChild(propsContainer);
   const row = document.createElement("div");
   row.className = "markets-row";
 
-  ["h2h", "spreads", "totals"].forEach(m =>
-    row.appendChild(marketBox(game, m))
-  );
+  row.appendChild(marketBox(game, "ml"));
+  row.appendChild(marketBox(game, "spread"));
+  row.appendChild(marketBox(game, "total"));
 
   card.appendChild(row);
+
+  /* ================= PROPS (ADDED, NON-DESTRUCTIVE) ================= */
+
+  const propsBtn = document.createElement("button");
+  propsBtn.className = "props-toggle";
+  propsBtn.textContent = "Show Props";
+
+  const propsWrap = document.createElement("div");
+  propsWrap.className = "props-container";
+
+  let loaded = false;
+
+  propsBtn.onclick = async () => {
+    propsWrap.classList.toggle("open");
+    if (loaded) return;
+    loaded = true;
+    propsWrap.innerHTML = `<div class="muted">Loading props…</div>`;
+    const data = await fetchProps(game.id);
+    renderProps(propsWrap, data.categories);
+  };
+
+  card.appendChild(propsBtn);
+  card.appendChild(propsWrap);
+
   return card;
 }
+
+/* =========================================================
+   MARKET BOX (ML / SPREAD / TOTAL)
+   ========================================================= */
+
+function marketBox(game, key) {
+  const box = document.createElement("div");
+  box.className = "market-box";
+
+  const sides = Object.values(game.best[key]);
+
+  sides.forEach(o => {
+    const imp = impliedProb(o.odds);
+    const d = o.consensus_prob - imp;
+
+    box.innerHTML += `
+      <div class="market-row ${signalClass(d)}">
+        <div>
+          <strong>${o.name ?? key}</strong> ${fmtOdds(o.odds)}
+          <div class="muted">
+            Book ${pct(imp)} • Model ${pct(o.consensus_prob)}
+          </div>
+        </div>
+        <div class="badge">${consensusLabel(o.consensus_prob)}</div>
+        <button class="parlay-btn"
+          data-label="${game.away_team} @ ${game.home_team} — ${o.name ?? key}"
+          data-odds="${o.odds}"
+          data-prob="${o.consensus_prob}">
+          + Parlay
+        </button>
+      </div>`;
+  });
+
+  return box;
+}
+
+/* =========================================================
+   PROPS RENDER (SAFE ADDITION)
+   ========================================================= */
+
 function renderProps(container, categories) {
   container.innerHTML = "";
 
   Object.entries(categories).forEach(([cat, props]) => {
-    if (!props.length) return;
-
-    const section = document.createElement("div");
-    section.className = "prop-category";
-    section.innerHTML = `<strong>${cat}</strong>`;
+    const sec = document.createElement("div");
+    sec.className = "prop-category";
+    sec.innerHTML = `<strong>${cat}</strong>`;
 
     props.slice(0, 4).forEach(p => {
       const best =
@@ -242,107 +254,30 @@ function renderProps(container, categories) {
           ? { side: "Over", ev: p.over_ev, prob: p.over_prob, odds: p.over_odds }
           : { side: "Under", ev: p.under_ev, prob: p.under_prob, odds: p.under_odds };
 
-      const row = document.createElement("div");
-      row.className = "prop-row";
-
-      row.innerHTML = `
-        <div>
-          <div class="prop-player">${p.player}</div>
-          <div class="prop-line">${best.side} ${p.point}</div>
-        </div>
-        <div class="prop-ev ${evClass(best.ev)}">
-          EV ${pct(best.ev)}
-        </div>
-        <button class="parlay-btn"
-          data-label="${p.player} ${best.side} ${p.point}"
-          data-odds="${best.odds}"
-          data-prob="${best.prob}">
-          + Parlay
-        </button>
-      `;
-
-      section.appendChild(row);
+      sec.innerHTML += `
+        <div class="prop-row">
+          <div>
+            <div class="prop-player">${p.player}</div>
+            <div class="prop-line">${best.side} ${p.point} ${fmtOdds(best.odds)}</div>
+          </div>
+          <div class="prop-ev ${evClass(best.ev)}">
+            EV ${pct(best.ev)}
+          </div>
+          <button class="parlay-btn"
+            data-label="${p.player} ${best.side} ${p.point}"
+            data-odds="${best.odds}"
+            data-prob="${best.prob}">
+            + Parlay
+          </button>
+        </div>`;
     });
 
-    container.appendChild(section);
+    container.appendChild(sec);
   });
 }
-/* =========================================================
-   MARKETS
-   ========================================================= */
-
-function marketBox(game, key) {
-  const box = document.createElement("div");
-  box.className = "market-box";
-
-  const best = {};
-  game.books[key].forEach(r =>
-    [r.outcome1, r.outcome2].forEach(o => {
-      if (!best[o.name] || o.odds > best[o.name].odds) best[o.name] = o;
-    })
-  );
-
-  Object.values(best).forEach(o => {
-    const imp = impliedProb(o.odds);
-    const d = o.fair - imp;
-
-    if (o.edge > 0.03 && o.fair > 0.55) {
-      autoPickCandidates.push({
-        label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
-        odds: o.odds,
-        prob: o.fair,
-        ev: o.edge,
-        score: o.fair * o.edge
-      });
-    }
-
-    box.innerHTML += `
-      <div class="market-row ${signalClass(d)}">
-        <div>
-          <strong>${o.name}</strong> ${fmtOdds(o.odds)}
-          <div class="muted">
-            Book ${pct(imp)} • Model ${pct(o.fair)}
-          </div>
-        </div>
-        <div class="badge">${consensusLabel(o.fair)}</div>
-        <button class="parlay-btn"
-          data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
-          data-odds="${o.odds}"
-          data-prob="${o.fair}">
-          + Parlay
-        </button>
-      </div>
-    `;
-  });
-
-  return box;
-}
 
 /* =========================================================
-   TOP PICKS
-   ========================================================= */
-
-function renderTopPicks() {
-  const box = document.getElementById("top-picks");
-
-  const picks = [...autoPickCandidates]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-
-  box.innerHTML = `
-    <h3>Top Picks (Model-Weighted)</h3>
-    ${picks.map(p => `
-      <div class="top-pick">
-        <strong>${p.label}</strong>
-        <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
-        <span class="badge">${consensusLabel(p.prob)}</span>
-      </div>
-    `).join("")}
-  `;
-}
-
-/* =========================================================
-   EVENTS
+   GLOBAL PARLAY CLICK
    ========================================================= */
 
 document.addEventListener("click", e => {

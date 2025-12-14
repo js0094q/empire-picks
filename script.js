@@ -1,25 +1,6 @@
 import { Teams } from "./teams.js";
 
 /* ============================================================
-   BOOK WEIGHTS
-   ============================================================ */
-
-const BOOK_WEIGHTS = {
-  pinnacle: 1.35,
-  circa: 1.30,
-  bookmaker: 1.25,
-  betonline: 1.20,
-
-  draftkings: 0.95,
-  fanduel: 0.95,
-  caesars: 0.90,
-  betmgm: 0.90,
-  pointsbet: 0.85
-};
-
-const DEFAULT_BOOK_WEIGHT = 0.80;
-
-/* ============================================================
    HELPERS
    ============================================================ */
 
@@ -40,24 +21,11 @@ function kickoffLocal(utc) {
   });
 }
 
-/* ============================================================
-   SHARP-WEIGHTED FAIR PROBABILITY
-   ============================================================ */
-
-function weightedFairProb(outcomes) {
-  let num = 0;
-  let den = 0;
-
-  outcomes.forEach(o => {
-    const book = o.book?.toLowerCase() || "";
-    const w = BOOK_WEIGHTS[book] ?? DEFAULT_BOOK_WEIGHT;
-    const p = impliedProb(o.odds);
-
-    num += p * w;
-    den += w;
-  });
-
-  return den ? num / den : 0;
+function signalClass(delta) {
+  if (delta > 0.15) return "signal-strong";
+  if (delta > 0.08) return "signal-medium";
+  if (delta > 0.04) return "signal-light";
+  return "";
 }
 
 /* ============================================================
@@ -87,7 +55,7 @@ function strengthCircle(prob) {
 }
 
 /* ============================================================
-   PARLAY MODAL
+   PARLAY MODAL ENGINE
    ============================================================ */
 
 const modal = document.getElementById("parlay-modal");
@@ -100,6 +68,7 @@ const Parlay = {
       this.legs.push(leg);
     }
 
+    // Force Safari-safe reopen
     modal.classList.remove("open");
     backdrop.classList.remove("open");
 
@@ -130,6 +99,18 @@ function americanToDecimal(o) {
   return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
 }
 
+function computeParlay() {
+  let mult = 1;
+  let prob = 1;
+
+  Parlay.legs.forEach(l => {
+    mult *= americanToDecimal(l.odds);
+    prob *= l.prob;
+  });
+
+  return { mult, prob, ev: prob * mult - 1 };
+}
+
 function renderParlay() {
   const legsEl = document.getElementById("parlay-legs");
   const sum = document.getElementById("parlay-summary");
@@ -146,18 +127,12 @@ function renderParlay() {
     `;
   });
 
-  let mult = 1;
-  let prob = 1;
-
-  Parlay.legs.forEach(l => {
-    mult *= americanToDecimal(l.odds);
-    prob *= l.prob;
-  });
+  const p = computeParlay();
 
   sum.innerHTML = `
-    <div>${stake.toFixed(2)} → ${(stake * mult).toFixed(2)}</div>
-    <div>Prob ${pct(prob)}</div>
-    <div class="ev-green">EV ${pct(prob * mult - 1)}</div>
+    <div>${stake.toFixed(2)} → ${(stake * p.mult).toFixed(2)}</div>
+    <div>Prob ${pct(p.prob)}</div>
+    <div class="ev-green">EV ${pct(p.ev)}</div>
   `;
 }
 
@@ -209,39 +184,39 @@ function renderTopPicks() {
    MARKET RENDERING
    ============================================================ */
 
-function renderMarket(outcomes, game, label) {
-  const fair = weightedFairProb(outcomes);
+function renderMarketRow(o, game) {
+  const imp = impliedProb(o.odds);
+  const delta = o.fair - imp;
 
-  outcomes.forEach(o => {
-    const imp = impliedProb(o.odds);
-    const edge = fair - imp;
+  if (o.edge > 0.03 && o.fair > 0.55) {
+    autoPickCandidates.push({
+      label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
+      odds: o.odds,
+      prob: o.fair,
+      ev: o.edge,
+      score: pickScore(o.fair, o.edge)
+    });
+  }
 
-    if (edge > 0.03 && fair > 0.55) {
-      autoPickCandidates.push({
-        label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
-        odds: o.odds,
-        prob: fair,
-        ev: edge,
-        score: pickScore(fair, edge)
-      });
-    }
-  });
-
-  return outcomes.map(o => `
-    <div class="market-row">
+  return `
+    <div class="market-row ${signalClass(delta)}">
       <div>
         <strong>${o.name}</strong> ${fmtOdds(o.odds)}
-        <div class="muted">Model ${pct(fair)}</div>
+        <div class="muted">
+          Book ${pct(imp)} • Model ${pct(o.fair)}
+        </div>
       </div>
-      ${strengthCircle(fair)}
+
+      ${strengthCircle(o.fair)}
+
       <button class="parlay-btn"
-        data-label="${label} — ${o.name}"
+        data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
         data-odds="${o.odds}"
-        data-prob="${fair}">
+        data-prob="${o.fair}">
         + Parlay
       </button>
     </div>
-  `).join("");
+  `;
 }
 
 /* ============================================================
@@ -273,30 +248,30 @@ function createGameCard(game) {
     const box = document.createElement("div");
     box.className = "market-box";
 
-    const byOutcome = {};
+    const best = {};
+    game.books[key].forEach(r =>
+      [r.outcome1, r.outcome2].forEach(o => {
+        if (!best[o.name] || o.odds > best[o.name].odds) best[o.name] = o;
+      })
+    );
 
-    game.books[key].forEach(b => {
-      [b.outcome1, b.outcome2].forEach(o => {
-        if (!byOutcome[o.name]) byOutcome[o.name] = [];
-        byOutcome[o.name].push({ ...o, book: b.book });
-      });
-    });
-
-    Object.values(byOutcome).forEach(outcomes => {
-      box.innerHTML += renderMarket(outcomes, game, key.toUpperCase());
+    Object.values(best).forEach(o => {
+      box.innerHTML += renderMarketRow(o, game);
     });
 
     markets.appendChild(box);
   });
 
   card.appendChild(markets);
+
+  // PROPS
   card.appendChild(renderProps(game));
 
   return card;
 }
 
 /* ============================================================
-   PROPS (UNCHANGED, WEIGHTS NOT APPLIED)
+   PROPS (FILTERED, SORTED)
    ============================================================ */
 
 function renderProps(game) {
@@ -306,31 +281,45 @@ function renderProps(game) {
 
   fetchProps(game.id).then(data => {
     Object.values(data).forEach(props => {
-      props.slice(0, 5).forEach(p => {
-        ["over", "under"].forEach(side => {
-          const odds = p[`${side}_odds`];
-          const prob = p[`${side}_prob`];
-          const ev = p[`${side}_ev`];
+      props
+        .filter(p => Number.isFinite(p.over_odds) || Number.isFinite(p.under_odds))
+        .sort((a, b) => Math.max(b.over_ev, b.under_ev) - Math.max(a.over_ev, a.under_ev))
+        .slice(0, 5)
+        .forEach(p => {
+          ["over", "under"].forEach(side => {
+            const odds = p[`${side}_odds`];
+            const prob = p[`${side}_prob`];
+            const ev = p[`${side}_ev`];
 
-          if (!Number.isFinite(odds)) return;
+            if (!Number.isFinite(odds) || prob < 0.05 || prob > 0.95) return;
 
-          wrap.innerHTML += `
-            <div class="market-row">
-              <div>
-                <strong>${p.player}</strong> ${side} ${p.point} ${fmtOdds(odds)}
-                <div class="muted">Model ${pct(prob)}</div>
+            if (ev > 0.03 && prob > 0.55) {
+              autoPickCandidates.push({
+                label: `${p.player} ${side} ${p.point}`,
+                odds,
+                prob,
+                ev,
+                score: pickScore(prob, ev)
+              });
+            }
+
+            wrap.innerHTML += `
+              <div class="market-row">
+                <div>
+                  <strong>${p.player}</strong> ${side} ${p.point} ${fmtOdds(odds)}
+                  <div class="muted">Model ${pct(prob)}</div>
+                </div>
+                ${strengthCircle(prob)}
+                <button class="parlay-btn"
+                  data-label="${p.player} ${side} ${p.point}"
+                  data-odds="${odds}"
+                  data-prob="${prob}">
+                  + Parlay
+                </button>
               </div>
-              ${strengthCircle(prob)}
-              <button class="parlay-btn"
-                data-label="${p.player} ${side} ${p.point}"
-                data-odds="${odds}"
-                data-prob="${prob}">
-                + Parlay
-              </button>
-            </div>
-          `;
+            `;
+          });
         });
-      });
     });
   });
 

@@ -1,133 +1,210 @@
+/* =====================================================
+   BASE
+   ===================================================== */
+
 body {
-  background:#020617;
-  color:#f8fafc;
-  font-family:Manrope,system-ui,sans-serif;
-  margin:0;
+  background: #020617;
+  color: #f8fafc;
+  font-family: Manrope, system-ui, sans-serif;
+  margin: 0;
 }
 
-.layout {
-  display:grid;
-  grid-template-columns:260px 1fr;
-  gap:18px;
-  padding:16px;
-}
-
-.left-rail {
-  position:sticky;
-  top:90px;
-}
-
-.hero {
-  background:radial-gradient(circle at top, rgba(56,189,248,.25), #020617 70%);
-  padding:32px;
-  border-radius:18px;
-  margin-bottom:24px;
-}
-
-.game-card {
-  background:#020617;
-  border-radius:18px;
-  padding:16px;
-  margin-bottom:24px;
-}
-
-.game-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:12px;
-}
-
-.teams img {
-  width:48px;
-  height:48px;
-}
-
-.markets-row {
-  display:flex;
-  gap:12px;
-}
-
-.market-box {
-  flex:1;
-}
-
-.market-row {
-  display:grid;
-  grid-template-columns:1fr auto auto;
-  gap:10px;
-  padding:12px;
-  border-radius:14px;
-  margin-bottom:8px;
-}
-
-.signal-strong { background:linear-gradient(90deg, rgba(34,197,94,.35), transparent); }
-.signal-medium { background:linear-gradient(90deg, rgba(34,197,94,.22), transparent); }
-.signal-light  { background:linear-gradient(90deg, rgba(34,197,94,.12), transparent); }
-
-.parlay-btn {
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.2);
-  background:rgba(255,255,255,.08);
-  color:white;
-  padding:6px 12px;
-  cursor:pointer;
-}
-
-.top-pick {
-  background:linear-gradient(90deg, rgba(34,197,94,.25), transparent);
-  padding:12px;
-  border-radius:14px;
-  margin-bottom:10px;
-}
-
-.badge {
-  background:#22c55e;
-  color:#022c22;
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:.75rem;
-  font-weight:700;
-}
-
-.ev-green { color:#22c55e; }
-.ev-neutral { color:#94a3b8; }
-
-.muted { color:#9ca3af; font-size:.8rem; }
-
-/* MODAL */
-.parlay-backdrop {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.6);
-  opacity:0;
-  pointer-events:none;
-  transition:.2s;
-}
-
-.parlay-modal {
-  position:fixed;
-  right:50%;
-  top:50%;
-  transform:translate(50%,-50%) scale(.95);
-  background:#020617;
-  border-radius:18px;
-  padding:20px;
-  width:320px;
-  opacity:0;
-  pointer-events:none;
-  transition:.2s;
-}
-
-.parlay-backdrop.open,
-.parlay-modal.open {
-  opacity:1;
-  pointer-events:auto;
-  transform:translate(50%,-50%) scale(1);
+.muted {
+  color: #9ca3af;
+  font-size: 0.8rem;
 }
 
 /* =====================================================
-   PARLAY MODAL HARD FIX (SAFARI / WEBKIT)
+   LAYOUT
+   ===================================================== */
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 18px;
+  padding: 16px;
+}
+
+.left-rail {
+  position: sticky;
+  top: 90px;
+}
+
+.main-content {
+  max-width: 1200px;
+}
+
+.games-container {
+  margin-top: 18px;
+}
+
+/* =====================================================
+   HEADER / HERO
+   ===================================================== */
+
+.ep-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: #020617;
+  border-bottom: 1px solid rgba(148,163,184,0.15);
+}
+
+.hero {
+  background: radial-gradient(circle at top, rgba(56,189,248,0.25), #020617 70%);
+  padding: 32px;
+  border-radius: 18px;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: 1.7rem;
+}
+
+.hero p {
+  max-width: 620px;
+  color: #cbd5f5;
+}
+
+/* =====================================================
+   TOP PICKS
+   ===================================================== */
+
+.top-picks {
+  background: #020617;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.top-pick {
+  background: linear-gradient(90deg, rgba(34,197,94,0.28), transparent);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
+
+  display: grid;
+  grid-template-columns: 1fr 64px;
+  align-items: center;
+  gap: 12px;
+}
+
+/* =====================================================
+   GAME CARDS
+   ===================================================== */
+
+.game-card {
+  background: #020617;
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 26px;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.teams {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.teams img {
+  width: 44px;
+  height: 44px;
+}
+
+/* =====================================================
+   MARKETS
+   ===================================================== */
+
+.markets-row {
+  display: flex;
+  gap: 12px;
+}
+
+.market-box {
+  flex: 1;
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: 1fr 64px auto;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+/* =====================================================
+   SIGNAL BACKGROUNDS
+   ===================================================== */
+
+.signal-strong {
+  background: linear-gradient(90deg, rgba(34,197,94,0.35), transparent);
+}
+
+.signal-medium {
+  background: linear-gradient(90deg, rgba(34,197,94,0.22), transparent);
+}
+
+.signal-light {
+  background: linear-gradient(90deg, rgba(34,197,94,0.12), transparent);
+}
+
+/* =====================================================
+   CONSENSUS STRENGTH CIRCLES (LOCKED)
+   ===================================================== */
+
+.strength-circle {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+
+  color: #022c22;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.35);
+
+  flex-shrink: 0;
+}
+
+.strength-very-strong { background: #22c55e; }
+.strength-strong      { background: #4ade80; }
+.strength-moderate    { background: #a3e635; }
+.strength-weak        { background: #facc15; color: #422006; }
+
+/* =====================================================
+   PARLAY BUTTON
+   ===================================================== */
+
+.parlay-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* =====================================================
+   PARLAY MODAL (SAFE)
    ===================================================== */
 
 .parlay-backdrop {
@@ -155,21 +232,8 @@ body {
   box-shadow: 0 30px 80px rgba(0,0,0,0.6);
 }
 
-/* OPEN STATE */
-.parlay-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
+.parlay-backdrop.open,
 .parlay-modal.open {
   opacity: 1;
   pointer-events: auto;
-}
-
-/* IMPORTANT: prevent parent stacking context bleed */
-.layout,
-.hero,
-.game-card {
-  transform: none !important;
-  filter: none !important;
 }

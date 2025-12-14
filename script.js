@@ -1,16 +1,6 @@
 import { Teams } from "./teams.js";
 
-/* =========================================================
-   SAFETY GUARD (prevents double load forever)
-   ========================================================= */
-if (window.__EMPIREPICKS__) {
-  throw new Error("EmpirePicks script loaded twice");
-}
-window.__EMPIREPICKS__ = true;
-
-/* =========================================================
-   HELPERS
-   ========================================================= */
+/* ================= HELPERS ================= */
 
 const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
@@ -18,15 +8,10 @@ const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 const impliedProb = o =>
   o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 
-const evClass = ev =>
-  ev > 0.05 ? "ev-green" :
-  ev < -0.05 ? "ev-red" : "ev-neutral";
-
-const strength = p =>
-  p > 0.75 ? { label: "Very Strong", level: 4 } :
-  p > 0.65 ? { label: "Strong", level: 3 } :
-  p > 0.55 ? { label: "Moderate", level: 2 } :
-             { label: "Weak", level: 1 };
+const consensusLabel = p =>
+  p > 0.75 ? "Very Strong" :
+  p > 0.65 ? "Strong" :
+  p > 0.55 ? "Moderate" : "Weak";
 
 const kickoffLocal = utc =>
   new Date(utc).toLocaleString("en-US", {
@@ -37,133 +22,44 @@ const kickoffLocal = utc =>
     minute: "2-digit"
   });
 
-/* =========================================================
-   DOM
-   ========================================================= */
+/* ================= STATE ================= */
 
 const gamesContainer = document.getElementById("games-container");
-const topPicksBox = document.getElementById("top-picks");
-
-/* =========================================================
-   PARLAY ENGINE (unchanged)
-   ========================================================= */
-
-const Parlay = {
-  legs: [],
-  add(leg) {
-    if (!this.legs.find(l => l.label === leg.label)) {
-      this.legs.push(leg);
-    }
-    renderParlay();
-    openParlay();
-  },
-  remove(i) {
-    this.legs.splice(i, 1);
-    renderParlay();
-  }
-};
-
-const modal = document.getElementById("parlay-modal");
-const backdrop = document.getElementById("parlay-backdrop");
-const closeBtn = document.getElementById("close-parlay");
-
-function openParlay() {
-  if (!modal || !backdrop) return;
-  modal.classList.add("open");
-  backdrop.classList.add("open");
-}
-
-function closeParlay() {
-  if (!modal || !backdrop) return;
-  modal.classList.remove("open");
-  backdrop.classList.remove("open");
-}
-
-if (backdrop) backdrop.onclick = closeParlay;
-if (closeBtn) closeBtn.onclick = closeParlay;
-function openParlay() {
-  modal.classList.add("open");
-  backdrop.classList.add("open");
-}
-function closeParlay() {
-  modal.classList.remove("open");
-  backdrop.classList.remove("open");
-}
-backdrop.onclick = closeParlay;
-document.getElementById("close-parlay").onclick = closeParlay;
-
-function americanToDecimal(o) {
-  return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
-}
-
-function renderParlay() {
-  const legsEl = document.getElementById("parlay-legs");
-  const sum = document.getElementById("parlay-summary");
-  const stake = Number(document.getElementById("parlay-stake").value || 0);
-
-  legsEl.innerHTML = "";
-
-  Parlay.legs.forEach((l, i) => {
-    legsEl.innerHTML += `
-      <div class="parlay-leg">
-        ${l.label} (${fmtOdds(l.odds)})
-        <span onclick="window.__rm(${i})">✕</span>
-      </div>
-    `;
-  });
-
-  let mult = 1, prob = 1;
-  Parlay.legs.forEach(l => {
-    mult *= americanToDecimal(l.odds);
-    prob *= l.prob;
-  });
-
-  sum.innerHTML = `
-    <div>${stake.toFixed(2)} → ${(stake * mult).toFixed(2)}</div>
-    <div>Prob ${pct(prob)}</div>
-    <div class="${evClass(prob * mult - 1)}">EV ${pct(prob * mult - 1)}</div>
-  `;
-}
-
-window.__rm = i => Parlay.remove(i);
-document.getElementById("parlay-stake").oninput = renderParlay;
-
-/* =========================================================
-   FETCH
-   ========================================================= */
-
-const fetchGames = async () =>
-  (await fetch("/api/events")).json();
-
-const fetchProps = async id =>
-  (await fetch(`/api/props?id=${id}`)).json();
-
-/* =========================================================
-   INIT
-   ========================================================= */
-
+const topPicks = [];
 document.getElementById("refresh-btn").onclick = loadGames;
+
+/* ================= FETCH ================= */
+
+async function fetchGames() {
+  const r = await fetch("/api/events");
+  return r.json();
+}
+
+async function fetchProps(gameId) {
+  const r = await fetch(`/api/props?id=${gameId}`);
+  return r.json();
+}
+
+/* ================= INIT ================= */
+
 loadGames();
 
-/* =========================================================
-   LOAD GAMES
-   ========================================================= */
+/* ================= MAIN ================= */
 
 async function loadGames() {
   gamesContainer.innerHTML = `<div class="loading">Loading NFL games…</div>`;
-  topPicksBox.innerHTML = `<h3>Top Picks (Model-Weighted)</h3>`;
+  topPicks.length = 0;
 
   const games = await fetchGames();
   gamesContainer.innerHTML = "";
 
-  games.forEach(g => gamesContainer.appendChild(gameCard(g)));
+  games.forEach(g => gamesContainer.appendChild(buildGameCard(g)));
+  renderTopPicks();
 }
 
-/* =========================================================
-   GAME CARD
-   ========================================================= */
+/* ================= GAME CARD ================= */
 
-function gameCard(game) {
+function buildGameCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
 
@@ -173,73 +69,62 @@ function gameCard(game) {
   card.innerHTML = `
     <div class="game-header">
       <div class="teams">
-        <img src="${away.logo}">
+        <img src="${away.logo}" />
         <span>@</span>
-        <img src="${home.logo}">
+        <img src="${home.logo}" />
       </div>
       <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
     </div>
   `;
 
-  const row = document.createElement("div");
-  row.className = "markets-row";
+  const markets = document.createElement("div");
+  markets.className = "markets-row";
 
-  ["h2h", "spreads", "totals"].forEach(m =>
-    row.appendChild(marketBox(game, m))
-  );
+  ["h2h", "spreads", "totals"].forEach(k => {
+    if (game.books[k]) markets.appendChild(buildMarket(game, k));
+  });
 
-  card.appendChild(row);
+  card.appendChild(markets);
 
-  /* ================= PROPS ================= */
-
-  const propsBtn = document.createElement("button");
-  propsBtn.className = "props-toggle";
-  propsBtn.textContent = "Show Props";
+  /* ===== PROPS (ALWAYS ATTACHED) ===== */
 
   const propsWrap = document.createElement("div");
   propsWrap.className = "props-container";
-
-  let loaded = false;
-
-  propsBtn.onclick = async () => {
-    propsWrap.classList.toggle("open");
-    if (loaded) return;
-    loaded = true;
-
-    propsWrap.innerHTML = `<div class="muted">Loading props…</div>`;
-    try {
-      const data = await fetchProps(game.id);
-      renderProps(propsWrap, data.categories);
-    } catch {
-      propsWrap.innerHTML = `<div class="muted">Props unavailable</div>`;
-    }
-  };
-
-  card.appendChild(propsBtn);
+  propsWrap.innerHTML = `<div class="muted">Loading props…</div>`;
   card.appendChild(propsWrap);
+
+  fetchProps(game.id)
+    .then(data => renderProps(propsWrap, data.categories))
+    .catch(() => propsWrap.innerHTML = `<div class="muted">No props available</div>`);
 
   return card;
 }
 
-/* =========================================================
-   MARKET BOX (ODDS + STRENGTH VISUAL)
-   ========================================================= */
+/* ================= MARKETS ================= */
 
-function marketBox(game, key) {
+function buildMarket(game, key) {
   const box = document.createElement("div");
   box.className = "market-box";
 
   const best = {};
-  game.books[key].forEach(r =>
-    [r.outcome1, r.outcome2].forEach(o => {
+  game.books[key].forEach(b =>
+    [b.outcome1, b.outcome2].forEach(o => {
       if (!best[o.name] || o.odds > best[o.name].odds) best[o.name] = o;
     })
   );
 
   Object.values(best).forEach(o => {
     const imp = impliedProb(o.odds);
-    const d = o.fair - imp;
-    const s = strength(o.fair);
+    const edge = o.fair - imp;
+
+    if (edge > 0.04 && o.fair > 0.55) {
+      topPicks.push({
+        label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
+        prob: o.fair,
+        ev: edge,
+        score: o.fair * edge
+      });
+    }
 
     box.innerHTML += `
       <div class="market-row">
@@ -247,20 +132,7 @@ function marketBox(game, key) {
           <strong>${o.name}</strong> ${fmtOdds(o.odds)}
           <div class="muted">Book ${pct(imp)} • Model ${pct(o.fair)}</div>
         </div>
-
-        <div class="strength">
-          ${[1,2,3,4].map(i =>
-            `<span class="dot ${i <= s.level ? "on" : ""}"></span>`
-          ).join("")}
-          <div class="badge">${s.label}</div>
-        </div>
-
-        <button class="parlay-btn"
-          data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
-          data-odds="${o.odds}"
-          data-prob="${o.fair}">
-          + Parlay
-        </button>
+        <span class="badge">${consensusLabel(o.fair)}</span>
       </div>
     `;
   });
@@ -268,15 +140,13 @@ function marketBox(game, key) {
   return box;
 }
 
-/* =========================================================
-   PROPS RENDER
-   ========================================================= */
+/* ================= PROPS ================= */
 
 function renderProps(container, categories) {
   container.innerHTML = "";
 
-  Object.entries(categories).forEach(([cat, props]) => {
-    if (!props.length) return;
+  Object.entries(categories || {}).forEach(([cat, props]) => {
+    if (!props?.length) return;
 
     const sec = document.createElement("div");
     sec.className = "prop-category";
@@ -285,30 +155,14 @@ function renderProps(container, categories) {
     props.slice(0, 4).forEach(p => {
       const best =
         p.over_ev > p.under_ev
-          ? { side: "Over", odds: p.over_odds, prob: p.over_prob, ev: p.over_ev }
-          : { side: "Under", odds: p.under_odds, prob: p.under_prob, ev: p.under_ev };
-
-      const s = strength(best.prob);
+          ? { side: "Over", ev: p.over_ev }
+          : { side: "Under", ev: p.under_ev };
 
       sec.innerHTML += `
         <div class="prop-row">
-          <div>
-            <div>${p.player}</div>
-            <div class="muted">${best.side} ${p.point} ${fmtOdds(best.odds)}</div>
-          </div>
-
-          <div class="strength">
-            ${[1,2,3,4].map(i =>
-              `<span class="dot ${i <= s.level ? "on" : ""}"></span>`
-            ).join("")}
-          </div>
-
-          <button class="parlay-btn"
-            data-label="${p.player} ${best.side} ${p.point}"
-            data-odds="${best.odds}"
-            data-prob="${best.prob}">
-            + Parlay
-          </button>
+          <div>${p.player}</div>
+          <div>${best.side} ${p.point}</div>
+          <div class="ev-green">EV ${(best.ev * 100).toFixed(1)}%</div>
         </div>
       `;
     });
@@ -317,17 +171,19 @@ function renderProps(container, categories) {
   });
 }
 
-/* =========================================================
-   GLOBAL PARLAY CLICK
-   ========================================================= */
+/* ================= TOP PICKS ================= */
 
-document.addEventListener("click", e => {
-  const btn = e.target.closest(".parlay-btn");
-  if (!btn) return;
+function renderTopPicks() {
+  const el = document.getElementById("top-picks");
+  const picks = [...topPicks].sort((a,b)=>b.score-a.score).slice(0,3);
 
-  Parlay.add({
-    label: btn.dataset.label,
-    odds: Number(btn.dataset.odds),
-    prob: Number(btn.dataset.prob)
-  });
-});
+  el.innerHTML = `
+    <h3>Top Picks</h3>
+    ${picks.map(p => `
+      <div class="top-pick">
+        <strong>${p.label}</strong>
+        <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
+      </div>
+    `).join("")}
+  `;
+}

@@ -1,239 +1,122 @@
-/* =====================================================
-   BASE
-   ===================================================== */
-
 body {
-  background: #020617;
-  color: #f8fafc;
-  font-family: Manrope, system-ui, sans-serif;
-  margin: 0;
+  background:#020617;
+  color:#f8fafc;
+  font-family:Manrope,system-ui;
+  margin:0;
 }
 
-.muted {
-  color: #9ca3af;
-  font-size: 0.8rem;
+.ep-header {
+  display:flex;
+  justify-content:space-between;
+  padding:12px 18px;
+  background:#020617;
+  border-bottom:1px solid rgba(255,255,255,0.08);
 }
-
-/* =====================================================
-   LAYOUT
-   ===================================================== */
 
 .layout {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 18px;
-  padding: 16px;
+  display:grid;
+  grid-template-columns:260px 1fr;
 }
 
 .left-rail {
-  position: sticky;
-  top: 90px;
-}
-
-.main-content {
-  max-width: 1200px;
-}
-
-.games-container {
-  margin-top: 18px;
-}
-
-/* =====================================================
-   HEADER / HERO
-   ===================================================== */
-
-.ep-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 18px;
-  background: #020617;
-  border-bottom: 1px solid rgba(148,163,184,0.15);
+  padding:14px;
 }
 
 .hero {
-  background: radial-gradient(circle at top, rgba(56,189,248,0.25), #020617 70%);
-  padding: 32px;
-  border-radius: 18px;
-  margin-bottom: 24px;
+  padding:28px;
+  background:radial-gradient(circle at top,#1e293b,#020617);
 }
 
-.hero h1 {
-  font-size: 1.7rem;
+.games-container {
+  padding:20px;
 }
-
-.hero p {
-  max-width: 620px;
-  color: #cbd5f5;
-}
-
-/* =====================================================
-   TOP PICKS
-   ===================================================== */
-
-.top-picks {
-  background: #020617;
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.top-pick {
-  background: linear-gradient(90deg, rgba(34,197,94,0.28), transparent);
-  border-radius: 14px;
-  padding: 12px;
-  margin-bottom: 10px;
-
-  display: grid;
-  grid-template-columns: 1fr 64px;
-  align-items: center;
-  gap: 12px;
-}
-
-/* =====================================================
-   GAME CARDS
-   ===================================================== */
 
 .game-card {
-  background: #020617;
-  border-radius: 18px;
-  padding: 16px;
-  margin-bottom: 26px;
+  margin-bottom:28px;
 }
 
 .game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:12px;
 }
 
-.teams {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.markets-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
 }
 
-.teams img {
-  width: 44px;
-  height: 44px;
+.market-box h4 {
+  margin-bottom:6px;
 }
 
-/* =====================================================
-   MARKETS
-   ===================================================== */
-
-.markets-row {
-  display: flex;
-  gap: 12px;
+.pick {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px;
+  border-radius:14px;
+  margin-bottom:8px;
+  background:rgba(255,255,255,0.04);
 }
 
-.market-box {
-  flex: 1;
+.pick-main {
+  display:flex;
+  flex-direction:column;
 }
 
-.market-row {
-  display: grid;
-  grid-template-columns: 1fr 64px auto;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  margin-bottom: 8px;
+.actions {
+  display:flex;
+  gap:10px;
+  align-items:center;
 }
 
-/* =====================================================
-   SIGNAL BACKGROUNDS
-   ===================================================== */
-
-.signal-strong {
-  background: linear-gradient(90deg, rgba(34,197,94,0.35), transparent);
+.badge {
+  width:72px;
+  text-align:center;
+  border-radius:999px;
+  font-size:0.75rem;
+  padding:6px 0;
 }
 
-.signal-medium {
-  background: linear-gradient(90deg, rgba(34,197,94,0.22), transparent);
-}
-
-.signal-light {
-  background: linear-gradient(90deg, rgba(34,197,94,0.12), transparent);
-}
-
-/* =====================================================
-   CONSENSUS STRENGTH CIRCLES (LOCKED)
-   ===================================================== */
-
-.strength-circle {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  min-height: 56px;
-
-  border-radius: 50%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-align: center;
-  line-height: 1.1;
-
-  color: #022c22;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.35);
-
-  flex-shrink: 0;
-}
-
-.strength-very-strong { background: #22c55e; }
-.strength-strong      { background: #4ade80; }
-.strength-moderate    { background: #a3e635; }
-.strength-weak        { background: #facc15; color: #422006; }
-
-/* =====================================================
-   PARLAY BUTTON
-   ===================================================== */
+.weak { background:#facc15; color:#111; }
+.moderate { background:#86efac; }
+.strong { background:#22c55e; }
+.very-strong { background:#16a34a; }
 
 .parlay-btn {
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  color: white;
-  padding: 6px 12px;
-  cursor: pointer;
+  border-radius:999px;
+  padding:6px 12px;
+  background:#020617;
+  border:1px solid rgba(255,255,255,0.15);
+  color:#fff;
+  cursor:pointer;
 }
 
-/* =====================================================
-   PARLAY MODAL (SAFE)
-   ===================================================== */
-
 .parlay-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(2,6,23,0.75);
-  z-index: 9998;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  display:none;
+}
+
+.parlay-backdrop.open {
+  display:block;
 }
 
 .parlay-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #020617;
-  border-radius: 18px;
-  padding: 20px;
-  width: 320px;
-  z-index: 9999;
-  opacity: 0;
-  pointer-events: none;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:#020617;
+  padding:20px;
+  border-radius:18px;
+  display:none;
+  width:320px;
 }
 
-.parlay-backdrop.open,
 .parlay-modal.open {
-  opacity: 1;
-  pointer-events: auto;
+  display:block;
 }

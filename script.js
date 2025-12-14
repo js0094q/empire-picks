@@ -226,7 +226,47 @@ function gameCard(game) {
   card.appendChild(row);
   return card;
 }
+function renderProps(container, categories) {
+  container.innerHTML = "";
 
+  Object.entries(categories).forEach(([cat, props]) => {
+    if (!props.length) return;
+
+    const section = document.createElement("div");
+    section.className = "prop-category";
+    section.innerHTML = `<strong>${cat}</strong>`;
+
+    props.slice(0, 4).forEach(p => {
+      const best =
+        p.over_ev > p.under_ev
+          ? { side: "Over", ev: p.over_ev, prob: p.over_prob, odds: p.over_odds }
+          : { side: "Under", ev: p.under_ev, prob: p.under_prob, odds: p.under_odds };
+
+      const row = document.createElement("div");
+      row.className = "prop-row";
+
+      row.innerHTML = `
+        <div>
+          <div class="prop-player">${p.player}</div>
+          <div class="prop-line">${best.side} ${p.point}</div>
+        </div>
+        <div class="prop-ev ${evClass(best.ev)}">
+          EV ${pct(best.ev)}
+        </div>
+        <button class="parlay-btn"
+          data-label="${p.player} ${best.side} ${p.point}"
+          data-odds="${best.odds}"
+          data-prob="${best.prob}">
+          + Parlay
+        </button>
+      `;
+
+      section.appendChild(row);
+    });
+
+    container.appendChild(section);
+  });
+}
 /* =========================================================
    MARKETS
    ========================================================= */

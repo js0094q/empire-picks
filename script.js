@@ -148,3 +148,238 @@ function renderTopPicks() {
     `).join("")}
   `;
 }
+/* =========================
+   GLOBAL RESET & THEME
+   ========================= */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(1200px 600px at 50% -20%, #0b1220, #020617);
+  color: #e5e7eb;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+.ep-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, #020617, #020617cc);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(10px);
+}
+
+.ep-header .logo {
+  font-weight: 800;
+  letter-spacing: .3px;
+  font-size: 1.1rem;
+}
+
+#refresh-btn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(37,99,235,.35);
+}
+
+#refresh-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* =========================
+   LAYOUT
+   ========================= */
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   LEFT RAIL (TOP PICKS)
+   ========================= */
+
+.left-rail {
+  background: linear-gradient(180deg, #020617, #020617cc);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.top-pick {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(16,185,129,.05));
+  border: 1px solid rgba(16,185,129,.35);
+}
+
+.top-pick strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* =========================
+   HERO
+   ========================= */
+
+.hero {
+  margin-bottom: 18px;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  margin: 0;
+  font-weight: 800;
+}
+
+.hero p {
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+/* =========================
+   GAME CARDS
+   ========================= */
+
+.game-card {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #020617, #020617cc);
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.teams {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.teams img {
+  height: 28px;
+  width: auto;
+}
+
+/* =========================
+   MARKETS
+   ========================= */
+
+.markets-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.market-box {
+  padding: 12px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(15,23,42,.9), rgba(15,23,42,.6));
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.market-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+/* =========================
+   SIGNAL INTENSITY
+   ========================= */
+
+.signal-light {
+  box-shadow: inset 0 0 0 1px rgba(16,185,129,.25);
+}
+
+.signal-medium {
+  box-shadow: inset 0 0 0 1px rgba(16,185,129,.45);
+  background: rgba(16,185,129,.08);
+}
+
+.signal-strong {
+  background: linear-gradient(135deg, rgba(16,185,129,.25), rgba(16,185,129,.08));
+  box-shadow: 0 0 18px rgba(16,185,129,.35);
+}
+
+/* =========================
+   BADGES & TEXT
+   ========================= */
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  background: rgba(16,185,129,.18);
+  border: 1px solid rgba(16,185,129,.4);
+}
+
+.muted {
+  color: #94a3b8;
+  font-size: .8rem;
+}
+
+/* =========================
+   EV COLORS
+   ========================= */
+
+.ev-green {
+  color: #10b981;
+}
+
+.ev-red {
+  color: #ef4444;
+}
+
+.ev-neutral {
+  color: #facc15;
+}
+
+/* =========================
+   LOADING STATE
+   ========================= */
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  font-weight: 600;
+  color: #94a3b8;
+}

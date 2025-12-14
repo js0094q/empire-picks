@@ -1,369 +1,309 @@
-import { Teams } from "./teams.js";
+/* =========================================================
+   EMPIREPICKS — SINGLE FILE APPLICATION
+   ========================================================= */
 
-/* =====================================================
-   CONFIG
-   ===================================================== */
+(() => {
+  /* =======================
+     CONFIG
+     ======================= */
 
-// Sharp books get higher weight in consensus
-const BOOK_WEIGHTS = {
-  pinnacle: 1.4,
-  circa: 1.35,
-  bookmaker: 1.25,
-  draftkings: 1.15,
-  fanduel: 1.15,
-  betmgm: 1.1,
-  caesars: 1.1,
-  barstool: 1.0,
-  pointsbet: 1.0,
-  default: 0.9
-};
+  const BOOK_WEIGHTS = {
+    pinnacle: 1.3,
+    circa: 1.3,
+    betonline: 1.25,
 
-// EV thresholds
-const EV_MIN = 0.03;
-const PROB_MIN = 0.55;
+    draftkings: 1.0,
+    fanduel: 1.0,
 
-/* =====================================================
-   HELPERS
-   ===================================================== */
+    caesars: 0.8,
+    mgm: 0.75,
+    betrivers: 0.7,
+    default: 0.7
+  };
 
-const pct = x => (x * 100).toFixed(1) + "%";
-const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
+  const MIN_EV = 0.02;
+  const MIN_PROB = 0.52;
 
-const impliedProb = o =>
-  o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
+  const state = {
+    games: [],
+    parlay: []
+  };
 
-function strengthLabel(delta) {
-  if (delta > 0.15) return "Very Strong";
-  if (delta > 0.08) return "Strong";
-  if (delta > 0.04) return "Moderate";
-  return "Weak";
-}
+  /* =======================
+     HELPERS
+     ======================= */
 
-function strengthClass(delta) {
-  if (delta > 0.15) return "badge-very-strong";
-  if (delta > 0.08) return "badge-strong";
-  if (delta > 0.04) return "badge-moderate";
-  return "badge-weak";
-}
+  const pct = x => `${(x * 100).toFixed(1)}%`;
+  const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
-function kickoffLocal(utc) {
-  return new Date(utc).toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-}
+  function impliedProb(odds) {
+    return odds > 0
+      ? 100 / (odds + 100)
+      : Math.abs(odds) / (Math.abs(odds) + 100);
+  }
 
-/* =====================================================
-   CONSENSUS ENGINE
-   ===================================================== */
+  function strengthTier(prob, ev) {
+    if (prob > 0.75 && ev > 0.08) return "very-strong";
+    if (prob > 0.65 && ev > 0.05) return "strong";
+    if (prob > 0.55 && ev > 0.03) return "moderate";
+    return "weak";
+  }
 
-function weightedAverage(outcomes) {
-  let totalWeight = 0;
-  let sum = 0;
+  function weightForBook(key = "") {
+    key = key.toLowerCase();
+    return BOOK_WEIGHTS[key] ?? BOOK_WEIGHTS.default;
+  }
 
-  outcomes.forEach(o => {
-    const w = BOOK_WEIGHTS[o.book] ?? BOOK_WEIGHTS.default;
-    sum += o.prob * w;
-    totalWeight += w;
-  });
+  function weightedConsensus(outcomes) {
+    let wSum = 0;
+    let pSum = 0;
 
-  return totalWeight ? sum / totalWeight : null;
-}
+    outcomes.forEach(o => {
+      const w = weightForBook(o.book);
+      const p = impliedProb(o.odds);
+      wSum += w;
+      pSum += p * w;
+    });
 
-/* =====================================================
-   GLOBAL STATE
-   ===================================================== */
+    return pSum / wSum;
+  }
 
-const autoPickCandidates = [];
+  function kickoff(utc) {
+    return new Date(utc).toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
 
-const Parlay = {
-  legs: []
-};
+  /* =======================
+     DATA FETCH
+     ======================= */
 
-/* =====================================================
-   FETCH
-   ===================================================== */
+  async function loadGames() {
+    const r = await fetch("/api/events");
+    state.games = await r.json();
+    render();
+  }
 
-async function fetchGames() {
-  const r = await fetch("/api/events");
-  return r.json();
-}
+  /* =======================
+     RENDER ROOT
+     ======================= */
 
-async function fetchProps(id) {
-  const r = await fetch(`/api/props?id=${id}`);
-  return r.json();
-}
+  function render() {
+    const container = document.getElementById("games-container");
+    container.innerHTML = "";
 
-/* =====================================================
-   INIT
-   ===================================================== */
+    state.games.forEach(game => {
+      container.appendChild(renderGame(game));
+    });
+  }
 
-const gamesContainer = document.getElementById("games-container");
-document.getElementById("refresh-btn").onclick = loadGames;
+  /* =======================
+     GAME CARD
+     ======================= */
 
-loadGames();
+  function renderGame(game) {
+    const card = document.createElement("div");
+    card.className = "game-card";
 
-/* =====================================================
-   LOAD GAMES
-   ===================================================== */
-
-async function loadGames() {
-  gamesContainer.innerHTML = `<div class="loading">Loading NFL games…</div>`;
-  autoPickCandidates.length = 0;
-
-  const games = await fetchGames();
-  gamesContainer.innerHTML = "";
-
-  games.forEach(g => gamesContainer.appendChild(createGameCard(g)));
-  renderTopPicks();
-}
-
-/* =====================================================
-   GAME CARD
-   ===================================================== */
-
-function createGameCard(game) {
-  const card = document.createElement("div");
-  card.className = "game-card";
-
-  const home = Teams[game.home_team];
-  const away = Teams[game.away_team];
-
-  card.innerHTML = `
-    <div class="game-header">
-      <div class="teams">
-        <img src="${away.logo}">
-        ${game.away_team}
-        <span>@</span>
-        <img src="${home.logo}">
-        ${game.home_team}
-      </div>
-      <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
-    </div>
-  `;
-
-  const markets = document.createElement("div");
-  markets.className = "markets-row";
-
-  markets.appendChild(buildMarket("Moneyline", game.books.h2h, game));
-  markets.appendChild(buildMarket("Spread", game.books.spreads, game));
-  markets.appendChild(buildMarket("Total", game.books.totals, game));
-
-  card.appendChild(markets);
-
-  const propsWrap = document.createElement("div");
-  propsWrap.className = "props-wrap";
-  card.appendChild(propsWrap);
-
-  fetchProps(game.id).then(p => {
-    if (p?.categories) {
-      propsWrap.innerHTML = `
-        <h4 class="props-title">Player Props</h4>
-        ${buildPropsUI(p.categories)}
-      `;
-    }
-  });
-
-  return card;
-}
-
-/* =====================================================
-   MAIN MARKETS
-   ===================================================== */
-
-function buildMarket(title, rows, game) {
-  const box = document.createElement("div");
-  box.className = "market-box";
-  box.innerHTML = `<div class="market-title">${title}</div>`;
-
-  rows.forEach(o => {
-    const imp = impliedProb(o.odds);
-    const delta = o.fair - imp;
-
-    const badge = strengthLabel(delta);
-    const cls = strengthClass(delta);
-
-    if (delta > EV_MIN && o.fair > PROB_MIN) {
-      autoPickCandidates.push({
-        label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
-        prob: o.fair,
-        ev: delta,
-        score: delta * o.fair
-      });
-    }
-
-    box.innerHTML += `
-      <div class="market-row">
-        <div>
-          <strong>${o.name}</strong> ${fmtOdds(o.odds)}
-          <div class="muted">
-            Book ${pct(imp)} • Model ${pct(o.fair)}
-          </div>
+    card.innerHTML = `
+      <div class="game-header">
+        <div class="teams">
+          ${game.away_team} @ ${game.home_team}
         </div>
-        <span class="strength-badge ${cls}">${badge}</span>
+        <div class="time">${kickoff(game.commence_time)}</div>
+      </div>
+    `;
+
+    const grid = document.createElement("div");
+    grid.className = "markets-grid";
+
+    grid.appendChild(renderMarket("Moneyline", game.books.h2h));
+    grid.appendChild(renderMarket("Spread", game.books.spreads));
+    grid.appendChild(renderMarket("Total", game.books.totals));
+
+    card.appendChild(grid);
+
+    if (game.props && Object.keys(game.props).length) {
+      card.appendChild(renderProps(game.props));
+    }
+
+    return card;
+  }
+
+  /* =======================
+     MARKET RENDER
+     ======================= */
+
+  function renderMarket(title, rows = []) {
+    const box = document.createElement("div");
+    box.className = "market-box";
+    box.innerHTML = `<h4>${title}</h4>`;
+
+    if (!rows.length) return box;
+
+    const sides = {};
+
+    rows.forEach(r => {
+      r.outcomes.forEach(o => {
+        if (!sides[o.name]) sides[o.name] = [];
+        sides[o.name].push({
+          odds: o.odds,
+          book: r.book
+        });
+      });
+    });
+
+    Object.entries(sides).forEach(([name, offers]) => {
+      const fair = weightedConsensus(offers);
+      const best = offers.reduce((a, b) =>
+        impliedProb(b.odds) < impliedProb(a.odds) ? b : a
+      );
+
+      const imp = impliedProb(best.odds);
+      const ev = fair - imp;
+      if (fair < MIN_PROB) return;
+
+      const tier = strengthTier(fair, ev);
+
+      box.appendChild(renderPick({
+        label: name,
+        odds: best.odds,
+        fair,
+        ev,
+        tier
+      }));
+    });
+
+    return box;
+  }
+
+  /* =======================
+     PICK TILE
+     ======================= */
+
+  function renderPick(p) {
+    const div = document.createElement("div");
+    div.className = `pick ${p.tier}`;
+
+    div.innerHTML = `
+      <div class="pick-main">
+        <strong>${p.label} ${fmtOdds(p.odds)}</strong>
+        <div class="meta">
+          Model ${pct(p.fair)} • EV ${pct(p.ev)}
+        </div>
+      </div>
+      <div class="actions">
+        <div class="badge ${p.tier}">${p.tier.replace("-", " ")}</div>
         <button class="parlay-btn"
-          data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
-          data-odds="${o.odds}"
-          data-prob="${o.fair}">
+          data-label="${p.label}"
+          data-odds="${p.odds}"
+          data-prob="${p.fair}">
           + Parlay
         </button>
       </div>
     `;
-  });
-
-  return box;
-}
-
-/* =====================================================
-   PROPS (FILTERED + RANKED)
-   ===================================================== */
-
-function buildPropsUI(categories) {
-  let html = "";
-
-  Object.entries(categories).forEach(([cat, props]) => {
-    const valid = props
-      .filter(p =>
-        p.over_odds && p.over_prob > 0.05 &&
-        p.under_odds && p.under_prob > 0.05
-      )
-      .sort((a, b) =>
-        Math.max(b.over_ev, b.under_ev) -
-        Math.max(a.over_ev, a.under_ev)
-      )
-      .slice(0, 6);
-
-    if (!valid.length) return;
-
-    html += `<h5>${cat}</h5>`;
-
-    valid.forEach(p => {
-      html += `
-        <div class="prop-item">
-          <strong>${p.player}</strong>
-          <div class="muted">${p.label} ${p.point}</div>
-
-          ${renderPropSide("Over", p.over_odds, p.over_prob, p.over_ev, p)}
-          ${renderPropSide("Under", p.under_odds, p.under_prob, p.under_ev, p)}
-        </div>
-      `;
-    });
-  });
-
-  return html || `<div class="muted">No playable props.</div>`;
-}
-
-function renderPropSide(side, odds, prob, ev, p) {
-  const badge = strengthLabel(ev);
-  const cls = strengthClass(ev);
-
-  return `
-    <div class="prop-side">
-      ${side} ${fmtOdds(odds)}
-      <div class="muted">Model ${pct(prob)}</div>
-      <span class="strength-badge ${cls}">${badge}</span>
-      <button class="parlay-btn"
-        data-label="${p.player} ${side} ${p.point}"
-        data-odds="${odds}"
-        data-prob="${prob}">
-        + Parlay
-      </button>
-    </div>
-  `;
-}
-
-/* =====================================================
-   PARLAY MODAL (BULLETPROOF)
-   ===================================================== */
-
-const modal = document.getElementById("parlay-modal");
-const backdrop = document.getElementById("parlay-backdrop");
-
-document.getElementById("close-parlay").onclick = closeParlay;
-backdrop.onclick = closeParlay;
-
-function openParlay() {
-  modal.classList.add("open");
-  backdrop.classList.add("open");
-}
-
-function closeParlay() {
-  modal.classList.remove("open");
-  backdrop.classList.remove("open");
-}
-
-/* =====================================================
-   EVENTS
-   ===================================================== */
-
-document.addEventListener("click", e => {
-  const btn = e.target.closest(".parlay-btn");
-  if (!btn) return;
-
-  const leg = {
-    label: btn.dataset.label,
-    odds: Number(btn.dataset.odds),
-    prob: Number(btn.dataset.prob)
-  };
-
-  if (!Parlay.legs.find(l => l.label === leg.label)) {
-    Parlay.legs.push(leg);
+    return div;
   }
 
-  renderParlay();
-  openParlay();
-});
+  /* =======================
+     PROPS
+     ======================= */
 
-/* =====================================================
-   PARLAY RENDER
-   ===================================================== */
+  function renderProps(categories) {
+    const wrap = document.createElement("div");
+    wrap.className = "props";
 
-function renderParlay() {
-  const legs = document.getElementById("parlay-legs");
-  const sum = document.getElementById("parlay-summary");
-  const stake = Number(document.getElementById("parlay-stake").value || 0);
+    Object.entries(categories).forEach(([cat, props]) => {
+      const sec = document.createElement("div");
+      sec.innerHTML = `<h4>${cat}</h4>`;
 
-  legs.innerHTML = Parlay.legs
-    .map(l => `<div>${l.label} (${fmtOdds(l.odds)})</div>`)
-    .join("");
+      props.forEach(p => {
+        ["over", "under"].forEach(side => {
+          if (!p[`${side}_odds`] || !p[`${side}_prob`]) return;
 
-  let mult = 1;
-  let prob = 1;
+          const fair = p[`${side}_prob`];
+          if (fair < MIN_PROB) return;
 
-  Parlay.legs.forEach(l => {
-    mult *= l.odds > 0 ? l.odds / 100 + 1 : 100 / Math.abs(l.odds) + 1;
-    prob *= l.prob;
+          const imp = impliedProb(p[`${side}_odds`]);
+          const ev = fair - imp;
+          const tier = strengthTier(fair, ev);
+
+          sec.appendChild(renderPick({
+            label: `${p.player} ${side} ${p.point}`,
+            odds: p[`${side}_odds`],
+            fair,
+            ev,
+            tier
+          }));
+        });
+      });
+
+      wrap.appendChild(sec);
+    });
+
+    return wrap;
+  }
+
+  /* =======================
+     PARLAY
+     ======================= */
+
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".parlay-btn");
+    if (!btn) return;
+
+    const leg = {
+      label: btn.dataset.label,
+      odds: +btn.dataset.odds,
+      prob: +btn.dataset.prob
+    };
+
+    if (!state.parlay.find(l => l.label === leg.label)) {
+      state.parlay.push(leg);
+    }
+
+    openParlay();
   });
 
-  sum.innerHTML = `
-    <div>${stake.toFixed(2)} to win ${(stake * mult).toFixed(2)}</div>
-    <div>Prob ${pct(prob)}</div>
-  `;
-}
+  function openParlay() {
+    const modal = document.getElementById("parlay-modal");
+    const legs = document.getElementById("parlay-legs");
+    const sum = document.getElementById("parlay-summary");
+    const stake = +document.getElementById("parlay-stake").value;
 
-/* =====================================================
-   TOP PICKS
-   ===================================================== */
+    legs.innerHTML = "";
+    let mult = 1;
+    let prob = 1;
 
-function renderTopPicks() {
-  const box = document.getElementById("top-picks");
-  if (!box) return;
+    state.parlay.forEach(l => {
+      mult *= l.odds > 0 ? l.odds / 100 + 1 : 100 / Math.abs(l.odds) + 1;
+      prob *= l.prob;
+      legs.innerHTML += `<div>${l.label} (${fmtOdds(l.odds)})</div>`;
+    });
 
-  const picks = [...autoPickCandidates]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    sum.innerHTML = `
+      ${stake.toFixed(2)} → ${(stake * mult).toFixed(2)}<br>
+      Prob ${pct(prob)} • EV ${pct(prob * mult - 1)}
+    `;
 
-  box.innerHTML = `
-    <h3>Top Picks (Model-Weighted)</h3>
-    ${picks.map(p => `
-      <div class="top-pick">
-        <strong>${p.label}</strong>
-        <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
-        <span class="strength-badge badge-strong">Strong</span>
-      </div>
-    `).join("")}
-  `;
-}
+    modal.classList.add("open");
+    document.getElementById("parlay-backdrop").classList.add("open");
+  }
+
+  document.getElementById("close-parlay").onclick = () => {
+    document.getElementById("parlay-modal").classList.remove("open");
+    document.getElementById("parlay-backdrop").classList.remove("open");
+  };
+
+  /* =======================
+     INIT
+     ======================= */
+
+  document.getElementById("refresh-btn").onclick = loadGames;
+  loadGames();
+
+})();

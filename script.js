@@ -7,6 +7,11 @@ import { Teams } from "./teams.js";
 const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
+async function fetchProps(eventId) {
+  const r = await fetch(`/api/props?id=${eventId}`);
+  if (!r.ok) throw new Error("Props fetch failed");
+  return r.json();
+}
 const impliedProb = o =>
   o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 

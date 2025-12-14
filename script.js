@@ -73,21 +73,27 @@ const Parlay = {
   }
 };
 
-const modal = document.getElementById("parlay-modal");
-const backdrop = document.getElementById("parlay-backdrop");
+let modal, backdrop;
+
+document.addEventListener("DOMContentLoaded", () => {
+  modal = document.getElementById("parlay-modal");
+  backdrop = document.getElementById("parlay-backdrop");
+
+  const closeBtn = document.getElementById("close-parlay");
+
+  if (closeBtn) closeBtn.onclick = closeParlay;
+  if (backdrop) backdrop.onclick = closeParlay;
+});
 
 function openParlay() {
-  modal.classList.add("open");
-  backdrop.classList.add("open");
+  modal?.classList.add("open");
+  backdrop?.classList.add("open");
 }
 
 function closeParlay() {
-  modal.classList.remove("open");
-  backdrop.classList.remove("open");
+  modal?.classList.remove("open");
+  backdrop?.classList.remove("open");
 }
-
-document.getElementById("close-parlay").onclick = closeParlay;
-backdrop.onclick = closeParlay;
 
 function americanToDecimal(o) {
   return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;

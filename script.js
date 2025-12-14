@@ -65,7 +65,22 @@ const Parlay = {
 
 const modal = document.getElementById("parlay-modal");
 const backdrop = document.getElementById("parlay-backdrop");
+const closeBtn = document.getElementById("close-parlay");
 
+function openParlay() {
+  if (!modal || !backdrop) return;
+  modal.classList.add("open");
+  backdrop.classList.add("open");
+}
+
+function closeParlay() {
+  if (!modal || !backdrop) return;
+  modal.classList.remove("open");
+  backdrop.classList.remove("open");
+}
+
+if (backdrop) backdrop.onclick = closeParlay;
+if (closeBtn) closeBtn.onclick = closeParlay;
 function openParlay() {
   modal.classList.add("open");
   backdrop.classList.add("open");

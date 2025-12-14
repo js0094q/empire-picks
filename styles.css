@@ -1,322 +1,249 @@
-/* =========================================================
-   GLOBAL RESET + THEME
-   ========================================================= */
+/* =====================================================
+   BASE
+   ===================================================== */
 
-* {
-  box-sizing: border-box;
-}
-
-html, body {
+body {
   margin: 0;
-  padding: 0;
-  background:
-    radial-gradient(1200px 600px at 50% -20%, #0b1220, #020617);
-  color: #e5e7eb;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: #020617;
+  color: #f8fafc;
+  font-family: Manrope, system-ui, sans-serif;
 }
 
-/* =========================================================
-   HEADER
-   ========================================================= */
+button {
+  font-family: inherit;
+}
+
+/* =====================================================
+   LAYOUT
+   ===================================================== */
 
 .ep-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 20px;
-  background: linear-gradient(180deg, #020617, #020617cc);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
-.ep-header .logo {
+.logo {
   font-weight: 800;
-  letter-spacing: .4px;
+  letter-spacing: .5px;
 }
-
-#refresh-btn {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(37,99,235,.35);
-}
-
-#refresh-btn:hover {
-  filter: brightness(1.1);
-}
-
-/* =========================================================
-   LAYOUT
-   ========================================================= */
 
 .layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 20px;
-  padding: 20px;
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* =========================================================
-   LEFT RAIL (TOP PICKS)
-   ========================================================= */
-
-.left-rail {
-  background: linear-gradient(180deg, #020617, #020617cc);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 18px;
+  grid-template-columns: 260px 1fr;
+  gap: 18px;
   padding: 16px;
 }
 
-.top-pick {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 14px;
-  background: linear-gradient(135deg,
-    rgba(16,185,129,.22),
-    rgba(16,185,129,.06)
-  );
-  border: 1px solid rgba(16,185,129,.4);
+.left-rail {
+  position: sticky;
+  top: 80px;
 }
-
-.top-pick strong {
-  display: block;
-  margin-bottom: 6px;
-}
-
-/* =========================================================
-   HERO
-   ========================================================= */
 
 .hero {
-  margin-bottom: 20px;
+  background: radial-gradient(circle at top, rgba(56,189,248,.25), #020617 70%);
+  padding: 32px;
+  border-radius: 18px;
+  margin-bottom: 24px;
 }
 
-.hero h1 {
-  font-size: 2rem;
-  margin: 0;
-  font-weight: 800;
-}
-
-.hero p {
-  margin-top: 6px;
-  color: #94a3b8;
-}
-
-/* =========================================================
-   GAME CARDS
-   ========================================================= */
+/* =====================================================
+   GAME CARD
+   ===================================================== */
 
 .game-card {
-  margin-bottom: 22px;
-  padding: 18px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #020617, #020617cc);
-  border: 1px solid rgba(255,255,255,.07);
-  box-shadow:
-    0 12px 40px rgba(0,0,0,.45),
-    inset 0 1px 0 rgba(255,255,255,.04);
+  background: #020617;
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255,255,255,.05);
 }
 
 .game-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .teams {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .teams img {
-  height: 30px;
-  width: auto;
+  width: 44px;
+  height: 44px;
 }
 
 .kickoff {
-  color: #94a3b8;
-  font-size: .85rem;
+  font-size: .75rem;
+  color: #9ca3af;
 }
 
-/* =========================================================
+/* =====================================================
    MARKETS
-   ========================================================= */
+   ===================================================== */
 
 .markets-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
+  display: flex;
+  gap: 12px;
 }
 
 .market-box {
-  padding: 14px;
-  border-radius: 16px;
-  background: linear-gradient(
-    180deg,
-    rgba(15,23,42,.95),
-    rgba(15,23,42,.7)
-  );
-  border: 1px solid rgba(255,255,255,.06);
+  flex: 1;
 }
 
 .market-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: 12px;
-  align-items: center;
+  gap: 10px;
   padding: 12px;
-  margin-top: 10px;
   border-radius: 14px;
-  background: rgba(255,255,255,.035);
+  margin-bottom: 8px;
+  background: rgba(255,255,255,.04);
 }
 
-/* =========================================================
-   STRENGTH / CONFIDENCE VISUAL
-   ========================================================= */
-
-.strength {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.strength .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.2);
-}
-
-.strength .dot.on {
-  background: #10b981;
-  box-shadow: 0 0 6px rgba(16,185,129,.8);
-}
+.signal-strong { background: linear-gradient(90deg, rgba(34,197,94,.35), transparent); }
+.signal-medium { background: linear-gradient(90deg, rgba(34,197,94,.22), transparent); }
+.signal-light  { background: linear-gradient(90deg, rgba(34,197,94,.12), transparent); }
 
 .badge {
-  margin-left: 8px;
+  background: #22c55e;
+  color: #022c22;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: .75rem;
-  background: rgba(16,185,129,.2);
-  border: 1px solid rgba(16,185,129,.45);
+  font-size: .7rem;
+  font-weight: 700;
 }
 
-/* =========================================================
+/* =====================================================
    PARLAY BUTTON
-   ========================================================= */
+   ===================================================== */
 
 .parlay-btn {
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.2);
   border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+  color: white;
   padding: 6px 12px;
-  font-size: .75rem;
-  color: #e5e7eb;
   cursor: pointer;
+  font-size: .7rem;
 }
 
-.parlay-btn:hover {
-  background: rgba(255,255,255,.15);
-}
-
-/* =========================================================
-   PROPS TOGGLE
-   ========================================================= */
+/* =====================================================
+   PROPS
+   ===================================================== */
 
 .props-toggle {
-  margin-top: 18px;
-  padding: 10px 16px;
+  margin: 8px 0 12px;
+  padding: 6px 14px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  font-weight: 600;
-  font-size: .85rem;
-  border: none;
+  border: 1px solid rgba(56,189,248,.4);
+  background: rgba(56,189,248,.12);
+  color: #e0f2fe;
+  font-size: .75rem;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(37,99,235,.4);
 }
-
-.props-toggle:hover {
-  filter: brightness(1.1);
-}
-
-/* =========================================================
-   PROPS CONTAINER
-   ========================================================= */
 
 .props-container {
   display: none;
-  margin-top: 16px;
-  padding: 16px;
-  border-radius: 18px;
-  background: linear-gradient(
-    180deg,
-    rgba(15,23,42,.98),
-    rgba(15,23,42,.75)
-  );
-  border: 1px solid rgba(255,255,255,.07);
+  margin-bottom: 12px;
 }
 
 .props-container.open {
   display: block;
 }
 
-/* =========================================================
-   PROP ROWS
-   ========================================================= */
-
 .prop-category {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .prop-category strong {
   display: block;
-  margin-bottom: 8px;
-  color: #c7d2fe;
+  margin-bottom: 6px;
+  font-size: .8rem;
+  color: #e5e7eb;
 }
 
 .prop-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 14px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  margin-bottom: 8px;
-  border-radius: 14px;
+  padding: 8px 10px;
+  border-radius: 12px;
   background: rgba(255,255,255,.04);
+  margin-bottom: 6px;
 }
 
-/* =========================================================
-   TEXT + STATES
-   ========================================================= */
-
-.muted {
-  color: #94a3b8;
+.prop-player {
   font-size: .8rem;
 }
 
-.loading {
-  padding: 40px;
-  text-align: center;
-  font-weight: 600;
-  color: #94a3b8;
+.prop-line {
+  font-size: .7rem;
+  color: #9ca3af;
 }
 
-.ev-green { color: #10b981; }
+.prop-ev {
+  font-size: .7rem;
+}
+
+/* =====================================================
+   TOP PICKS
+   ===================================================== */
+
+.top-pick {
+  background: linear-gradient(90deg, rgba(34,197,94,.25), transparent);
+  padding: 12px;
+  border-radius: 14px;
+  margin-bottom: 10px;
+}
+
+.ev-green { color: #22c55e; }
+.ev-neutral { color: #94a3b8; }
 .ev-red { color: #ef4444; }
-.ev-neutral { color: #facc15; }
+
+.muted {
+  color: #9ca3af;
+  font-size: .75rem;
+}
+
+/* =====================================================
+   PARLAY MODAL
+   ===================================================== */
+
+.parlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,.75);
+  opacity: 0;
+  pointer-events: none;
+  transition: .2s;
+  z-index: 9998;
+}
+
+.parlay-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  background: #020617;
+  border-radius: 18px;
+  padding: 20px;
+  width: 320px;
+  opacity: 0;
+  pointer-events: none;
+  transition: .2s;
+  z-index: 9999;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+}
+
+.parlay-backdrop.open,
+.parlay-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+}

@@ -1,23 +1,32 @@
 import { Teams } from "./teams.js";
 
-/* ================= HELPERS ================= */
+/* =========================================================
+   SAFETY GUARD (prevents double load forever)
+   ========================================================= */
+if (window.__EMPIREPICKS__) {
+  throw new Error("EmpirePicks script loaded twice");
+}
+window.__EMPIREPICKS__ = true;
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
 
 const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
-const impliedProb = o => o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
+
+const impliedProb = o =>
+  o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 
 const evClass = ev =>
-  ev > 0.03 ? "ev-green" : ev < -0.03 ? "ev-red" : "ev-neutral";
+  ev > 0.05 ? "ev-green" :
+  ev < -0.05 ? "ev-red" : "ev-neutral";
 
-const signalClass = d =>
-  d > 0.15 ? "signal-strong" :
-  d > 0.08 ? "signal-medium" :
-  d > 0.04 ? "signal-light" : "";
-
-const consensusLabel = p =>
-  p > 0.75 ? "Very Strong" :
-  p > 0.65 ? "Strong" :
-  p > 0.55 ? "Moderate" : "Weak";
+const strength = p =>
+  p > 0.75 ? { label: "Very Strong", level: 4 } :
+  p > 0.65 ? { label: "Strong", level: 3 } :
+  p > 0.55 ? { label: "Moderate", level: 2 } :
+             { label: "Weak", level: 1 };
 
 const kickoffLocal = utc =>
   new Date(utc).toLocaleString("en-US", {
@@ -28,34 +37,116 @@ const kickoffLocal = utc =>
     minute: "2-digit"
   });
 
-/* ================= STATE ================= */
+/* =========================================================
+   DOM
+   ========================================================= */
 
 const gamesContainer = document.getElementById("games-container");
-const autoPickCandidates = [];
+const topPicksBox = document.getElementById("top-picks");
 
-/* ================= FETCH ================= */
+/* =========================================================
+   PARLAY ENGINE (unchanged)
+   ========================================================= */
 
-const fetchGames = async () => (await fetch("/api/events")).json();
+const Parlay = {
+  legs: [],
+  add(leg) {
+    if (!this.legs.find(l => l.label === leg.label)) {
+      this.legs.push(leg);
+    }
+    renderParlay();
+    openParlay();
+  },
+  remove(i) {
+    this.legs.splice(i, 1);
+    renderParlay();
+  }
+};
 
-/* ================= INIT ================= */
+const modal = document.getElementById("parlay-modal");
+const backdrop = document.getElementById("parlay-backdrop");
+
+function openParlay() {
+  modal.classList.add("open");
+  backdrop.classList.add("open");
+}
+function closeParlay() {
+  modal.classList.remove("open");
+  backdrop.classList.remove("open");
+}
+backdrop.onclick = closeParlay;
+document.getElementById("close-parlay").onclick = closeParlay;
+
+function americanToDecimal(o) {
+  return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
+}
+
+function renderParlay() {
+  const legsEl = document.getElementById("parlay-legs");
+  const sum = document.getElementById("parlay-summary");
+  const stake = Number(document.getElementById("parlay-stake").value || 0);
+
+  legsEl.innerHTML = "";
+
+  Parlay.legs.forEach((l, i) => {
+    legsEl.innerHTML += `
+      <div class="parlay-leg">
+        ${l.label} (${fmtOdds(l.odds)})
+        <span onclick="window.__rm(${i})">✕</span>
+      </div>
+    `;
+  });
+
+  let mult = 1, prob = 1;
+  Parlay.legs.forEach(l => {
+    mult *= americanToDecimal(l.odds);
+    prob *= l.prob;
+  });
+
+  sum.innerHTML = `
+    <div>${stake.toFixed(2)} → ${(stake * mult).toFixed(2)}</div>
+    <div>Prob ${pct(prob)}</div>
+    <div class="${evClass(prob * mult - 1)}">EV ${pct(prob * mult - 1)}</div>
+  `;
+}
+
+window.__rm = i => Parlay.remove(i);
+document.getElementById("parlay-stake").oninput = renderParlay;
+
+/* =========================================================
+   FETCH
+   ========================================================= */
+
+const fetchGames = async () =>
+  (await fetch("/api/events")).json();
+
+const fetchProps = async id =>
+  (await fetch(`/api/props?id=${id}`)).json();
+
+/* =========================================================
+   INIT
+   ========================================================= */
 
 document.getElementById("refresh-btn").onclick = loadGames;
 loadGames();
 
-/* ================= LOAD ================= */
+/* =========================================================
+   LOAD GAMES
+   ========================================================= */
 
 async function loadGames() {
   gamesContainer.innerHTML = `<div class="loading">Loading NFL games…</div>`;
-  autoPickCandidates.length = 0;
+  topPicksBox.innerHTML = `<h3>Top Picks (Model-Weighted)</h3>`;
 
   const games = await fetchGames();
   gamesContainer.innerHTML = "";
 
   games.forEach(g => gamesContainer.appendChild(gameCard(g)));
-  renderTopPicks();
 }
 
-/* ================= GAME CARD ================= */
+/* =========================================================
+   GAME CARD
+   ========================================================= */
 
 function gameCard(game) {
   const card = document.createElement("div");
@@ -78,15 +169,46 @@ function gameCard(game) {
   const row = document.createElement("div");
   row.className = "markets-row";
 
-  ["h2h", "spreads", "totals"].forEach(k =>
-    row.appendChild(marketBox(game, k))
+  ["h2h", "spreads", "totals"].forEach(m =>
+    row.appendChild(marketBox(game, m))
   );
 
   card.appendChild(row);
+
+  /* ================= PROPS ================= */
+
+  const propsBtn = document.createElement("button");
+  propsBtn.className = "props-toggle";
+  propsBtn.textContent = "Show Props";
+
+  const propsWrap = document.createElement("div");
+  propsWrap.className = "props-container";
+
+  let loaded = false;
+
+  propsBtn.onclick = async () => {
+    propsWrap.classList.toggle("open");
+    if (loaded) return;
+    loaded = true;
+
+    propsWrap.innerHTML = `<div class="muted">Loading props…</div>`;
+    try {
+      const data = await fetchProps(game.id);
+      renderProps(propsWrap, data.categories);
+    } catch {
+      propsWrap.innerHTML = `<div class="muted">Props unavailable</div>`;
+    }
+  };
+
+  card.appendChild(propsBtn);
+  card.appendChild(propsWrap);
+
   return card;
 }
 
-/* ================= MARKETS ================= */
+/* =========================================================
+   MARKET BOX (ODDS + STRENGTH VISUAL)
+   ========================================================= */
 
 function marketBox(game, key) {
   const box = document.createElement("div");
@@ -102,26 +224,28 @@ function marketBox(game, key) {
   Object.values(best).forEach(o => {
     const imp = impliedProb(o.odds);
     const d = o.fair - imp;
-
-    if (o.edge > 0.03 && o.fair > 0.55) {
-      autoPickCandidates.push({
-        label: `${game.away_team} @ ${game.home_team} — ${o.name}`,
-        odds: o.odds,
-        prob: o.fair,
-        ev: o.edge,
-        score: o.fair * o.edge
-      });
-    }
+    const s = strength(o.fair);
 
     box.innerHTML += `
-      <div class="market-row ${signalClass(d)}">
+      <div class="market-row">
         <div>
           <strong>${o.name}</strong> ${fmtOdds(o.odds)}
-          <div class="muted">
-            Book ${pct(imp)} • Model ${pct(o.fair)}
-          </div>
+          <div class="muted">Book ${pct(imp)} • Model ${pct(o.fair)}</div>
         </div>
-        <div class="badge">${consensusLabel(o.fair)}</div>
+
+        <div class="strength">
+          ${[1,2,3,4].map(i =>
+            `<span class="dot ${i <= s.level ? "on" : ""}"></span>`
+          ).join("")}
+          <div class="badge">${s.label}</div>
+        </div>
+
+        <button class="parlay-btn"
+          data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
+          data-odds="${o.odds}"
+          data-prob="${o.fair}">
+          + Parlay
+        </button>
       </div>
     `;
   });
@@ -129,257 +253,66 @@ function marketBox(game, key) {
   return box;
 }
 
-/* ================= TOP PICKS ================= */
+/* =========================================================
+   PROPS RENDER
+   ========================================================= */
 
-function renderTopPicks() {
-  const box = document.getElementById("top-picks");
+function renderProps(container, categories) {
+  container.innerHTML = "";
 
-  const picks = [...autoPickCandidates]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+  Object.entries(categories).forEach(([cat, props]) => {
+    if (!props.length) return;
 
-  box.innerHTML = `
-    <h3>Top Picks (Model-Weighted)</h3>
-    ${picks.map(p => `
-      <div class="top-pick">
-        <strong>${p.label}</strong>
-        <div class="muted">Prob ${pct(p.prob)} • EV ${pct(p.ev)}</div>
-      </div>
-    `).join("")}
-  `;
-}
-/* =========================
-   GLOBAL RESET & THEME
-   ========================= */
+    const sec = document.createElement("div");
+    sec.className = "prop-category";
+    sec.innerHTML = `<strong>${cat}</strong>`;
 
-html, body {
-  margin: 0;
-  padding: 0;
-  background: radial-gradient(1200px 600px at 50% -20%, #0b1220, #020617);
-  color: #e5e7eb;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-}
+    props.slice(0, 4).forEach(p => {
+      const best =
+        p.over_ev > p.under_ev
+          ? { side: "Over", odds: p.over_odds, prob: p.over_prob, ev: p.over_ev }
+          : { side: "Under", odds: p.under_odds, prob: p.under_prob, ev: p.under_ev };
 
-* {
-  box-sizing: border-box;
-}
+      const s = strength(best.prob);
 
-/* =========================
-   HEADER
-   ========================= */
+      sec.innerHTML += `
+        <div class="prop-row">
+          <div>
+            <div>${p.player}</div>
+            <div class="muted">${best.side} ${p.point} ${fmtOdds(best.odds)}</div>
+          </div>
 
-.ep-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  background: linear-gradient(180deg, #020617, #020617cc);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  backdrop-filter: blur(10px);
+          <div class="strength">
+            ${[1,2,3,4].map(i =>
+              `<span class="dot ${i <= s.level ? "on" : ""}"></span>`
+            ).join("")}
+          </div>
+
+          <button class="parlay-btn"
+            data-label="${p.player} ${best.side} ${p.point}"
+            data-odds="${best.odds}"
+            data-prob="${best.prob}">
+            + Parlay
+          </button>
+        </div>
+      `;
+    });
+
+    container.appendChild(sec);
+  });
 }
 
-.ep-header .logo {
-  font-weight: 800;
-  letter-spacing: .3px;
-  font-size: 1.1rem;
-}
+/* =========================================================
+   GLOBAL PARLAY CLICK
+   ========================================================= */
 
-#refresh-btn {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(37,99,235,.35);
-}
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".parlay-btn");
+  if (!btn) return;
 
-#refresh-btn:hover {
-  filter: brightness(1.1);
-}
-
-/* =========================
-   LAYOUT
-   ========================= */
-
-.layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 20px;
-  padding: 20px;
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* =========================
-   LEFT RAIL (TOP PICKS)
-   ========================= */
-
-.left-rail {
-  background: linear-gradient(180deg, #020617, #020617cc);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.top-pick {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(16,185,129,.05));
-  border: 1px solid rgba(16,185,129,.35);
-}
-
-.top-pick strong {
-  display: block;
-  margin-bottom: 4px;
-}
-
-/* =========================
-   HERO
-   ========================= */
-
-.hero {
-  margin-bottom: 18px;
-}
-
-.hero h1 {
-  font-size: 2rem;
-  margin: 0;
-  font-weight: 800;
-}
-
-.hero p {
-  color: #94a3b8;
-  margin-top: 6px;
-}
-
-/* =========================
-   GAME CARDS
-   ========================= */
-
-.game-card {
-  margin-bottom: 20px;
-  padding: 16px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #020617, #020617cc);
-  border: 1px solid rgba(255,255,255,.07);
-  box-shadow:
-    0 10px 30px rgba(0,0,0,.45),
-    inset 0 1px 0 rgba(255,255,255,.04);
-}
-
-.game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.teams {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.teams img {
-  height: 28px;
-  width: auto;
-}
-
-/* =========================
-   MARKETS
-   ========================= */
-
-.markets-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.market-box {
-  padding: 12px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(15,23,42,.9), rgba(15,23,42,.6));
-  border: 1px solid rgba(255,255,255,.06);
-}
-
-.market-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border-radius: 10px;
-  margin-top: 8px;
-  background: rgba(255,255,255,.03);
-}
-
-/* =========================
-   SIGNAL INTENSITY
-   ========================= */
-
-.signal-light {
-  box-shadow: inset 0 0 0 1px rgba(16,185,129,.25);
-}
-
-.signal-medium {
-  box-shadow: inset 0 0 0 1px rgba(16,185,129,.45);
-  background: rgba(16,185,129,.08);
-}
-
-.signal-strong {
-  background: linear-gradient(135deg, rgba(16,185,129,.25), rgba(16,185,129,.08));
-  box-shadow: 0 0 18px rgba(16,185,129,.35);
-}
-
-/* =========================
-   BADGES & TEXT
-   ========================= */
-
-.badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: .75rem;
-  background: rgba(16,185,129,.18);
-  border: 1px solid rgba(16,185,129,.4);
-}
-
-.muted {
-  color: #94a3b8;
-  font-size: .8rem;
-}
-
-/* =========================
-   EV COLORS
-   ========================= */
-
-.ev-green {
-  color: #10b981;
-}
-
-.ev-red {
-  color: #ef4444;
-}
-
-.ev-neutral {
-  color: #facc15;
-}
-
-/* =========================
-   LOADING STATE
-   ========================= */
-
-.loading {
-  padding: 40px;
-  text-align: center;
-  font-weight: 600;
-  color: #94a3b8;
-}
+  Parlay.add({
+    label: btn.dataset.label,
+    odds: Number(btn.dataset.odds),
+    prob: Number(btn.dataset.prob)
+  });
+});

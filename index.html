@@ -3,65 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <title>EmpirePicks • NFL Odds & Props</title>
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=stable">
+  <script type="module" src="script.js" defer></script>
 </head>
 
 <body>
-
-  <!-- ================= HEADER ================= -->
   <header class="ep-header">
     <div class="logo">🏛️ EmpirePicks</div>
     <button id="refresh-btn">Refresh Odds</button>
   </header>
 
-  <!-- ================= LAYOUT ================= -->
   <div class="layout">
-
-    <!-- LEFT RAIL -->
     <aside class="left-rail">
-      <section id="top-picks" class="top-picks">
-        <h3>Top Picks (Model-Weighted)</h3>
-      </section>
+      <section id="top-picks"></section>
     </aside>
 
-    <!-- MAIN -->
     <main class="main-content">
-
       <section class="hero">
         <h1>EmpirePicks</h1>
-        <p>Consensus odds, no-vig probabilities, and model-weighted value.</p>
       </section>
 
-      <div id="games-container">
-        <div class="loading">Loading NFL games…</div>
-      </div>
-
+      <div id="games-container"></div>
     </main>
-  </div>
-
-  <!-- ================= PARLAY MODAL ================= -->
-  <div id="parlay-backdrop" class="parlay-backdrop"></div>
-
-  <div id="parlay-modal" class="parlay-modal">
-    <button id="close-parlay">✕</button>
-    <h3>Parlay</h3>
-    <div id="parlay-legs"></div>
-    <input id="parlay-stake" type="number" value="10" min="1" />
-    <div id="parlay-summary"></div>
   </div>
 
   <footer class="ep-footer">
     Data from The Odds API • EmpirePicks.com
   </footer>
-
-  <!-- ✅ SINGLE MODULE ENTRY -->
-  <script type="module">
-    import "./script.js";
-  </script>
-
 </body>
 </html>

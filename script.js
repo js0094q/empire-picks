@@ -254,22 +254,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   sumEl = document.getElementById("parlay-summary");
   stakeEl = document.getElementById("parlay-stake");
 
-  document?.getElementById("close-parlay").onclick = closeParlay;
+  // Close parlay
+  document
+    .getElementById("close-parlay")
+    ?.addEventListener("click", closeParlay);
+
   backdrop?.addEventListener("click", closeParlay);
-  backdrop?.addEventListener("click", closeParlay);
+
+  // Update parlay on stake change
   stakeEl?.addEventListener("input", renderParlay);
 
-  // ✅ THIS IS THE FIX
-  legsEl.addEventListener("click", e => {
+  // Remove parlay legs (Safari-safe)
+  legsEl?.addEventListener("click", e => {
     const btn = e.target.closest(".remove-leg");
     if (!btn) return;
     Parlay.remove(Number(btn.dataset.index));
   });
 
+  // Load games
   const games = await fetchGames();
   gamesContainer.innerHTML = "";
   games.forEach(g => gamesContainer.appendChild(gameCard(g)));
 
+  // Add parlay legs from buttons
   document.addEventListener("click", e => {
     const btn = e.target.closest(".parlay-btn");
     if (!btn) return;

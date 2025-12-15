@@ -80,7 +80,7 @@ function renderParlay() {
     legsEl.innerHTML += `
       <div class="parlay-leg">
         ${l.label} (${fmtOdds(l.odds)})
-        <span onclick="window.__removeLeg(${i})">✕</span>
+        <span class="remove-leg" data-index="${i}">✕</span>
       </div>
     `;
   });
@@ -94,8 +94,6 @@ function renderParlay() {
     <div class="${evClass(p.ev)}">EV ${pct(p.ev)}</div>
   `;
 }
-
-window.__removeLeg = i => Parlay.remove(i);
 
 function openParlay() {
   modal?.classList.add("open");
@@ -259,6 +257,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("close-parlay")?.onclick = closeParlay;
   backdrop?.addEventListener("click", closeParlay);
   stakeEl?.addEventListener("input", renderParlay);
+
+  // ✅ THIS IS THE FIX
+  legsEl.addEventListener("click", e => {
+    const btn = e.target.closest(".remove-leg");
+    if (!btn) return;
+    Parlay.remove(Number(btn.dataset.index));
+  });
 
   const games = await fetchGames();
   gamesContainer.innerHTML = "";

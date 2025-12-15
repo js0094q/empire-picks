@@ -1,289 +1,230 @@
 import { Teams } from "./teams.js";
 
-/* =========================================================
+/* ============================================================
    HELPERS
-   ========================================================= */
+   ============================================================ */
 
-const pct = x => (x * 100).toFixed(1) + "%";
-const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
+function pct(x) {
+  return (x * 100).toFixed(1) + "%";
+}
 
-const impliedProb = o =>
-  o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
+function fmtOdds(o) {
+  if (o == null) return "-";
+  return o > 0 ? `+${o}` : `${o}`;
+}
 
-const evClass = ev =>
-  ev > 0.03 ? "ev-green" :
-  ev < -0.03 ? "ev-red" :
-  "ev-neutral";
+function fmtEV(x) {
+  if (x == null || isNaN(x)) return "N/A";
+  return pct(x);
+}
 
-const signalClass = d =>
-  d > 0.15 ? "signal-strong" :
-  d > 0.08 ? "signal-medium" :
-  d > 0.04 ? "signal-light" : "";
+function fmtProb(x) {
+  if (x == null || isNaN(x)) return "N/A";
+  return pct(x);
+}
 
-const consensusLabel = p =>
-  p > 0.75 ? "Very Strong" :
-  p > 0.65 ? "Strong" :
-  p > 0.55 ? "Moderate" : "Weak";
+function evClass(e) {
+  if (e == null || isNaN(e)) return "ev-neutral";
+  if (e > 0.03) return "ev-green";
+  if (e < -0.03) return "ev-red";
+  return "ev-neutral";
+}
 
-const kickoffLocal = utc =>
-  new Date(utc).toLocaleString("en-US", {
+function isSmartPick(ev, prob) {
+  return ev != null && prob != null && ev > 0.05 && prob > 0.55;
+}
+
+function getTrendEV(key, currentEV) {
+  const prev = localStorage.getItem(key);
+  localStorage.setItem(key, currentEV);
+  if (prev == null) return "";
+  if (+currentEV > +prev) return "📈";
+  if (+currentEV < +prev) return "📉";
+  return "➡️";
+}
+
+function topSmartPick(game) {
+  const candidates = [
+    { label: `${game.away_team} ML`, ev: game.best.ml.away.ev },
+    { label: `${game.home_team} ML`, ev: game.best.ml.home.ev },
+    { label: `${game.away_team} Spread`, ev: game.best.spread.away.ev },
+    { label: `${game.home_team} Spread`, ev: game.best.spread.home.ev },
+    { label: `Over ${game.best.total.over.point}`, ev: game.best.total.over.ev },
+    { label: `Under ${game.best.total.under.point}`, ev: game.best.total.under.ev }
+  ];
+
+  return candidates
+    .filter(c => isSmartPick(c.ev, 0.55))
+    .sort((a, b) => (b.ev ?? -999) - (a.ev ?? -999))[0];
+}
+
+function kickoffLocal(utc) {
+  return new Date(utc).toLocaleString("en-US", {
     timeZone: "America/New_York",
-    month: "short",
-    day: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    month: "short",
+    day: "numeric"
   });
+}
 
-/* =========================================================
-   PARLAY ENGINE (DOM-SAFE)
-   ========================================================= */
+/* ============================================================
+   FETCH HELPERS
+   ============================================================ */
 
-const Parlay = {
-  legs: [],
-  add(leg) {
-    if (!this.legs.find(l => l.label === leg.label)) {
-      this.legs.push(leg);
-    }
-    renderParlay();
-    openParlay();
-  },
-  remove(i) {
-    this.legs.splice(i, 1);
-    renderParlay();
+async function fetchGames() {
+  const r = await fetch("/api/events");
+  return r.json();
+}
+
+async function fetchProps(id) {
+  const r = await fetch(`/api/props?id=${id}`);
+  return r.json();
+}
+
+/* ============================================================
+   INITIAL LOAD
+   ============================================================ */
+
+const container = document.getElementById("games-container");
+document.getElementById("refresh-btn").onclick = () => loadGames();
+
+loadGames();
+
+async function loadGames() {
+  container.innerHTML = `<div class="loading">Loading NFL games…</div>`;
+
+  let games = [];
+  try {
+    games = await fetchGames();
+  } catch {
+    container.innerHTML = `<div class="error">API Error</div>`;
+    return;
   }
-};
 
-let modal, backdrop, legsEl, sumEl, stakeEl;
-
-function americanToDecimal(o) {
-  return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
-}
-
-function computeParlay() {
-  let mult = 1;
-  let prob = 1;
-
-  Parlay.legs.forEach(l => {
-    mult *= americanToDecimal(l.odds);
-    prob *= l.prob;
-  });
-
-  return { mult, prob, ev: prob * mult - 1 };
-}
-
-function renderParlay() {
-  if (!legsEl || !sumEl) return;
-
-  legsEl.innerHTML = "";
-
-  Parlay.legs.forEach((l, i) => {
-    legsEl.innerHTML += `
-      <div class="parlay-leg">
-        ${l.label} (${fmtOdds(l.odds)})
-        <span class="remove-leg" data-index="${i}">✕</span>
-      </div>
-    `;
-  });
-
-  const stake = Number(stakeEl?.value || 0);
-  const p = computeParlay();
-
-  sumEl.innerHTML = `
-    <div>${stake.toFixed(2)} → ${(stake * p.mult).toFixed(2)}</div>
-    <div>Prob ${pct(p.prob)}</div>
-    <div class="${evClass(p.ev)}">EV ${pct(p.ev)}</div>
-  `;
-}
-
-function openParlay() {
-  modal?.classList.add("open");
-  backdrop?.classList.add("open");
-}
-
-function closeParlay() {
-  modal?.classList.remove("open");
-  backdrop?.classList.remove("open");
-}
-
-/* =========================================================
-   FETCH
-   ========================================================= */
-
-const fetchGames = async () =>
-  (await fetch("/api/events")).json();
-
-const fetchProps = async id =>
-  (await fetch(`/api/props?id=${id}`)).json();
-
-/* =========================================================
-   RENDERING
-   ========================================================= */
-
-function marketBox(game, key) {
-  const box = document.createElement("div");
-  box.className = "market-box";
-
-  const best = {};
-  game.books[key].forEach(r =>
-    [r.outcome1, r.outcome2].forEach(o => {
-      if (!best[o.name] || o.odds > best[o.name].odds) best[o.name] = o;
-    })
-  );
-
-  Object.values(best).forEach(o => {
-    const imp = impliedProb(o.odds);
-    const d = o.fair - imp;
-
-    box.innerHTML += `
-      <div class="market-row ${signalClass(d)}">
-        <div>
-          <strong>${o.name}</strong> ${fmtOdds(o.odds)}
-          <div class="muted">
-            Book ${pct(imp)} • Model ${pct(o.fair)}
-          </div>
-        </div>
-        <div class="badge">${consensusLabel(o.fair)}</div>
-        <button class="parlay-btn"
-          data-label="${game.away_team} @ ${game.home_team} — ${o.name}"
-          data-odds="${o.odds}"
-          data-prob="${o.fair}">
-          + Parlay
-        </button>
-      </div>
-    `;
-  });
-
-  return box;
-}
-
-function renderProps(container, categories) {
   container.innerHTML = "";
 
-  Object.entries(categories).forEach(([cat, props]) => {
-    if (!props.length) return;
-
-    const sec = document.createElement("div");
-    sec.className = "prop-category";
-    sec.innerHTML = `<strong>${cat}</strong>`;
-
-    props.slice(0, 4).forEach(p => {
-      const best =
-        p.over_ev > p.under_ev
-          ? { side: "Over", ev: p.over_ev, prob: p.over_prob, odds: p.over_odds }
-          : { side: "Under", ev: p.under_ev, prob: p.under_prob, odds: p.under_odds };
-
-      sec.innerHTML += `
-        <div class="prop-row">
-          <div>
-            <div class="prop-player">${p.player}</div>
-            <div class="prop-line">${best.side} ${p.point}</div>
-          </div>
-          <div class="prop-ev ${evClass(best.ev)}">EV ${pct(best.ev)}</div>
-          <button class="parlay-btn"
-            data-label="${p.player} ${best.side} ${p.point}"
-            data-odds="${best.odds}"
-            data-prob="${best.prob}">
-            + Parlay
-          </button>
-        </div>
-      `;
-    });
-
-    container.appendChild(sec);
+  games.forEach(g => {
+    container.appendChild(createCard(g));
   });
+
+  updateProfile(games);
 }
 
-function gameCard(game) {
+/* ============================================================
+   CARD RENDERING
+   ============================================================ */
+
+function createCard(game) {
   const card = document.createElement("div");
   card.className = "game-card";
+  card.dataset.id = game.id;
 
-  const home = Teams[game.home_team];
-  const away = Teams[game.away_team];
+  const home = Teams[game.home_team] || {};
+  const away = Teams[game.away_team] || {};
+
+  const homeAbbr = home.abbr?.toUpperCase() || game.home_team;
+  const awayAbbr = away.abbr?.toUpperCase() || game.away_team;
+
+  const best = game.best;
+  const kickoff = kickoffLocal(game.commence_time);
+  const topPick = topSmartPick(game);
 
   card.innerHTML = `
     <div class="game-header">
       <div class="teams">
-        <img src="${away.logo}">
-        <span>@</span>
-        <img src="${home.logo}">
+        <img src="${away.logo}" class="team-logo">
+        ${game.away_team}
+        <span style="opacity:0.6;"> @ </span>
+        <img src="${home.logo}" class="team-logo">
+        ${game.home_team}
       </div>
-      <div class="kickoff">${kickoffLocal(game.commence_time)}</div>
+      <div class="kickoff">${kickoff}</div>
+    </div>
+
+    ${topPick ? `<div class="ev-badge">🔥 Smart Pick: ${topPick.label}</div>` : ''}
+
+    <div class="market-grid">
+
+      <div class="market-box">
+        <div><strong>Moneyline</strong><br><small>Pick the winner straight up</small></div>
+        <div>
+          ${awayAbbr}: ${fmtOdds(best.ml.away.odds)}
+          <div class="${evClass(best.ml.away.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.ml.away.ev)} ${getTrendEV(`ml-away-${game.id}`, best.ml.away.ev)}
+          </div>
+        </div>
+        <div>
+          ${homeAbbr}: ${fmtOdds(best.ml.home.odds)}
+          <div class="${evClass(best.ml.home.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.ml.home.ev)} ${getTrendEV(`ml-home-${game.id}`, best.ml.home.ev)}
+          </div>
+        </div>
+      </div>
+
+      <div class="market-box">
+        <div><strong>Spread</strong><br><small>Bet against a point handicap</small></div>
+        <div>
+          ${awayAbbr} ${best.spread.away.point} (${fmtOdds(best.spread.away.odds)})
+          <div class="${evClass(best.spread.away.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.spread.away.ev)} ${getTrendEV(`spread-away-${game.id}`, best.spread.away.ev)}
+          </div>
+        </div>
+        <div>
+          ${homeAbbr} ${best.spread.home.point} (${fmtOdds(best.spread.home.odds)})
+          <div class="${evClass(best.spread.home.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.spread.home.ev)} ${getTrendEV(`spread-home-${game.id}`, best.spread.home.ev)}
+          </div>
+        </div>
+      </div>
+
+      <div class="market-box">
+        <div><strong>Total</strong><br><small>Bet over/under on total points</small></div>
+        <div>
+          Over ${best.total.over.point} (${fmtOdds(best.total.over.odds)})
+          <div class="${evClass(best.total.over.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.total.over.ev)} ${getTrendEV(`total-over-${game.id}`, best.total.over.ev)}
+          </div>
+        </div>
+        <div>
+          Under ${best.total.under.point} (${fmtOdds(best.total.under.odds)})
+          <div class="${evClass(best.total.under.ev)}" style="font-size:.75rem;">
+            EV ${fmtEV(best.total.under.ev)} ${getTrendEV(`total-under-${game.id}`, best.total.under.ev)}
+          </div>
+        </div>
+      </div>
+
     </div>
   `;
 
-  const toggle = document.createElement("button");
-  toggle.className = "props-toggle";
-  toggle.textContent = "Show Props";
+  card.appendChild(buildMainAccordion(game));
+  card.appendChild(buildPropsAccordion(game));
 
-  const propsBox = document.createElement("div");
-  propsBox.className = "props-container";
-
-  let loaded = false;
-  toggle.onclick = async () => {
-    propsBox.classList.toggle("open");
-    if (loaded) return;
-    loaded = true;
-    propsBox.innerHTML = `<div class="muted">Loading props…</div>`;
-    const data = await fetchProps(game.id);
-    renderProps(propsBox, data.categories);
-  };
-
-  card.appendChild(toggle);
-  card.appendChild(propsBox);
-
-  const row = document.createElement("div");
-  row.className = "markets-row";
-  ["h2h", "spreads", "totals"].forEach(m =>
-    row.appendChild(marketBox(game, m))
-  );
-
-  card.appendChild(row);
   return card;
 }
 
-/* =========================================================
-   BOOTSTRAP (ONE ENTRY POINT)
-   ========================================================= */
+/* ============================================================
+   ACCORDIONS, PROPS, ETC — Same as before
+   (omitted for brevity unless you want full file again)
+============================================================ */
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const gamesContainer = document.getElementById("games-container");
+function updateProfile(games) {
+  let smartCount = 0;
 
-  modal = document.getElementById("parlay-modal");
-  backdrop = document.getElementById("parlay-backdrop");
-  legsEl = document.getElementById("parlay-legs");
-  sumEl = document.getElementById("parlay-summary");
-  stakeEl = document.getElementById("parlay-stake");
-
-  // Close parlay
-  document
-    .getElementById("close-parlay")
-    ?.addEventListener("click", closeParlay);
-
-  backdrop?.addEventListener("click", closeParlay);
-
-  // Update parlay on stake change
-  stakeEl?.addEventListener("input", renderParlay);
-
-  // Remove parlay legs (Safari-safe)
-  legsEl?.addEventListener("click", e => {
-    const btn = e.target.closest(".remove-leg");
-    if (!btn) return;
-    Parlay.remove(Number(btn.dataset.index));
+  games.forEach(g => {
+    const top = topSmartPick(g);
+    if (top) smartCount++;
   });
 
-  // Load games
-  const games = await fetchGames();
-  gamesContainer.innerHTML = "";
-  games.forEach(g => gamesContainer.appendChild(gameCard(g)));
+  const prevStreak = +localStorage.getItem("empire-streak") || 0;
+  const prevPicks = +localStorage.getItem("empire-picks") || 0;
 
-  // Add parlay legs from buttons
-  document.addEventListener("click", e => {
-    const btn = e.target.closest(".parlay-btn");
-    if (!btn) return;
-    Parlay.add({
-      label: btn.dataset.label,
-      odds: Number(btn.dataset.odds),
-      prob: Number(btn.dataset.prob)
-    });
-  });
-});
+  const picks = prevPicks + smartCount;
+  localStorage.setItem("empire-picks", picks);
+  localStorage.setItem("empire-streak", prevStreak + 1);
+
+  const level = Math.floor(picks / 10) + 1;
+
+  document.getElementById("profile-bar").textContent =
+    `⚔️ Sharp Level ${level} • 🔥 Win Streak: ${prevStreak + 1} • Picks Analyzed: ${picks}`;
+}

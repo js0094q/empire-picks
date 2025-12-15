@@ -1,50 +1,105 @@
-// === Sharp / Soft Book Weighting ===
-const SHARP_BOOKS = ['Pinnacle', 'Circa', 'BetOnline'];
-const SOFT_BOOKS = ['PointsBet', 'BetMGM'];
+const SHARP_BOOKS = ["Pinnacle", "Circa", "BetOnline"];
+const SOFT_BOOKS = ["PointsBet", "BetMGM"];
 
-function getBookWeight(bookmaker) {
-  if (SHARP_BOOKS.includes(bookmaker)) return 1.5;
-  if (SOFT_BOOKS.includes(bookmaker)) return 0.7;
-  return 1.0;
+function getWeight(book) {
+  return SHARP_BOOKS.includes(book) ? 1.5 : SOFT_BOOKS.includes(book) ? 0.7 : 1;
 }
 
-function calculateEV(prob, odds) {
-  const decimal = odds > 0 ? (odds + 100) / 100 : 100 / Math.abs(odds);
-  const edge = (decimal * prob) - 1;
-  return (edge * 100).toFixed(1);
+function calculateConsensusEV(outcomes) {
+  let totalWeight = 0, probSum = 0;
+
+  outcomes.forEach(o => {
+    const weight = getWeight(o.bookmaker);
+    totalWeight += weight;
+    probSum += o.probability * weight;
+  });
+
+  const consensusProb = probSum / totalWeight;
+  const odds = outcomes[0].odds;
+  const implied = odds > 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
+  const ev = ((consensusProb * (odds > 0 ? odds : 100)) - 100).toFixed(1);
+
+  return { ev, consensusProb };
 }
 
-// === Accordion Components ===
-function buildAccordion(label, contentHTML, accent = "yellow") {
+function createGameCard(game) {
+  const card = document.createElement("div");
+  card.className = "bg-slate-950 p-5 rounded-2xl border border-white/10 space-y-4";
+
+  const kickoff = new Date(game.commence_time).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+
+  const header = `
+    <div class="flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <img src="/logos/${game.home_team_abbrev}.png" class="w-11 h-11" />
+        <div class="text-white font-semibold">${game.away_team} @ ${game.home_team}</div>
+      </div>
+      <div class="text-xs text-slate-400">${kickoff}</div>
+    </div>
+  `;
+
+  const markets = game.markets.map(mkt => {
+    const { ev, consensusProb } = calculateConsensusEV(mkt.outcomes);
+    const highlight = ev >= 10 ? "text-green-400" : ev < 0 ? "text-red-400" : "text-yellow-300";
+
+    return `
+      <div class="grid grid-cols-3 gap-4 bg-white/5 rounded-lg px-4 py-2 text-sm">
+        <div>${mkt.market}</div>
+        <div class="text-right">${mkt.outcomes[0].label}</div>
+        <div class="text-right ${highlight}">${ev}% EV</div>
+      </div>
+    `;
+  }).join("");
+
+  const smartPick = game.best_pick ? `
+    <div class="bg-emerald-400 text-emerald-900 text-xs px-3 py-1 rounded-full inline-block font-bold shadow">
+      🔥 Smart Pick: ${game.best_pick}
+    </div>` : '';
+
+  card.innerHTML = header + markets + smartPick;
+  card.appendChild(createAccordion("📊 Show Odds Info", createGameMeta(game)));
+  card.appendChild(createPropsAccordion(game.id));
+  return card;
+}
+
+function createGameMeta(game) {
+  return `
+    <div class="text-sm text-slate-300 space-y-2">
+      <p><strong>Kickoff:</strong> ${new Date(game.commence_time).toLocaleString()}</p>
+      <p><strong>Markets:</strong> ${game.markets.length}</p>
+      <p><strong>Books:</strong> ${game.bookmakers?.length || 0}</p>
+    </div>
+  `;
+}
+
+function createAccordion(title, innerHTML) {
   const section = document.createElement("div");
-  section.className = "border-t border-white/10 pt-3 mt-4";
+  section.className = "pt-3 mt-4 border-t border-white/10";
 
   const toggle = document.createElement("button");
-  toggle.className = `w-full flex justify-between items-center text-left text-${accent}-300 font-bold text-sm py-2`;
-  toggle.textContent = label;
+  toggle.className = "w-full text-left text-yellow-300 font-semibold text-sm py-2";
+  toggle.textContent = title;
 
   const content = document.createElement("div");
-  content.className = "text-sm space-y-2 hidden";
-  content.innerHTML = contentHTML;
+  content.className = "hidden text-sm mt-2";
+  content.innerHTML = innerHTML;
 
   toggle.onclick = () => content.classList.toggle("hidden");
-
-  section.appendChild(toggle);
-  section.appendChild(content);
+  section.append(toggle, content);
   return section;
 }
 
-function buildPropsAccordion(gameId) {
+function createPropsAccordion(gameId) {
   const section = document.createElement("div");
-  section.className = "border-t border-white/10 pt-3 mt-4";
+  section.className = "pt-3 mt-4 border-t border-white/10";
 
   const toggle = document.createElement("button");
-  toggle.className = `w-full flex justify-between items-center text-left text-cyan-300 font-semibold text-sm py-2`;
-  toggle.textContent = "🏈 Load Player Props";
+  toggle.className = "w-full text-left text-cyan-300 font-semibold text-sm py-2";
+  toggle.textContent = "🏈 Show Player Props";
 
   const content = document.createElement("div");
-  content.className = "text-sm space-y-2 hidden";
-  content.innerHTML = `<div class="text-slate-400 italic">Loading props…</div>`;
+  content.className = "hidden text-sm mt-2";
+  content.innerHTML = `<div class="text-slate-400 italic">Loading props...</div>`;
 
   let loaded = false;
   toggle.onclick = async () => {
@@ -61,98 +116,35 @@ function buildPropsAccordion(gameId) {
             <span class="text-xs text-white">${p.player}</span>
             <span class="text-xs text-slate-400">${p.market}: ${p.value}</span>
           </div>`).join("")
-        : `<div class="text-slate-400 italic">No props available.</div>`;
+        : `<div class="text-slate-400 italic">No props found.</div>`;
 
       loaded = true;
     } catch {
-      content.innerHTML = `<div class="text-red-400 italic">Error loading props.</div>`;
+      content.innerHTML = `<div class="text-red-400">Error loading props.</div>`;
     }
   };
 
-  section.appendChild(toggle);
-  section.appendChild(content);
+  section.append(toggle, content);
   return section;
 }
 
-// === Game Card Generator ===
-function createCard(game) {
-  const card = document.createElement("div");
-  card.className = "bg-slate-950 rounded-2xl p-4 mb-6 border border-white/5";
-
-  // Game header
-  const header = document.createElement("div");
-  header.className = "flex justify-between items-center mb-3";
-
-  const teams = document.createElement("div");
-  teams.className = "flex items-center gap-2";
-  teams.innerHTML = `<img src="/logos/${game.home_team_abbrev}.png" class="w-11 h-11" />
-                     <span class="font-semibold">${game.away_team} @ ${game.home_team}</span>`;
-
-  const kickoff = document.createElement("span");
-  kickoff.className = "text-xs text-slate-400";
-  kickoff.textContent = new Date(game.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  header.appendChild(teams);
-  header.appendChild(kickoff);
-  card.appendChild(header);
-
-  // Market Boxes
-  const marketRow = document.createElement("div");
-  marketRow.className = "flex gap-3 mb-3";
-
-  game.markets.forEach(m => {
-    const box = document.createElement("div");
-    box.className = "flex-1 grid grid-cols-3 gap-3 bg-white/5 p-3 rounded-xl";
-
-    const ev = calculateEV(m.prob, m.odds);
-    box.innerHTML = `
-      <div class="text-xs font-medium text-white">${m.key}</div>
-      <div class="text-xs text-right text-white">${m.outcome}</div>
-      <div class="text-xs text-right ${ev > 0 ? 'text-green-400' : 'text-red-400'}">${ev}% EV</div>
-    `;
-
-    marketRow.appendChild(box);
-  });
-
-  card.appendChild(marketRow);
-
-  // Smart Pick badge
-  if (game.best_pick) {
-    const badge = document.createElement("span");
-    badge.className = "inline-block mt-2 px-3 py-1 text-xs font-bold rounded bg-emerald-400 text-emerald-900 shadow";
-    badge.textContent = `🔥 Smart Pick: ${game.best_pick}`;
-    card.appendChild(badge);
-  }
-
-  // Add accordions
-  card.appendChild(buildAccordion("📊 Show Game Info", `
-    <p class="text-slate-300">Start Time: ${new Date(game.commence_time).toLocaleString()}</p>
-    <p class="text-slate-300">Bookmakers: ${game.bookmakers.length}</p>
-  `));
-
-  card.appendChild(buildPropsAccordion(game.id));
-  return card;
-}
-
-// === Load Games ===
 async function loadGames() {
   const container = document.getElementById("games-container");
-  container.innerHTML = "<div class='text-slate-400'>Loading games…</div>";
+  container.innerHTML = "<div class='text-slate-400'>Loading...</div>";
 
   try {
     const res = await fetch("/api/games");
     const data = await res.json();
-
     container.innerHTML = "";
-    data.forEach(game => container.appendChild(createCard(game)));
+
+    data.forEach(game => container.appendChild(createGameCard(game)));
 
     document.getElementById("profile-bar").textContent =
       `⚔️ Sharp Level 1 • 🔥 Win Streak: ${Math.floor(Math.random() * 5)} • Picks Analyzed: ${data.length}`;
   } catch {
-    container.innerHTML = "<div class='text-red-400'>Error loading data.</div>";
+    container.innerHTML = "<div class='text-red-400'>Could not load data.</div>";
   }
 }
 
-// === Refresh Button ===
 document.getElementById("refresh-btn").addEventListener("click", loadGames);
 window.addEventListener("DOMContentLoaded", loadGames);

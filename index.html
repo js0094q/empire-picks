@@ -4,40 +4,42 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EmpirePicks • NFL Odds & Props</title>
-
-  <link rel="stylesheet" href="styles.css" />
-  <script type="module" src="script.js" defer></script> 
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="script.js" defer></script>
 </head>
 
-<body>
-  <header class="ep-header">
-    <div class="logo">🏛️ EmpirePicks</div>
-    <button id="refresh-btn">Refresh Odds</button>
+<body class="bg-slate-950 text-slate-100 font-sans">
+
+  <!-- Header -->
+  <header class="flex justify-between items-center px-5 py-3 border-b border-white/10">
+    <div class="font-extrabold tracking-wide text-white text-lg">🏛️ EmpirePicks</div>
+    <button id="refresh-btn" class="bg-emerald-400 text-black px-4 py-1.5 rounded-md text-sm font-semibold shadow hover:brightness-110">
+      Refresh Odds
+    </button>
   </header>
 
-  <div class="layout">
-    <aside class="left-rail">
-      <section id="top-picks" class="top-picks"></section>
-    </aside>
-    
-    <div id="profile-bar" class="profile-bar">
+  <!-- Profile Bar -->
+  <div id="profile-bar" class="bg-slate-800/90 text-yellow-300 text-center text-sm font-bold py-3 border-b border-white/10 shadow-md">
     ⚔️ Sharp Level 1 • 🔥 Win Streak: 0 • Picks Analyzed: 0
-    </div>
-    
-    <main class="main-content">
-      <section class="hero">
-        <h1>EmpirePicks</h1>
-        <p>Consensus odds, no-vig probabilities, model-weighted value.</p>
-      </section>
+  </div>
 
-      <div id="games-container" class="games-container">
-        <div class="loading">Loading NFL games…</div>
-      </div>
+  <!-- Layout -->
+  <div class="grid grid-cols-[260px_1fr] gap-5 p-4">
+    <aside class="sticky top-20">
+      <section id="top-picks" class="space-y-3"></section>
+    </aside>
+
+    <main class="space-y-6">
+      <section class="bg-gradient-to-br from-cyan-500/30 via-slate-900 to-slate-950 rounded-2xl p-8 mb-6">
+        <h1 class="text-2xl font-bold text-white mb-2">EmpirePicks</h1>
+        <p class="text-slate-300">Sharp-weighted EV picks, consensus odds, and prop markets.</p>
+      </section>
+      <section id="games-container"><div class="text-slate-400">Loading NFL games…</div></section>
     </main>
   </div>
 
-  <footer class="ep-footer">
-    Data from The Odds API • EmpirePicks.com
+  <footer class="text-center text-sm text-slate-500 mt-10 py-6 border-t border-white/10">
+    Data from <a href="https://the-odds-api.com" class="underline">The Odds API</a> • EmpirePicks.com
   </footer>
 </body>
 </html>

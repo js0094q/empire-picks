@@ -254,6 +254,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   sumEl = document.getElementById("parlay-summary");
   stakeEl = document.getElementById("parlay-stake");
 
+  document?.getElementById("close-parlay").onclick = closeParlay;
+  backdrop?.addEventListener("click", closeParlay);
   backdrop?.addEventListener("click", closeParlay);
   stakeEl?.addEventListener("input", renderParlay);
 

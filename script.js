@@ -7,8 +7,13 @@ import { Teams } from "./teams.js";
 const pct = x => (x == null ? "—" : (x * 100).toFixed(1) + "%");
 const fmtOdds = o => (o == null ? "—" : o > 0 ? `+${o}` : `${o}`);
 
+const impliedFromOdds = o => {
+  if (o == null) return null;
+  return o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
+};
+
 /*
-  Percentile-based strength within a comparable cohort.
+  Percentile-based strength within cohort
 */
 function strengthFromDistribution(ev, evs) {
   if (ev == null || evs.length < 2) {
@@ -58,16 +63,17 @@ function formatMarketLabel(type, o) {
 function renderMarketRows(marketType, label, options) {
   if (!Array.isArray(options)) return "";
 
-  const viable = options.filter(o => o && o.ev != null && o.odds != null);
+  const viable = options.filter(o => o && o.odds != null && o.consensus_prob != null);
   if (!viable.length) return "";
 
-  const sorted = viable.sort((a, b) => b.ev - a.ev);
-  const positives = sorted.filter(o => o.ev > 0);
-  const shown = (positives.length ? positives : sorted).slice(0, 2);
+  // Always show both sides, sorted by EV
+  const sorted = viable.sort((a, b) => (b.ev ?? -999) - (a.ev ?? -999));
+  const shown = sorted.slice(0, 2);
 
-  const evs = shown.map(o => o.ev);
+  const evs = shown.map(o => o.ev).filter(v => v != null);
 
   return shown.map(o => {
+    const marketProb = o.implied ?? impliedFromOdds(o.odds);
     const s = strengthFromDistribution(o.ev, evs);
 
     return `
@@ -78,7 +84,7 @@ function renderMarketRows(marketType, label, options) {
           <div class="market-name">${formatMarketLabel(marketType, o)}</div>
           <div class="market-odds">${fmtOdds(o.odds)}</div>
           <div class="market-meta">
-            Market ${pct(o.implied)}
+            Market ${pct(marketProb)}
             · Consensus ${pct(o.consensus_prob)}
             · EV ${(o.ev * 100).toFixed(1)}%
           </div>
@@ -91,7 +97,7 @@ function renderMarketRows(marketType, label, options) {
 }
 
 /* =========================================================
-   PROPS RENDERING
+   PROPS RENDERING (unchanged, already correct)
    ========================================================= */
 
 function renderProps(container, categories) {
@@ -113,7 +119,9 @@ function renderProps(container, categories) {
             ev: p.over_ev,
             prob: p.over_prob,
             odds: p.over_odds,
-            market: p.over_list?.length ? p.over_list.reduce((a,b)=>a+b.p,0)/p.over_list.length : null,
+            market: p.over_list?.length
+              ? p.over_list.reduce((a,b)=>a+b.p,0)/p.over_list.length
+              : null,
             player: p.player,
             point: p.point,
             label: p.label
@@ -126,7 +134,9 @@ function renderProps(container, categories) {
             ev: p.under_ev,
             prob: p.under_prob,
             odds: p.under_odds,
-            market: p.under_list?.length ? p.under_list.reduce((a,b)=>a+b.p,0)/p.under_list.length : null,
+            market: p.under_list?.length
+              ? p.under_list.reduce((a,b)=>a+b.p,0)/p.under_list.length
+              : null,
             player: p.player,
             point: p.point,
             label: p.label
@@ -176,7 +186,7 @@ function renderProps(container, categories) {
 }
 
 /* =========================================================
-   GAME CARD
+   GAME CARD + BOOTSTRAP (unchanged)
    ========================================================= */
 
 function gameCard(game) {
@@ -222,13 +232,8 @@ function gameCard(game) {
   `;
 }
 
-/* =========================================================
-   BOOTSTRAP
-   ========================================================= */
-
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");
-
   const games = (await fetchGames())
     .sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
 

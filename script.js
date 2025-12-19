@@ -1,6 +1,6 @@
 import { Teams } from "./teams.js";
 
-/* ================= HELPERS ================= */
+/* HELPERS */
 
 const pct = x => (x == null ? "—" : (x * 100).toFixed(1) + "%");
 const fmtOdds = o => (o == null ? "—" : o > 0 ? `+${o}` : `${o}`);
@@ -12,7 +12,7 @@ const strengthFromEV = ev => {
   return { cls: "strength-weak", txt: "WEAK" };
 };
 
-/* ================= FETCH ================= */
+/* FETCH */
 
 const fetchGames = async () => {
   const r = await fetch("/api/events");
@@ -26,7 +26,7 @@ const fetchProps = async id => {
   return r.json();
 };
 
-/* ================= RENDER ================= */
+/* RENDERERS */
 
 const marketRow = ({ marketType, label, name, odds, bookProb, modelProb, ev }) => {
   const s = strengthFromEV(ev);
@@ -54,7 +54,7 @@ const gameCard = game => {
   });
 
   let html = `
-    <div class="game-card">
+    <div class="game-card" data-id="${game.id}">
       <div class="game-header">
         <div class="teams">
           <img src="${away.logo}" />
@@ -66,23 +66,51 @@ const gameCard = game => {
       <button class="props-toggle">Show Props</button>
   `;
 
-  game.best?.ml?.home && (html += marketRow({
+  const pickBest = obj =>
+    Object.values(obj || {}).sort((a,b) => (b.ev ?? 0) - (a.ev ?? 0))[0];
+
+  const ml = pickBest(game.best?.ml);
+  const spread = pickBest(game.best?.spread);
+  const total = pickBest(game.best?.total);
+
+  ml && (html += marketRow({
     marketType: "ml", label: "ML",
-    name: game.home_team,
-    odds: game.best.ml.home.odds,
-    bookProb: game.best.ml.home.implied,
-    modelProb: game.best.ml.home.consensus_prob,
-    ev: game.best.ml.home.ev
+    name: ml.name || game.home_team,
+    odds: ml.odds,
+    bookProb: ml.implied,
+    modelProb: ml.consensus_prob,
+    ev: ml.ev
+  }));
+
+  spread && (html += marketRow({
+    marketType: "spread", label: "SPREAD",
+    name: spread.name,
+    odds: spread.odds,
+    bookProb: spread.implied,
+    modelProb: spread.consensus_prob,
+    ev: spread.ev
+  }));
+
+  total && (html += marketRow({
+    marketType: "total", label: "TOTAL",
+    name: total.name,
+    odds: total.odds,
+    bookProb: total.implied,
+    modelProb: total.consensus_prob,
+    ev: total.ev
   }));
 
   html += `<div class="props-container"></div></div>`;
   return html;
 };
 
-/* ================= BOOT ================= */
+/* BOOT */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");
-  const games = await fetchGames();
+
+  const games = (await fetchGames())
+    .sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
+
   container.innerHTML = games.map(gameCard).join("");
 });

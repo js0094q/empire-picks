@@ -9,7 +9,6 @@ const fmtOdds = o => (o == null ? "—" : o > 0 ? `+${o}` : `${o}`);
 
 /*
   Percentile-based strength within a comparable cohort.
-  Prevents everything from being VSTR.
 */
 function strengthFromDistribution(ev, evs) {
   if (ev == null || evs.length < 2) {
@@ -47,16 +46,12 @@ const fetchProps = async gameId => {
    ========================================================= */
 
 function formatMarketLabel(type, o) {
-  if (type === "ml") {
-    return o.team;
-  }
+  if (type === "ml") return o.team;
   if (type === "spread") {
     const sign = o.point > 0 ? "+" : "";
     return `${o.team} ${sign}${o.point}`;
   }
-  if (type === "total") {
-    return `${o.side} ${o.point}`;
-  }
+  if (type === "total") return `${o.side} ${o.point}`;
   return "—";
 }
 
@@ -67,8 +62,6 @@ function renderMarketRows(marketType, label, options) {
   if (!viable.length) return "";
 
   const sorted = viable.sort((a, b) => b.ev - a.ev);
-
-  // Prefer positive EV, fallback to best available
   const positives = sorted.filter(o => o.ev > 0);
   const shown = (positives.length ? positives : sorted).slice(0, 2);
 
@@ -85,7 +78,9 @@ function renderMarketRows(marketType, label, options) {
           <div class="market-name">${formatMarketLabel(marketType, o)}</div>
           <div class="market-odds">${fmtOdds(o.odds)}</div>
           <div class="market-meta">
-            Market ${pct(o.implied)} · Consensus ${pct(o.consensus_prob)}
+            Market ${pct(o.implied)}
+            · Consensus ${pct(o.consensus_prob)}
+            · EV ${(o.ev * 100).toFixed(1)}%
           </div>
         </div>
 
@@ -110,13 +105,15 @@ function renderProps(container, categories) {
 
     const rows = props
       .flatMap(p => {
-        const sides = [];
+        const out = [];
 
         if (p.over_ev != null) {
-          sides.push({
+          out.push({
             side: "Over",
             ev: p.over_ev,
+            prob: p.over_prob,
             odds: p.over_odds,
+            market: p.over_list?.length ? p.over_list.reduce((a,b)=>a+b.p,0)/p.over_list.length : null,
             player: p.player,
             point: p.point,
             label: p.label
@@ -124,20 +121,22 @@ function renderProps(container, categories) {
         }
 
         if (p.under_ev != null) {
-          sides.push({
+          out.push({
             side: "Under",
             ev: p.under_ev,
+            prob: p.under_prob,
             odds: p.under_odds,
+            market: p.under_list?.length ? p.under_list.reduce((a,b)=>a+b.p,0)/p.under_list.length : null,
             player: p.player,
             point: p.point,
             label: p.label
           });
         }
 
-        return sides;
+        return out;
       })
       .sort((a, b) => b.ev - a.ev)
-      .slice(0, 4); // top ~4 per category for realism
+      .slice(0, 4);
 
     if (!rows.length) return "";
 
@@ -157,12 +156,16 @@ function renderProps(container, categories) {
                 <div class="prop-line">
                   ${r.side} ${r.point} ${r.label}
                 </div>
+                <div class="market-meta">
+                  Market ${pct(r.market)}
+                  · Consensus ${pct(r.prob)}
+                  · EV ${(r.ev * 100).toFixed(1)}%
+                </div>
               </div>
 
               <div class="prop-right">
                 <div class="strength-bubble ${s.cls}">${s.txt}</div>
                 <span class="prop-odds">${fmtOdds(r.odds)}</span>
-                <span class="prop-ev">EV ${(r.ev * 100).toFixed(1)}%</span>
               </div>
             </div>
           `;

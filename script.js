@@ -13,7 +13,7 @@ const impliedFromOdds = o => {
 };
 
 /*
-  Percentile-based strength within cohort
+  Percentile-based EV strength
 */
 function strengthFromDistribution(ev, evs) {
   if (ev == null || evs.length < 2) {
@@ -66,18 +66,16 @@ function renderMarketRows(marketType, label, options) {
   const viable = options.filter(o => o && o.odds != null && o.consensus_prob != null);
   if (!viable.length) return "";
 
-  // Always show both sides, sorted by EV
-  const sorted = viable.sort((a, b) => (b.ev ?? -999) - (a.ev ?? -999));
-  const shown = sorted.slice(0, 2);
+  const maxProb = Math.max(...viable.map(o => o.consensus_prob));
+  const evs = viable.map(o => o.ev).filter(v => v != null);
 
-  const evs = shown.map(o => o.ev).filter(v => v != null);
-
-  return shown.map(o => {
-    const marketProb = o.implied ?? impliedFromOdds(o.odds);
+  return viable.map(o => {
     const s = strengthFromDistribution(o.ev, evs);
+    const marketProb = impliedFromOdds(o.odds);
+    const isMostLikely = o.consensus_prob === maxProb;
 
     return `
-      <div class="market-row">
+      <div class="market-row ${isMostLikely ? "most-likely" : ""}">
         <span class="market-tag ${marketType}">${label}</span>
 
         <div class="market-main">
@@ -97,7 +95,7 @@ function renderMarketRows(marketType, label, options) {
 }
 
 /* =========================================================
-   PROPS RENDERING (unchanged, already correct)
+   PROPS RENDERING
    ========================================================= */
 
 function renderProps(container, categories) {
@@ -109,47 +107,41 @@ function renderProps(container, categories) {
   container.innerHTML = Object.entries(categories).map(([cat, props]) => {
     if (!Array.isArray(props) || !props.length) return "";
 
-    const rows = props
-      .flatMap(p => {
-        const out = [];
+    const rows = props.flatMap(p => {
+      const out = [];
 
-        if (p.over_ev != null) {
-          out.push({
-            side: "Over",
-            ev: p.over_ev,
-            prob: p.over_prob,
-            odds: p.over_odds,
-            market: p.over_list?.length
-              ? p.over_list.reduce((a,b)=>a+b.p,0)/p.over_list.length
-              : null,
-            player: p.player,
-            point: p.point,
-            label: p.label
-          });
-        }
+      if (p.over_odds != null) {
+        out.push({
+          player: p.player,
+          side: "Over",
+          point: p.point,
+          label: p.label,
+          odds: p.over_odds,
+          consensus: p.over_prob,
+          ev: p.over_ev
+        });
+      }
 
-        if (p.under_ev != null) {
-          out.push({
-            side: "Under",
-            ev: p.under_ev,
-            prob: p.under_prob,
-            odds: p.under_odds,
-            market: p.under_list?.length
-              ? p.under_list.reduce((a,b)=>a+b.p,0)/p.under_list.length
-              : null,
-            player: p.player,
-            point: p.point,
-            label: p.label
-          });
-        }
+      if (p.under_odds != null) {
+        out.push({
+          player: p.player,
+          side: "Under",
+          point: p.point,
+          label: p.label,
+          odds: p.under_odds,
+          consensus: p.under_prob,
+          ev: p.under_ev
+        });
+      }
 
-        return out;
-      })
-      .sort((a, b) => b.ev - a.ev)
-      .slice(0, 4);
+      return out;
+    })
+    .sort((a, b) => b.ev - a.ev)
+    .slice(0, 4);
 
     if (!rows.length) return "";
 
+    const maxProb = Math.max(...rows.map(r => r.consensus));
     const evs = rows.map(r => r.ev);
 
     return `
@@ -158,17 +150,19 @@ function renderProps(container, categories) {
 
         ${rows.map(r => {
           const s = strengthFromDistribution(r.ev, evs);
+          const marketProb = impliedFromOdds(r.odds);
+          const isMostLikely = r.consensus === maxProb;
 
           return `
-            <div class="prop-row">
+            <div class="prop-row ${isMostLikely ? "most-likely" : ""}">
               <div class="prop-left">
                 <div class="prop-player">${r.player}</div>
                 <div class="prop-line">
                   ${r.side} ${r.point} ${r.label}
                 </div>
                 <div class="market-meta">
-                  Market ${pct(r.market)}
-                  · Consensus ${pct(r.prob)}
+                  Market ${pct(marketProb)}
+                  · Consensus ${pct(r.consensus)}
                   · EV ${(r.ev * 100).toFixed(1)}%
                 </div>
               </div>
@@ -186,7 +180,7 @@ function renderProps(container, categories) {
 }
 
 /* =========================================================
-   GAME CARD + BOOTSTRAP (unchanged)
+   GAME CARD + BOOTSTRAP
    ========================================================= */
 
 function gameCard(game) {

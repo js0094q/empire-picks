@@ -1,3 +1,7 @@
+/* =========================================================
+   BASE
+   ========================================================= */
+
 body {
   margin: 0;
   background: #020617;
@@ -29,11 +33,73 @@ body {
   padding: 16px;
 }
 
+.main-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   HERO / BANNER
+   ========================================================= */
+
 .hero {
   background: radial-gradient(circle at top, rgba(56,189,248,0.25), #020617 70%);
   padding: 32px;
   border-radius: 18px;
   margin-bottom: 24px;
+}
+
+.hero-new {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+}
+
+.hero-left h1 {
+  margin: 0 0 6px 0;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.hero-left p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  max-width: 520px;
+  line-height: 1.4;
+}
+
+.hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #e5e7eb;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot.strong {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.legend-dot.conf {
+  background: rgba(255,255,255,0.35);
+}
+
+.legend-dot.sharp {
+  background: #facc15;
 }
 
 /* =========================================================
@@ -71,23 +137,24 @@ body {
 }
 
 /* =========================================================
-   MAIN MARKETS
+   MAIN MARKETS (GRID-ALIGNED)
    ========================================================= */
 
 .market-row {
   position: relative;
   display: grid;
-  grid-template-columns: 70px 1fr 52px auto;
-  gap: 12px;
+  grid-template-columns: 70px 1fr 44px 90px 80px auto;
+  gap: 10px;
+  align-items: center;
   padding: 12px;
   border-radius: 14px;
   background: rgba(255,255,255,0.05);
   margin-bottom: 8px;
-  align-items: center;
   overflow: hidden;
 }
 
 /* Confidence overlay */
+
 .market-row::after {
   content: "";
   position: absolute;
@@ -111,6 +178,8 @@ body {
   background: rgba(255,255,255,0.02);
   opacity: 1;
 }
+
+/* Market cells */
 
 .market-tag {
   font-size: 0.65rem;
@@ -154,7 +223,7 @@ body {
 }
 
 /* =========================================================
-   STRENGTH BUBBLES
+   STRENGTH BUBBLES (GLOBAL)
    ========================================================= */
 
 .strength-bubble {
@@ -166,9 +235,7 @@ body {
   justify-content: center;
   font-size: 0.6rem;
   font-weight: 900;
-  text-align: center;
   line-height: 1;
-  flex-shrink: 0;
 }
 
 .strength-very-strong {
@@ -198,7 +265,7 @@ body {
 .parlay-btn {
   border: 1px solid rgba(255,255,255,0.2);
   background: rgba(255,255,255,0.08);
-  color: white;
+  color: #ffffff;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.7rem;
@@ -217,7 +284,7 @@ body {
 }
 
 /* =========================================================
-   PROPS
+   PROPS (GRID-ALIGNED TO MARKETS)
    ========================================================= */
 
 .props-container {
@@ -238,13 +305,15 @@ body {
   font-size: 0.85rem;
   color: #e2e8f0;
   margin-bottom: 8px;
-  opacity: 0.95;
 }
+
+/* Prop row uses SAME rail logic */
 
 .prop-row {
   position: relative;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 44px 90px 80px auto;
+  gap: 10px;
   align-items: center;
   padding: 10px 12px;
   border-radius: 12px;
@@ -255,6 +324,7 @@ body {
 }
 
 /* Confidence overlay */
+
 .prop-row::after {
   content: "";
   position: absolute;
@@ -278,6 +348,8 @@ body {
   background: rgba(255,255,255,0.02);
   opacity: 1;
 }
+
+/* Prop content */
 
 .prop-left {
   display: flex;
@@ -323,18 +395,6 @@ body {
 
 .prop-label {
   opacity: 0.85;
-}
-
-.prop-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.prop-right .strength-bubble {
-  width: 38px;
-  height: 38px;
-  font-size: 0.55rem;
 }
 
 .prop-odds {

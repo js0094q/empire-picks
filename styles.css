@@ -1,6 +1,4 @@
-/* =========================================================
-   BASE
-   ========================================================= */
+/* ================= BASE ================= */
 
 body {
   margin: 0;
@@ -9,9 +7,13 @@ body {
   font-family: Manrope, system-ui, sans-serif;
 }
 
-/* =========================================================
-   HEADER / LAYOUT
-   ========================================================= */
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+/* ================= HEADER ================= */
 
 .ep-header {
   display: flex;
@@ -26,85 +28,39 @@ body {
   font-size: 1.2rem;
 }
 
+#refresh-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* ================= LAYOUT ================= */
+
 .layout {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 18px;
-  padding: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px;
 }
-
-.main-content {
-  display: flex;
-  flex-direction: column;
-}
-
-/* =========================================================
-   HERO / BANNER
-   ========================================================= */
 
 .hero {
-  background: radial-gradient(circle at top, rgba(56,189,248,0.25), #020617 70%);
-  padding: 32px;
-  border-radius: 18px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
-.hero-new {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 32px;
-}
-
-.hero-left h1 {
+.hero h1 {
   margin: 0 0 6px 0;
   font-size: 1.6rem;
-  font-weight: 900;
 }
 
-.hero-left p {
+.hero p {
   margin: 0;
   font-size: 0.9rem;
   color: #cbd5e1;
-  max-width: 520px;
-  line-height: 1.4;
 }
 
-.hero-right {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.75rem;
-  color: #e5e7eb;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.legend-dot.strong {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-}
-
-.legend-dot.conf {
-  background: rgba(255,255,255,0.35);
-}
-
-.legend-dot.sharp {
-  background: #facc15;
-}
-
-/* =========================================================
-   GAME CARD
-   ========================================================= */
+/* ================= GAME CARD ================= */
 
 .game-card {
   background: #0f172a;
@@ -118,6 +74,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 10px;
 }
 
 .teams {
@@ -127,82 +84,40 @@ body {
 }
 
 .teams img {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
 }
 
 .kickoff {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #94a3b8;
 }
 
-/* =========================================================
-   MAIN MARKETS (GRID-ALIGNED)
-   ========================================================= */
+/* ================= MARKET ROW ================= */
 
 .market-row {
-  position: relative;
   display: grid;
-  grid-template-columns: 70px 1fr 44px 90px 80px auto;
-  gap: 10px;
+  grid-template-columns: 60px 1fr 50px auto;
   align-items: center;
+  gap: 12px;
   padding: 12px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.05);
   margin-bottom: 8px;
-  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
 }
-
-/* Confidence overlay */
-
-.market-row::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.market-row.conf-high::after {
-  background: rgba(255,255,255,0.06);
-  opacity: 1;
-}
-
-.market-row.conf-medium::after {
-  background: rgba(255,255,255,0.035);
-  opacity: 1;
-}
-
-.market-row.conf-low::after {
-  background: rgba(255,255,255,0.02);
-  opacity: 1;
-}
-
-/* Market cells */
 
 .market-tag {
   font-size: 0.65rem;
   font-weight: 800;
-  padding: 4px 8px;
+  padding: 4px 6px;
   border-radius: 6px;
   text-align: center;
+  opacity: 0.85;
 }
 
-.market-tag.ml {
-  background: rgba(59,130,246,0.18);
-  color: #bfdbfe;
-}
-
-.market-tag.spread {
-  background: rgba(168,85,247,0.18);
-  color: #e9d5ff;
-}
-
-.market-tag.total {
-  background: rgba(34,197,94,0.18);
-  color: #bbf7d0;
-}
+.market-tag.ml { background: rgba(59,130,246,0.2); }
+.market-tag.spread { background: rgba(168,85,247,0.2); }
+.market-tag.total { background: rgba(34,197,94,0.2); }
 
 .market-main {
   display: flex;
@@ -222,9 +137,7 @@ body {
   color: #94a3b8;
 }
 
-/* =========================================================
-   STRENGTH BUBBLES (GLOBAL)
-   ========================================================= */
+/* ================= STRENGTH BUBBLES (RESTORED) ================= */
 
 .strength-bubble {
   width: 44px;
@@ -233,24 +146,22 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
   font-weight: 900;
-  line-height: 1;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: #022c22;
 }
 
 .strength-very-strong {
   background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #022c22;
 }
 
 .strength-strong {
   background: #22c55e;
-  color: #022c22;
 }
 
 .strength-moderate {
-  background: #84cc16;
-  color: #1a2e05;
+  background: #a3e635;
 }
 
 .strength-weak {
@@ -258,103 +169,48 @@ body {
   color: #020617;
 }
 
-/* =========================================================
-   BUTTONS
-   ========================================================= */
+/* ================= BUTTONS ================= */
 
 .parlay-btn {
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  color: #ffffff;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: white;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.7rem;
   cursor: pointer;
 }
 
+/* ================= PROPS ================= */
+
 .props-toggle {
   margin: 10px 0;
-  padding: 6px 14px;
-  border: 1px solid rgba(56,189,248,0.4);
-  background: rgba(56,189,248,0.12);
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.3);
   color: #e0f2fe;
-  font-size: 0.75rem;
+  padding: 6px 14px;
   border-radius: 999px;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
-/* =========================================================
-   PROPS (GRID-ALIGNED TO MARKETS)
-   ========================================================= */
-
 .props-container {
   display: none;
-  margin-top: 10px;
 }
 
 .props-container.open {
   display: block;
 }
 
-.props-category {
-  margin-top: 14px;
-}
-
-.props-category-title {
-  font-weight: 800;
-  font-size: 0.85rem;
-  color: #e2e8f0;
-  margin-bottom: 8px;
-}
-
-/* Prop row uses SAME rail logic */
-
 .prop-row {
-  position: relative;
   display: grid;
-  grid-template-columns: 1fr 44px 90px 80px auto;
-  gap: 10px;
+  grid-template-columns: 1fr 44px auto auto;
+  gap: 12px;
   align-items: center;
   padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-  margin-bottom: 8px;
-  border: 1px solid rgba(255,255,255,0.06);
-  overflow: hidden;
-}
-
-/* Confidence overlay */
-
-.prop-row::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.prop-row.conf-high::after {
-  background: rgba(255,255,255,0.06);
-  opacity: 1;
-}
-
-.prop-row.conf-medium::after {
+  border-radius: 10px;
   background: rgba(255,255,255,0.035);
-  opacity: 1;
-}
-
-.prop-row.conf-low::after {
-  background: rgba(255,255,255,0.02);
-  opacity: 1;
-}
-
-/* Prop content */
-
-.prop-left {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  margin-bottom: 6px;
 }
 
 .prop-player {
@@ -365,65 +221,15 @@ body {
 .prop-line {
   font-size: 0.75rem;
   color: #cbd5e1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.prop-side {
-  font-weight: 900;
-  font-size: 0.72rem;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.10);
-}
-
-.prop-side.over {
-  background: rgba(34,197,94,0.16);
-  color: #bbf7d0;
-}
-
-.prop-side.under {
-  background: rgba(59,130,246,0.16);
-  color: #bfdbfe;
-}
-
-.prop-point {
-  font-weight: 800;
-}
-
-.prop-label {
-  opacity: 0.85;
 }
 
 .prop-odds {
-  font-weight: 900;
+  font-weight: 800;
   font-size: 0.8rem;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
 }
 
 .prop-ev {
   font-size: 0.75rem;
   font-weight: 800;
   color: #22c55e;
-  min-width: 72px;
-  text-align: right;
-}
-
-/* =========================================================
-   MISC
-   ========================================================= */
-
-.loading {
-  padding: 40px;
-  text-align: center;
-}
-
-.muted {
-  font-size: 0.75rem;
-  color: #94a3b8;
 }

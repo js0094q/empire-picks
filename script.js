@@ -8,14 +8,16 @@ const pct = x => (x == null ? "—" : (x * 100).toFixed(1) + "%");
 const fmtOdds = o => (o == null ? "—" : o > 0 ? `+${o}` : `${o}`);
 
 /*
-  Percentile-based strength.
-  This prevents everything from being VSTR.
+  Percentile-based strength within a comparable cohort.
 */
 function strengthFromDistribution(ev, evs) {
-  if (ev == null || !evs.length) return { cls: "strength-weak", txt: "WEAK" };
+  if (ev == null || evs.length < 2) {
+    return { cls: "strength-weak", txt: "WEAK" };
+  }
 
   const sorted = [...evs].sort((a, b) => a - b);
-  const rank = sorted.indexOf(ev) / (sorted.length - 1 || 1);
+  const idx = sorted.lastIndexOf(ev);
+  const rank = idx / (sorted.length - 1);
 
   if (rank >= 0.9) return { cls: "strength-very-strong", txt: "VSTR" };
   if (rank >= 0.7) return { cls: "strength-strong", txt: "STR" };
@@ -40,21 +42,25 @@ const fetchProps = async gameId => {
 };
 
 /* =========================================================
-   MAIN MARKET ROW
+   MAIN MARKET RENDERING
    ========================================================= */
 
 function renderMarketRows(marketType, label, options) {
-  if (!Array.isArray(options) || !options.length) return "";
+  if (!Array.isArray(options)) return "";
 
-  // sort by EV descending, take top 3
-  const sorted = [...options]
-    .filter(o => o.ev != null)
-    .sort((a, b) => b.ev - a.ev)
-    .slice(0, 3);
+  const viable = options.filter(o => o?.ev != null && o?.odds != null);
 
-  const evs = sorted.map(o => o.ev);
+  if (!viable.length) return "";
 
-  return sorted.map(o => {
+  const sorted = viable.sort((a, b) => b.ev - a.ev);
+
+  // Prefer showing only positive-EV outcomes
+  const positive = sorted.filter(o => o.ev > 0);
+
+  const shown = (positive.length ? positive : sorted).slice(0, 2);
+  const evs = shown.map(o => o.ev);
+
+  return shown.map(o => {
     const s = strengthFromDistribution(o.ev, evs);
 
     return `
@@ -65,7 +71,7 @@ function renderMarketRows(marketType, label, options) {
           <div class="market-name">${o.name}</div>
           <div class="market-odds">${fmtOdds(o.odds)}</div>
           <div class="market-meta">
-            Market ${pct(o.implied)} · Consensus ${pct(o.consensus_prob)}
+            Book ${pct(o.implied)} · Consensus ${pct(o.consensus_prob)}
           </div>
         </div>
 
@@ -90,54 +96,62 @@ function renderProps(container, categories) {
     if (!Array.isArray(props) || !props.length) return "";
 
     const rows = props
-      .filter(p => p.over_ev != null || p.under_ev != null)
       .flatMap(p => {
         const sides = [];
 
-        if (p.over_ev != null) {
+        if (p.over_ev != null && p.over_ev > 0) {
           sides.push({
             side: "Over",
             ev: p.over_ev,
-            odds: p.over_odds
-          });
-        }
-        if (p.under_ev != null) {
-          sides.push({
-            side: "Under",
-            ev: p.under_ev,
-            odds: p.under_odds
+            odds: p.over_odds,
+            player: p.player,
+            point: p.point,
+            label: p.label
           });
         }
 
-        // sort by EV, take top 2 sides per prop
-        return sides
-          .sort((a, b) => b.ev - a.ev)
-          .slice(0, 2)
-          .map(s => ({ ...s, player: p.player, point: p.point, label: p.label }));
+        if (p.under_ev != null && p.under_ev > 0) {
+          sides.push({
+            side: "Under",
+            ev: p.under_ev,
+            odds: p.under_odds,
+            player: p.player,
+            point: p.point,
+            label: p.label
+          });
+        }
+
+        return sides;
       })
       .sort((a, b) => b.ev - a.ev)
-      .slice(0, 3); // top 3 props per category
+      .slice(0, 3);
+
+    if (!rows.length) return "";
 
     const evs = rows.map(r => r.ev);
 
     return `
       <div class="props-category">
         <div class="props-category-title">${cat}</div>
+
         ${rows.map(r => {
           const s = strengthFromDistribution(r.ev, evs);
+
           return `
             <div class="prop-row">
-              <div>
+              <div class="prop-left">
                 <div class="prop-player">${r.player}</div>
                 <div class="prop-line">
                   ${r.side} ${r.point} ${r.label}
                 </div>
               </div>
 
-              <div class="strength-bubble ${s.cls}">${s.txt}</div>
-              <span class="prop-odds">${fmtOdds(r.odds)}</span>
-              <span class="prop-ev">EV ${(r.ev * 100).toFixed(1)}%</span>
-              <button class="parlay-btn">+ Parlay</button>
+              <div class="prop-right">
+                <div class="strength-bubble ${s.cls}">${s.txt}</div>
+                <span class="prop-odds">${fmtOdds(r.odds)}</span>
+                <span class="prop-ev">EV ${(r.ev * 100).toFixed(1)}%</span>
+                <button class="parlay-btn">+ Parlay</button>
+              </div>
             </div>
           `;
         }).join("")}
@@ -164,9 +178,9 @@ function gameCard(game) {
     <div class="game-card" data-game-id="${game.id}">
       <div class="game-header">
         <div class="teams">
-          <img src="${away.logo}" />
+          <img src="${away?.logo || ""}" />
           <span>@</span>
-          <img src="${home.logo}" />
+          <img src="${home?.logo || ""}" />
         </div>
         <div class="kickoff">${kickoff}</div>
       </div>

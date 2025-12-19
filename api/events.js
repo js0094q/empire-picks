@@ -1,4 +1,4 @@
-// /api/events.js — Optimized aggregation engine
+// /api/events.js — Corrected aggregation engine
 import fetch from "node-fetch";
 
 const API_KEY = process.env.ODDS_API_KEY;
@@ -28,53 +28,30 @@ const BOOK_WEIGHTS = {
    ============================================================ */
 
 function implied(odds) {
-  if (odds == null) return null;
   return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
 }
 
-/* Symmetric no-vig (Zeng–Zhang) */
 function noVigSymmetric(pA, pB) {
-  const denom = pA + pB - pA * pB;
-  if (denom <= 0) return [0.5, 0.5];
-  return [pA / denom, pB / denom];
+  const denom = pA + pB;
+  return denom > 0 ? [pA / denom, pB / denom] : [0.5, 0.5];
 }
 
-function weightedFair(list) {
-  const probs = list.map(x => x.p);
-  const weights = list.map(x => x.w);
-
-  const wSum = weights.reduce((a, b) => a + b, 0);
+function weightedAvg(list) {
+  const wSum = list.reduce((s, x) => s + x.w, 0);
   if (!wSum) return null;
-
-  const fair = probs.reduce((s, p, i) => s + p * weights[i], 0) / wSum;
-  return fair;
+  return list.reduce((s, x) => s + x.p * x.w, 0) / wSum;
 }
 
-function variance(arr) {
-  if (arr.length <= 1) return 1;
-  const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
-  const v = arr.reduce((s, x) => s + (x - mean) ** 2, 0) / arr.length;
-  return Math.max(0.15, Math.min(1, 1 - v));  // normalized stability score
+function stabilityScore(list) {
+  if (list.length < 2) return 0.5;
+  const mean = list.reduce((a, b) => a + b, 0) / list.length;
+  const v = list.reduce((s, x) => s + (x - mean) ** 2, 0) / list.length;
+  return Math.max(0.5, Math.min(1, 1 - v * 4));
 }
 
-function edge(fair, impliedProb, stability = 1) {
-  if (fair == null || impliedProb == null) return null;
-  return (fair - impliedProb) * stability;
-}
-
-/* ============================================================
-   WEEK FILTERING
-   ============================================================ */
-
-function inWeekWindow(utc) {
-  const d = new Date(utc).toLocaleString("en-US", { timeZone: "America/New_York" });
-  const dow = new Date(d).getDay();
-  return [4,5,6,0,1].includes(dow); // Thu–Mon
-}
-
-function isVisible(utc) {
-  const diffHours = (Date.now() - new Date(utc)) / 3600000;
-  return diffHours < 4;
+function ev(fair, odds, stability) {
+  const p = implied(odds);
+  return (fair - p) * stability;
 }
 
 /* ============================================================
@@ -82,199 +59,109 @@ function isVisible(utc) {
    ============================================================ */
 
 function aggregateBookmakers(game) {
-  const consensus = {
-    h2h: { home: [], away: [] },
-    spreads: { home: [], away: [] },
-    totals: { over: [], under: [] }
+  const accum = {
+    ml: { home: [], away: [] },
+    spread: { home: [], away: [] },
+    total: { over: [], under: [] }
   };
 
-  const markets = { h2h: [], spreads: [], totals: [] };
+  const bestOdds = {
+    ml: { home: null, away: null },
+    spread: { home: null, away: null },
+    total: { over: null, under: null }
+  };
 
   for (const book of game.bookmakers || []) {
-    const weight = BOOK_WEIGHTS[book.key] || 1;
+    const w = BOOK_WEIGHTS[book.key] || 1;
 
     for (const m of book.markets || []) {
-      const key = m.key;
-      if (!["h2h","spreads","totals"].includes(key)) continue;
-
-      /* ---------------- H2H ---------------- */
-      if (key === "h2h") {
-        const homeO = m.outcomes.find(o => o.name === game.home_team);
-        const awayO = m.outcomes.find(o => o.name === game.away_team);
-        if (!homeO || !awayO) continue;
-
-        const pH = implied(homeO.price);
-        const pA = implied(awayO.price);
-        const [fA, fH] = noVigSymmetric(pA, pH);
-
-        consensus.h2h.home.push({ p: fH, w: weight });
-        consensus.h2h.away.push({ p: fA, w: weight });
-
-        markets.h2h.push({
-          bookmaker: book.title,
-          outcome1: {
-            name: awayO.name,
-            odds: awayO.price,
-            implied: pA,
-            fair: fA,
-            edge: edge(fA, pA)
-          },
-          outcome2: {
-            name: homeO.name,
-            odds: homeO.price,
-            implied: pH,
-            fair: fH,
-            edge: edge(fH, pH)
-          }
-        });
-      }
-
-      /* ---------------- SPREAD ---------------- */
-      if (key === "spreads") {
+      if (m.key === "h2h") {
         const h = m.outcomes.find(o => o.name === game.home_team);
         const a = m.outcomes.find(o => o.name === game.away_team);
         if (!h || !a) continue;
 
         const pH = implied(h.price);
         const pA = implied(a.price);
-        const [fA, fH] = noVigSymmetric(pA, pH);
+        const [fH, fA] = noVigSymmetric(pH, pA);
 
-        consensus.spreads.home.push({ p: fH, w: weight });
-        consensus.spreads.away.push({ p: fA, w: weight });
+        accum.ml.home.push({ p: fH, w });
+        accum.ml.away.push({ p: fA, w });
 
-        markets.spreads.push({
-          bookmaker: book.title,
-          outcome1: {
-            name: a.name,
-            point: a.point,
-            odds: a.price,
-            implied: pA,
-            fair: fA,
-            edge: edge(fA, pA)
-          },
-          outcome2: {
-            name: h.name,
-            point: h.point,
-            odds: h.price,
-            implied: pH,
-            fair: fH,
-            edge: edge(fH, pH)
-          }
-        });
+        if (!bestOdds.ml.home || h.price > bestOdds.ml.home.price)
+          bestOdds.ml.home = h;
+        if (!bestOdds.ml.away || a.price > bestOdds.ml.away.price)
+          bestOdds.ml.away = a;
       }
 
-      /* ---------------- TOTALS ---------------- */
-      if (key === "totals") {
-        const over = m.outcomes.find(o => o.name === "Over");
-        const under = m.outcomes.find(o => o.name === "Under");
-        if (!over || !under) continue;
+      if (m.key === "spreads") {
+        const h = m.outcomes.find(o => o.name === game.home_team);
+        const a = m.outcomes.find(o => o.name === game.away_team);
+        if (!h || !a) continue;
 
-        const pO = implied(over.price);
-        const pU = implied(under.price);
+        const pH = implied(h.price);
+        const pA = implied(a.price);
+        const [fH, fA] = noVigSymmetric(pH, pA);
+
+        accum.spread.home.push({ p: fH, w });
+        accum.spread.away.push({ p: fA, w });
+
+        if (!bestOdds.spread.home || h.price > bestOdds.spread.home.price)
+          bestOdds.spread.home = h;
+        if (!bestOdds.spread.away || a.price > bestOdds.spread.away.price)
+          bestOdds.spread.away = a;
+      }
+
+      if (m.key === "totals") {
+        const o = m.outcomes.find(x => x.name === "Over");
+        const u = m.outcomes.find(x => x.name === "Under");
+        if (!o || !u) continue;
+
+        const pO = implied(o.price);
+        const pU = implied(u.price);
         const [fO, fU] = noVigSymmetric(pO, pU);
 
-        consensus.totals.over.push({ p: fO, w: weight });
-        consensus.totals.under.push({ p: fU, w: weight });
+        accum.total.over.push({ p: fO, w });
+        accum.total.under.push({ p: fU, w });
 
-        markets.totals.push({
-          bookmaker: book.title,
-          outcome1: {
-            name: "Over",
-            point: over.point,
-            odds: over.price,
-            implied: pO,
-            fair: fO,
-            edge: edge(fO, pO)
-          },
-          outcome2: {
-            name: "Under",
-            point: under.point,
-            odds: under.price,
-            implied: pU,
-            fair: fU,
-            edge: edge(fU, pU)
-          }
-        });
+        if (!bestOdds.total.over || o.price > bestOdds.total.over.price)
+          bestOdds.total.over = o;
+        if (!bestOdds.total.under || u.price > bestOdds.total.under.price)
+          bestOdds.total.under = u;
       }
     }
   }
 
-  /* ============================================================
-     FINAL CONSENSUS & EV (Weighted + Stability)
-     ============================================================ */
-
-  function finalize(list, odds) {
-    const fair = weightedFair(list);
-    const impliedProb = implied(odds);
-    const stability = variance(list.map(x => x.p)); // adjust EV
-
+  function finalize(side, odds) {
+    const fair = weightedAvg(side);
+    const stability = stabilityScore(side.map(x => x.p));
     return {
       consensus_prob: fair,
-      ev: edge(fair, impliedProb, stability),
-      stability
+      ev: ev(fair, odds.price, stability),
+      odds: odds.price,
+      point: odds.point
     };
   }
 
-  /* build final best-line object but base EV on consensus fair prob */
-  const extractBest = (mkt, selector) => {
-    const rows = markets[mkt];
-    if (!rows.length) return null;
-
-    let best = null;
-
-    for (const r of rows) {
-      const o = selector(r);
-      if (!best || o.odds > best.odds) best = { ...o };
-    }
-
-    const side = mkt === "spreads"
-      ? (selector.name?.includes("home") ? "home" : "away")
-      : mkt;
-
-    const cons = mkt === "h2h"
-      ? finalize(
-          selector.name === game.home_team
-            ? consensus.h2h.home
-            : consensus.h2h.away,
-          best.odds
-        )
-      : mkt === "spreads"
-      ? finalize(
-          selector.name === game.home_team
-            ? consensus.spreads.home
-            : consensus.spreads.away,
-          best.odds
-        )
-      : finalize(
-          selector.name === "Over"
-            ? consensus.totals.over
-            : consensus.totals.under,
-          best.odds
-        );
-
-    return { ...best, ...cons };
-  };
-
-  const best = {
-    ml: {
-      home: extractBest("h2h", r => r.outcome2),
-      away: extractBest("h2h", r => r.outcome1)
-    },
-    spread: {
-      home: extractBest("spreads", r => r.outcome2),
-      away: extractBest("spreads", r => r.outcome1)
-    },
-    total: {
-      over: extractBest("totals", r => r.outcome1),
-      under: extractBest("totals", r => r.outcome2)
+  return {
+    best: {
+      ml: {
+        home: finalize(accum.ml.home, bestOdds.ml.home),
+        away: finalize(accum.ml.away, bestOdds.ml.away)
+      },
+      spread: {
+        home: finalize(accum.spread.home, bestOdds.spread.home),
+        away: finalize(accum.spread.away, bestOdds.spread.away)
+      },
+      total: {
+        over: finalize(accum.total.over, bestOdds.total.over),
+        under: finalize(accum.total.under, bestOdds.total.under)
+      }
     }
   };
-
-  return { markets, best };
 }
 
 /* ============================================================
-   MAIN HANDLER
+   HANDLER
    ============================================================ */
 
 export default async function handler(req, res) {
@@ -284,30 +171,21 @@ export default async function handler(req, res) {
       `&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 
     const r = await fetch(url);
-    if (!r.ok) return res.status(500).json({ error: "Odds API failure" });
+    if (!r.ok) throw new Error("Odds API failure");
 
     const events = await r.json();
-    const out = [];
 
-    for (const g of events) {
-      if (!inWeekWindow(g.commence_time)) continue;
-      if (!isVisible(g.commence_time)) continue;
-
-      const agg = aggregateBookmakers(g);
-
-      out.push({
-        id: g.id,
-        home_team: g.home_team,
-        away_team: g.away_team,
-        commence_time: g.commence_time,
-        books: agg.markets,
-        best: agg.best
-      });
-    }
+    const out = events.map(g => ({
+      id: g.id,
+      home_team: g.home_team,
+      away_team: g.away_team,
+      commence_time: g.commence_time,
+      ...aggregateBookmakers(g)
+    }));
 
     res.status(200).json(out);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
   }
 }

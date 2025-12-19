@@ -5,7 +5,9 @@ body {
   font-family: Manrope, system-ui, sans-serif;
 }
 
-/* HEADER */
+/* =========================================================
+   HEADER
+   ========================================================= */
 
 .ep-header {
   display: flex;
@@ -29,7 +31,9 @@ body {
   cursor: pointer;
 }
 
-/* LAYOUT */
+/* =========================================================
+   LAYOUT
+   ========================================================= */
 
 .layout {
   max-width: 1100px;
@@ -37,7 +41,9 @@ body {
   padding: 24px 16px;
 }
 
-/* GAME CARD */
+/* =========================================================
+   GAME CARD
+   ========================================================= */
 
 .game-card {
   background: #0f172a;
@@ -70,7 +76,9 @@ body {
   color: #94a3b8;
 }
 
-/* MARKET ROW */
+/* =========================================================
+   MARKET ROWS
+   ========================================================= */
 
 .market-row {
   display: grid;
@@ -89,6 +97,7 @@ body {
   padding: 4px 8px;
   border-radius: 999px;
   text-align: center;
+  letter-spacing: 0.02em;
 }
 
 .market-tag.ml {
@@ -106,17 +115,28 @@ body {
   color: #bbf7d0;
 }
 
+/* Main bet content */
+
 .market-main {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .market-name {
   font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.market-line {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e5e7eb;
 }
 
 .market-odds {
   font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .market-meta {
@@ -124,7 +144,9 @@ body {
   color: #94a3b8;
 }
 
-/* STRENGTH BUBBLES */
+/* =========================================================
+   STRENGTH BUBBLES
+   ========================================================= */
 
 .strength-bubble {
   width: 44px;
@@ -155,25 +177,12 @@ body {
   color: #020617;
 }
 
-/* PROPS */
-
-.props-toggle {
-  margin: 10px 0;
-  background: rgba(59,130,246,0.18);
-  border: 1px solid rgba(59,130,246,0.35);
-  color: #e0f2fe;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
+/* =========================================================
+   PROPS (DISPLAY ONLY, NO CREATE BUTTON)
+   ========================================================= */
 
 .props-container {
-  display: none;
-}
-
-.props-container.open {
-  display: block;
+  margin-top: 12px;
 }
 
 .prop-row {
@@ -207,7 +216,9 @@ body {
   color: #22c55e;
 }
 
-/* MISC */
+/* =========================================================
+   MISC
+   ========================================================= */
 
 .loading {
   padding: 40px;

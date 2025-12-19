@@ -75,6 +75,7 @@ body {
    ========================================================= */
 
 .market-row {
+  position: relative;
   display: grid;
   grid-template-columns: 70px 1fr 52px auto;
   gap: 12px;
@@ -83,6 +84,32 @@ body {
   background: rgba(255,255,255,0.05);
   margin-bottom: 8px;
   align-items: center;
+  overflow: hidden;
+}
+
+/* Confidence overlay */
+.market-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.market-row.conf-high::after {
+  background: rgba(255,255,255,0.06);
+  opacity: 1;
+}
+
+.market-row.conf-medium::after {
+  background: rgba(255,255,255,0.035);
+  opacity: 1;
+}
+
+.market-row.conf-low::after {
+  background: rgba(255,255,255,0.02);
+  opacity: 1;
 }
 
 .market-tag {
@@ -126,7 +153,10 @@ body {
   color: #94a3b8;
 }
 
-/* Strength bubbles, fixed geometry */
+/* =========================================================
+   STRENGTH BUBBLES
+   ========================================================= */
+
 .strength-bubble {
   width: 44px;
   height: 44px;
@@ -212,6 +242,7 @@ body {
 }
 
 .prop-row {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -220,6 +251,32 @@ body {
   background: rgba(255,255,255,0.04);
   margin-bottom: 8px;
   border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+/* Confidence overlay */
+.prop-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.prop-row.conf-high::after {
+  background: rgba(255,255,255,0.06);
+  opacity: 1;
+}
+
+.prop-row.conf-medium::after {
+  background: rgba(255,255,255,0.035);
+  opacity: 1;
+}
+
+.prop-row.conf-low::after {
+  background: rgba(255,255,255,0.02);
+  opacity: 1;
 }
 
 .prop-left {
@@ -279,6 +336,7 @@ body {
   height: 38px;
   font-size: 0.55rem;
 }
+
 .prop-odds {
   font-weight: 900;
   font-size: 0.8rem;

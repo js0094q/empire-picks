@@ -42,6 +42,27 @@ const fetchProps = async gameId => {
 };
 
 /* =========================================================
+   BET LABEL CONSTRUCTION (CRITICAL)
+   ========================================================= */
+
+function formatBetLabel(marketType, o) {
+  if (marketType === "ml") {
+    return o.name;
+  }
+
+  if (marketType === "spread") {
+    const sign = o.point > 0 ? "+" : "";
+    return `${o.name} ${sign}${o.point}`;
+  }
+
+  if (marketType === "total") {
+    return `${o.name} ${o.point}`;
+  }
+
+  return o.name;
+}
+
+/* =========================================================
    MAIN MARKET RENDERING
    ========================================================= */
 
@@ -53,22 +74,20 @@ function renderMarketRows(marketType, label, options) {
   if (!viable.length) return "";
 
   const sorted = viable.sort((a, b) => b.ev - a.ev);
-
-  // Prefer showing only positive-EV outcomes
   const positive = sorted.filter(o => o.ev > 0);
-
   const shown = (positive.length ? positive : sorted).slice(0, 2);
   const evs = shown.map(o => o.ev);
 
   return shown.map(o => {
     const s = strengthFromDistribution(o.ev, evs);
+    const betLabel = formatBetLabel(marketType, o);
 
     return `
       <div class="market-row">
         <span class="market-tag ${marketType}">${label}</span>
 
         <div class="market-main">
-          <div class="market-name">${o.name}</div>
+          <div class="market-name">${betLabel}</div>
           <div class="market-odds">${fmtOdds(o.odds)}</div>
           <div class="market-meta">
             Book ${pct(o.implied)} · Consensus ${pct(o.consensus_prob)}
@@ -76,7 +95,6 @@ function renderMarketRows(marketType, label, options) {
         </div>
 
         <div class="strength-bubble ${s.cls}">${s.txt}</div>
-        <button class="parlay-btn">+ Parlay</button>
       </div>
     `;
   }).join("");
@@ -139,19 +157,16 @@ function renderProps(container, categories) {
 
           return `
             <div class="prop-row">
-              <div class="prop-left">
+              <div>
                 <div class="prop-player">${r.player}</div>
                 <div class="prop-line">
                   ${r.side} ${r.point} ${r.label}
                 </div>
               </div>
 
-              <div class="prop-right">
-                <div class="strength-bubble ${s.cls}">${s.txt}</div>
-                <span class="prop-odds">${fmtOdds(r.odds)}</span>
-                <span class="prop-ev">EV ${(r.ev * 100).toFixed(1)}%</span>
-                <button class="parlay-btn">+ Parlay</button>
-              </div>
+              <div class="strength-bubble ${s.cls}">${s.txt}</div>
+              <span class="prop-odds">${fmtOdds(r.odds)}</span>
+              <span class="prop-ev">EV ${(r.ev * 100).toFixed(1)}%</span>
             </div>
           `;
         }).join("")}
@@ -185,8 +200,6 @@ function gameCard(game) {
         <div class="kickoff">${kickoff}</div>
       </div>
 
-      <button class="props-toggle">Show Props</button>
-
       ${renderMarketRows("ml", "ML", Object.values(game.best?.ml || {}))}
       ${renderMarketRows("spread", "SPREAD", Object.values(game.best?.spread || {}))}
       ${renderMarketRows("total", "TOTAL", Object.values(game.best?.total || {}))}
@@ -209,29 +222,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   container.innerHTML = games.map(gameCard).join("");
 
   container.addEventListener("click", async e => {
-    const btn = e.target.closest(".props-toggle");
-    if (!btn) return;
+    const card = e.target.closest(".game-card");
+    if (!card) return;
 
-    const card = btn.closest(".game-card");
     const propsEl = card.querySelector(".props-container");
     const gameId = card.dataset.gameId;
 
     if (propsEl.classList.contains("open")) {
       propsEl.classList.remove("open");
-      btn.textContent = "Show Props";
+      propsEl.innerHTML = "";
       return;
     }
 
-    btn.textContent = "Loading Props…";
     propsEl.classList.add("open");
+    propsEl.innerHTML = `<div class="loading">Loading props…</div>`;
 
     try {
       const data = await fetchProps(gameId);
       renderProps(propsEl, data.categories);
-      btn.textContent = "Hide Props";
     } catch {
       propsEl.innerHTML = `<div class="muted">Failed to load props.</div>`;
-      btn.textContent = "Show Props";
     }
   });
 });

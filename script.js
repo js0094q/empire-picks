@@ -14,6 +14,13 @@ const strengthFromEV = ev => {
   return { cls: "strength-weak", txt: "WEAK" };
 };
 
+const propStrengthFromEV = ev => {
+  if (ev > 0.18) return { cls: "strength-very-strong", txt: "VSTR" };
+  if (ev > 0.12) return { cls: "strength-strong", txt: "STR" };
+  if (ev > 0.07) return { cls: "strength-moderate", txt: "MOD" };
+  return { cls: "strength-weak", txt: "WEAK" };
+};
+
 const evText = ev => (ev == null ? "EV —" : `EV ${(ev * 100).toFixed(1)}%`);
 
 /* =========================================================
@@ -68,35 +75,32 @@ function marketRow({ marketType, label, name, odds, bookProb, modelProb, ev }) {
    ========================================================= */
 
 function propRow({ player, label, point, side, odds, ev }) {
-  const sideCls = side === "Over" ? "prop-side over" : "prop-side under";
+  const strength = propStrengthFromEV(ev);
 
-  return `
-    <div class="prop-row">
-      <div class="prop-left">
-        <div class="prop-player">${player}</div>
-        <div class="prop-line">
-          <span class="${sideCls}">${side}</span>
-          <span class="prop-point">${point == null ? "" : point}</span>
-          <span class="prop-label">${label || ""}</span>
-        </div>
-      </div>
-
-      <div class="prop-right">
-        <span class="prop-odds">${fmtOdds(odds)}</span>
-        <span class="prop-ev">${evText(ev)}</span>
-        <button class="parlay-btn" data-leg='${encodeURIComponent(JSON.stringify({
-          type: "prop",
-          player,
-          label,
-          side,
-          point,
-          odds
-        }))}'>+ Parlay</button>
+return `
+  <div class="prop-row">
+    <div class="prop-left">
+      <div class="prop-player">${player}</div>
+      <div class="prop-line">
+        <span class="${sideCls}">${side}</span>
+        <span class="prop-point">${point ?? ""}</span>
+        <span class="prop-label">${label ?? ""}</span>
       </div>
     </div>
-  `;
-}
 
+    <div class="prop-right">
+      <div class="strength-bubble ${strength.cls}">
+        ${strength.txt}
+      </div>
+
+      <span class="prop-odds">${fmtOdds(odds)}</span>
+      <span class="prop-ev">${evText(ev)}</span>
+
+      <button class="parlay-btn">+ Parlay</button>
+    </div>
+  </div>
+`;
+   
 function renderPropsInto(containerEl, categories) {
   const cats = categories || {};
   const keys = Object.keys(cats);

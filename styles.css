@@ -2,22 +2,20 @@
   --bg: #0b1020;
   --card: #11182f;
   --accent: #3b82f6;
-  --accent-soft: rgba(59,130,246,0.25);
   --text: #f8fafc;
   --muted: #94a3b8;
   --green: #22c55e;
+  --red: #ef4444;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #0e1530, #070b18 70%);
+  background: var(--bg);
   color: var(--text);
   font-family: Inter, Manrope, system-ui, sans-serif;
 }
-
-/* HEADER */
 
 .header {
   display: flex;
@@ -25,13 +23,11 @@ body {
   align-items: center;
   padding: 14px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  background: rgba(7,11,24,0.9);
-  backdrop-filter: blur(8px);
 }
 
 .brand {
   font-weight: 900;
-  letter-spacing: 0.02em;
+  font-size: 1.1rem;
 }
 
 #refresh-btn {
@@ -40,10 +36,7 @@ body {
   color: white;
   padding: 6px 14px;
   border-radius: 999px;
-  cursor: pointer;
 }
-
-/* LAYOUT */
 
 .container {
   max-width: 980px;
@@ -52,71 +45,31 @@ body {
 }
 
 .loading {
-  padding: 40px;
   text-align: center;
   color: var(--muted);
+  padding: 40px;
 }
 
 /* GAME CARD */
 
 .game-card {
-  position: relative;
-  background: linear-gradient(180deg, #11182f, #0d1326);
-  border-radius: 16px;
+  background: var(--card);
+  border-radius: 14px;
   padding: 16px 18px;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
   border: 1px solid rgba(255,255,255,0.06);
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
-.game-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-}
-
-/* BACKGROUND GLOW */
-
-.card-bg {
-  position: absolute;
-  top: -30%;
-  bottom: -30%;
-  width: 50%;
-  filter: blur(20px);
-  opacity: 0.14;
-  pointer-events: none;
-}
-
-.card-bg.home {
-  left: -10%;
-  background: radial-gradient(circle, var(--home-color), transparent 70%);
-}
-
-.card-bg.away {
-  right: -10%;
-  background: radial-gradient(circle, var(--away-color), transparent 70%);
-}
-
-/* MATCHUP */
 
 .matchup {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
-.teams {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.teams img {
-  width: 22px;
-  height: 22px;
-  opacity: 0.9;
+.matchup strong {
+  color: var(--text);
 }
 
 /* PICK STRIP */
@@ -124,16 +77,12 @@ body {
 .pick-strip {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: 64px 1fr auto auto;
+  grid-template-columns: 72px 1fr auto auto;
   gap: 14px;
   align-items: center;
   padding: 14px 16px;
-  border-radius: 14px;
-  background: linear-gradient(135deg,
-    rgba(59,130,246,0.22),
-    rgba(59,130,246,0.05)
-  );
-  border: 1px solid rgba(59,130,246,0.35);
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
 }
 
 .pick-market {
@@ -143,17 +92,20 @@ body {
   text-align: center;
   padding: 6px 8px;
   border-radius: 999px;
-  background: var(--accent-soft);
+  background: rgba(59,130,246,0.25);
   color: #bfdbfe;
 }
 
 .pick-selection {
+  display: flex;
+  gap: 8px;
   font-weight: 900;
   font-size: 1rem;
 }
 
 .pick-odds {
   font-weight: 900;
+  font-size: 0.95rem;
 }
 
 .pick-metrics {
@@ -163,39 +115,33 @@ body {
 }
 
 .ev-green { color: var(--green); }
-
-/* WHY */
-
-.why {
-  margin-top: 8px;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
+.ev-red { color: var(--red); }
 
 /* ACTIONS */
 
 .actions {
-  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .actions button {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
   color: white;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 800;
-  cursor: pointer;
 }
 
 /* PROPS */
 
 .props {
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 1px dashed rgba(255,255,255,0.12);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 

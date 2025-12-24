@@ -3,22 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks • NFL</title>
+  <title>EmpirePicks • NFL Odds & Props</title>
   <link rel="stylesheet" href="styles.css" />
   <script type="module" src="script.js" defer></script>
 </head>
+
 <body>
+  <header class="ep-header">
+    <div class="brand">
+      <div class="logo">🏛️ EmpirePicks</div>
+      <nav class="nav">
+        <a class="nav-link" href="/about.html">About</a>
+      </nav>
+    </div>
 
-<header class="header">
-  <div class="brand">🏛️ EmpirePicks</div>
-  <button id="refresh-btn">Refresh</button>
-</header>
+    <button id="refresh-btn" title="Refresh latest odds and props">Refresh Odds</button>
+  </header>
 
-<main class="container">
-  <div id="games-container" class="games">
-    <div class="loading">Loading NFL games…</div>
-  </div>
-</main>
+  <main class="layout">
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-kicker">NFL Market Intelligence</div>
+        <h1>See what the sportsbooks believe, and where value may exist</h1>
+        <p>
+          EmpirePicks removes margin, weights sharper books more heavily, and
+          highlights market lean, value signals, and consensus stability.
+        </p>
 
+        <div class="hero-bullets">
+          <div class="hero-pill"><span class="dot dot-lean"></span> Market Lean</div>
+          <div class="hero-pill"><span class="dot dot-signal"></span> Value Signal</div>
+          <div class="hero-pill"><span class="dot dot-stability"></span> Consensus</div>
+        </div>
+      </div>
+    </section>
+
+    <div id="games-container">
+      <div class="loading">Loading NFL games…</div>
+    </div>
+  </main>
+
+  <footer class="ep-footer">
+    Data from The Odds API • EmpirePicks
+  </footer>
 </body>
 </html>

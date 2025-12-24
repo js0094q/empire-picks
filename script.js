@@ -8,14 +8,14 @@ async function fetchGames() {
   return await r.json();
 }
 
+function marketTag(type) {
+  return type === "spread" ? "SPREAD" : type === "total" ? "TOTAL" : "ML";
+}
+
 function pickLabel(p) {
   if (p.type === "spread") return `${p.name} ${p.point > 0 ? "+" : ""}${p.point}`;
   if (p.type === "total") return `${p.side.toUpperCase()} ${p.point}`;
   return p.name;
-}
-
-function marketTag(type) {
-  return type === "spread" ? "SPREAD" : type === "total" ? "TOTAL" : "ML";
 }
 
 function selectBestPick(game) {
@@ -36,12 +36,25 @@ function renderGame(game) {
   const pick = selectBestPick(game);
   if (!pick) return null;
 
+  const home = Teams[game.home_team];
+  const away = Teams[game.away_team];
+
   const card = document.createElement("div");
   card.className = "game-card";
+  card.style.setProperty("--home-color", home?.color || "#334155");
+  card.style.setProperty("--away-color", away?.color || "#475569");
 
   card.innerHTML = `
+    <div class="card-bg home"></div>
+    <div class="card-bg away"></div>
+
     <div class="matchup">
-      <strong>${game.away_team} @ ${game.home_team}</strong>
+      <div class="teams">
+        <img src="${away.logo}" />
+        <span>@</span>
+        <img src="${home.logo}" />
+        <strong>${away.abbr} @ ${home.abbr}</strong>
+      </div>
       <span>${new Date(game.commence_time).toLocaleString()}</span>
     </div>
 
@@ -51,17 +64,21 @@ function renderGame(game) {
       <div class="pick-odds">${fmtOdds(pick.odds)}</div>
       <div class="pick-metrics">
         <span>Model ${pct(pick.consensus_prob)}</span>
-        <span class="${pick.ev > 0 ? "ev-green" : "ev-red"}">
-          ${(pick.ev * 100).toFixed(2)}% EV
-        </span>
+        <span class="ev-green">${(pick.ev * 100).toFixed(2)}% EV</span>
       </div>
+    </div>
+
+    <div class="why">
+      Why: Model consensus diverges materially from market price
     </div>
 
     <div class="actions">
       <button class="props-btn">View Props</button>
     </div>
 
-    <div class="props hidden">No +EV props detected</div>
+    <div class="props hidden">
+      🔒 Props monitored. No +EV props detected yet.
+    </div>
   `;
 
   const btn = card.querySelector(".props-btn");
@@ -72,12 +89,12 @@ function renderGame(game) {
 }
 
 (async function init() {
-  const el = document.getElementById("games-container");
-  el.innerHTML = "";
-  const games = await fetchGames();
+  const container = document.getElementById("games-container");
+  container.innerHTML = "";
 
+  const games = await fetchGames();
   games.forEach(g => {
     const card = renderGame(g);
-    if (card) el.appendChild(card);
+    if (card) container.appendChild(card);
   });
 })();

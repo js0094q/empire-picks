@@ -41,6 +41,24 @@ body {
   padding: 24px 16px;
 }
 
+.games-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+
+.hidden {
+  display: none !important;
+}
+
+.muted {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
 /* =========================================================
    GAME CARD
    ========================================================= */
@@ -77,20 +95,161 @@ body {
 }
 
 /* =========================================================
-   MARKET ROWS
+   PRIMARY PICK (NEW HOMEPAGE STRUCTURE)
    ========================================================= */
+
+.pick-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.pick-label {
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.pick-odds {
+  font-weight: 900;
+  font-size: 1.05rem;
+}
+
+.pick-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.pick-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pick-actions button {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #f8fafc;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.pick-actions button:hover {
+  background: rgba(255,255,255,0.10);
+}
+
+/* =========================================================
+   EV COLORS (USED BY SCRIPT)
+   ========================================================= */
+
+.ev-green { color: #22c55e; }
+.ev-red { color: #ef4444; }
+.ev-neutral { color: #94a3b8; }
+
+/* =========================================================
+   DETAILS (ODDS BREAKDOWN PANEL)
+   ========================================================= */
+
+.details {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.markets {
+  display: grid;
+  gap: 12px;
+}
+
+.market-block h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
 
 .market-row {
   display: grid;
-  grid-template-columns: 64px 1fr 44px auto;
+  grid-template-columns: 1fr auto auto;
   gap: 12px;
   align-items: center;
   background: rgba(255,255,255,0.04);
   border-radius: 14px;
-  padding: 12px;
+  padding: 10px 12px;
   margin-bottom: 8px;
 }
 
+.market-row span:nth-child(2) {
+  font-weight: 800;
+}
+
+.market-row span:nth-child(3) {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+/* =========================================================
+   PROPS (SECONDARY, LAZY-LOADED)
+   ========================================================= */
+
+.props {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255,255,255,0.10);
+  opacity: 0.92;
+}
+
+.props-category {
+  margin-top: 10px;
+}
+
+.props-category h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.prop-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255,255,255,0.03);
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.prop-row span:nth-child(2) {
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.prop-row span:nth-child(3) {
+  font-weight: 900;
+}
+
+/* =========================================================
+   LEGACY CLASSES (SAFE TO KEEP)
+   If older markup still exists, these prevent breakage.
+   ========================================================= */
+
+/* MARKET TAGS (legacy) */
 .market-tag {
   font-size: 0.65rem;
   font-weight: 900;
@@ -115,39 +274,7 @@ body {
   color: #bbf7d0;
 }
 
-/* Main bet content */
-
-.market-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.market-name {
-  font-weight: 800;
-  font-size: 0.9rem;
-}
-
-.market-line {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #e5e7eb;
-}
-
-.market-odds {
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.market-meta {
-  font-size: 0.7rem;
-  color: #94a3b8;
-}
-
-/* =========================================================
-   STRENGTH BUBBLES
-   ========================================================= */
-
+/* STRENGTH BUBBLES (legacy) */
 .strength-bubble {
   width: 44px;
   height: 44px;
@@ -160,61 +287,10 @@ body {
   color: #022c22;
 }
 
-.strength-very-strong {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-}
-
-.strength-strong {
-  background: #22c55e;
-}
-
-.strength-moderate {
-  background: #a3e635;
-}
-
-.strength-weak {
-  background: #64748b;
-  color: #020617;
-}
-
-/* =========================================================
-   PROPS (DISPLAY ONLY, NO CREATE BUTTON)
-   ========================================================= */
-
-.props-container {
-  margin-top: 12px;
-}
-
-.prop-row {
-  display: grid;
-  grid-template-columns: 1fr 44px auto;
-  gap: 12px;
-  align-items: center;
-  background: rgba(255,255,255,0.035);
-  padding: 10px 12px;
-  border-radius: 12px;
-  margin-bottom: 6px;
-}
-
-.prop-player {
-  font-weight: 800;
-}
-
-.prop-line {
-  font-size: 0.75rem;
-  color: #cbd5e1;
-}
-
-.prop-odds {
-  font-weight: 800;
-  font-size: 0.8rem;
-}
-
-.prop-ev {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #22c55e;
-}
+.strength-very-strong { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.strength-strong { background: #22c55e; }
+.strength-moderate { background: #a3e635; }
+.strength-weak { background: #64748b; color: #020617; }
 
 /* =========================================================
    MISC

@@ -2,6 +2,7 @@
   "version": 2,
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "about/index.html", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },
     { "src": "script.js", "use": "@vercel/static" },
     { "src": "teams.js", "use": "@vercel/static" },
@@ -20,6 +21,8 @@
       "dest": "/api/props.js",
       "headers": { "Cache-Control": "no-store" }
     },
+
+    { "src": "/about/?", "dest": "/about/index.html" },
 
     { "src": "/(.*\\.css)", "dest": "/$1" },
     { "src": "/(.*\\.js)", "dest": "/$1" },

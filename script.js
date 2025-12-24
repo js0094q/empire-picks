@@ -45,31 +45,43 @@ function pickLabel(p) {
 }
 
 function renderProps(categories) {
-  return Object.entries(categories).map(([cat, list]) => {
-    const top = list
-      .map(p => {
-        const over = { side: "Over", ev: p.over_ev, odds: p.over_odds };
-        const under = { side: "Under", ev: p.under_ev, odds: p.under_odds };
-        return over.ev > under.ev ? over : under;
-      })
-      .filter(x => x.ev > 0)
-      .slice(0, 3);
+  let hasAny = false;
 
-    if (!top.length) {
-      return `<div class="muted">${cat}: No +EV props</div>`;
-    }
+  const html = Object.entries(categories)
+    .map(([cat, list]) => {
+      const best = list
+        .map(p => {
+          const over = { side: "Over", ev: p.over_ev, odds: p.over_odds, point: p.point, player: p.player };
+          const under = { side: "Under", ev: p.under_ev, odds: p.under_odds, point: p.point, player: p.player };
+          return over.ev > under.ev ? over : under;
+        })
+        .filter(p => p.ev > 0)
+        .slice(0, 2);
 
-    return `
-      <h4>${cat}</h4>
-      ${top.map(p =>
-        `<div class="prop-row">
-          <span>${p.side}</span>
-          <span>${fmtOdds(p.odds)}</span>
-          <span class="ev-green">${(p.ev * 100).toFixed(2)}%</span>
-        </div>`
-      ).join("")}
-    `;
-  }).join("");
+      if (!best.length) return "";
+
+      hasAny = true;
+
+      return `
+        <div class="props-category">
+          <h4>${cat}</h4>
+          ${best.map(p => `
+            <div class="prop-row">
+              <span>${p.player} ${p.side} ${p.point}</span>
+              <span>${fmtOdds(p.odds)}</span>
+              <span class="ev-green">${(p.ev * 100).toFixed(2)}%</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    })
+    .join("");
+
+  if (!hasAny) {
+    return `<div class="muted">No +EV props detected for this game</div>`;
+  }
+
+  return html;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

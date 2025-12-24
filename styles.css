@@ -1,148 +1,480 @@
-:root {
-  --bg: #0b1020;
-  --card: #11182f;
-  --accent: #3b82f6;
-  --text: #f8fafc;
+:root{
+  --bg: #020617;
+  --panel: #0f172a;
+  --panel2: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
   --muted: #94a3b8;
-  --green: #22c55e;
-  --red: #ef4444;
+  --text: #f8fafc;
+  --pill: rgba(255,255,255,0.06);
 }
-
-* { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: Inter, Manrope, system-ui, sans-serif;
+  font-family: Manrope, system-ui, sans-serif;
 }
 
-.header {
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.ep-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid var(--border);
+  background: rgba(2,6,23,0.7);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.brand {
+.brand{
+  display:flex;
+  align-items:center;
+  gap: 14px;
+}
+
+.logo {
   font-weight: 900;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+}
+
+.nav{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.nav-link{
+  color: #cbd5e1;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.nav-link:hover{
+  background: rgba(255,255,255,0.07);
 }
 
 #refresh-btn {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.15);
   color: white;
-  padding: 6px 14px;
+  padding: 8px 14px;
   border-radius: 999px;
+  cursor: pointer;
+  font-weight: 900;
 }
 
-.container {
-  max-width: 980px;
+#refresh-btn:hover{
+  background: rgba(255,255,255,0.12);
+}
+
+/* =========================================================
+   LAYOUT + HERO
+   ========================================================= */
+
+.layout {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 20px 16px 28px;
 }
 
-.loading {
-  text-align: center;
-  color: var(--muted);
-  padding: 40px;
+.hero{
+  background: radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,0.25), transparent 55%),
+              radial-gradient(900px 500px at 85% 0%, rgba(34,197,94,0.18), transparent 55%),
+              rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  padding: 18px;
+  margin-bottom: 18px;
 }
 
-/* GAME CARD */
+.hero-inner{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.hero-kicker{
+  display:inline-flex;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #e2e8f0;
+}
+
+.hero h1{
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.hero p{
+  margin: 0;
+  color: #cbd5e1;
+  font-weight: 600;
+  max-width: 72ch;
+}
+
+.hero-bullets{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.hero-pill{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 8px 10px;
+  border-radius: 14px;
+  font-weight: 900;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.dot{
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+}
+.dot-lean{ background: rgba(59,130,246,0.9); }
+.dot-signal{ background: rgba(34,197,94,0.9); }
+.dot-stability{ background: rgba(168,85,247,0.9); }
+
+/* =========================================================
+   GAME CARD
+   ========================================================= */
 
 .game-card {
-  background: var(--card);
-  border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 20px;
+  background: var(--panel);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
   border: 1px solid rgba(255,255,255,0.06);
 }
 
-.matchup {
+.game-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
-  color: var(--muted);
+  margin-bottom: 10px;
 }
 
-.matchup strong {
-  color: var(--text);
-}
-
-/* PICK STRIP */
-
-.pick-strip {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: 72px 1fr auto auto;
-  gap: 14px;
+.teams {
+  display: flex;
   align-items: center;
-  padding: 14px 16px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 12px;
+  gap: 10px;
 }
 
-.pick-market {
+.teams img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.kickoff {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.game-summary{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 12px;
+}
+
+.summary-item{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.summary-label{
+  color: var(--muted);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  font-weight: 900;
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+}
+
+.badge-lean{ background: rgba(59,130,246,0.18); color:#bfdbfe; }
+.badge-value{ background: rgba(34,197,94,0.18); color:#bbf7d0; }
+.badge-stability{ background: rgba(168,85,247,0.18); color:#e9d5ff; }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.props-toggle{
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+.props-toggle:hover{
+  background: rgba(255,255,255,0.10);
+}
+
+/* =========================================================
+   MARKET ROWS
+   ========================================================= */
+
+.market-row {
+  display: grid;
+  grid-template-columns: 64px 1fr 44px auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel2);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.market-row.book-fav{
+  outline: 2px solid rgba(59,130,246,0.20);
+}
+
+.market-row.best-value{
+  outline: 2px solid rgba(34,197,94,0.22);
+}
+
+.market-tag {
   font-size: 0.65rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
-  text-align: center;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border-radius: 999px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.market-tag.ml {
   background: rgba(59,130,246,0.25);
   color: #bfdbfe;
 }
 
-.pick-selection {
-  display: flex;
-  gap: 8px;
-  font-weight: 900;
-  font-size: 1rem;
+.market-tag.spread {
+  background: rgba(168,85,247,0.25);
+  color: #e9d5ff;
 }
 
-.pick-odds {
-  font-weight: 900;
-  font-size: 0.95rem;
+.market-tag.total {
+  background: rgba(34,197,94,0.25);
+  color: #bbf7d0;
 }
 
-.pick-metrics {
+/* Main bet content */
+
+.market-main {
   display: flex;
   flex-direction: column;
-  font-size: 0.75rem;
+  gap: 2px;
+  min-width: 0;
 }
 
-.ev-green { color: var(--green); }
-.ev-red { color: var(--red); }
-
-/* ACTIONS */
-
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
+.market-name {
+  font-weight: 900;
+  font-size: 0.92rem;
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.actions button {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: white;
-  padding: 6px 12px;
+.pill-mini{
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 0.7rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: #e2e8f0;
+}
+
+.pill-fav{ background: rgba(59,130,246,0.16); color: #bfdbfe; }
+.pill-value{ background: rgba(34,197,94,0.16); color: #bbf7d0; }
+
+.market-odds {
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.market-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* =========================================================
+   SIGNAL BUBBLES (renamed from strength)
+   ========================================================= */
+
+.signal-bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.68rem;
+  color: #052e1a;
+  letter-spacing: 0.02em;
+}
+
+.signal-very-strong {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.signal-strong {
+  background: #22c55e;
+}
+
+.signal-moderate {
+  background: #a3e635;
+}
+
+.signal-weak {
+  background: #64748b;
+  color: #020617;
+}
+
+/* =========================================================
+   PROPS
+   ========================================================= */
+
+.props-container {
+  margin-top: 12px;
+  display:none;
+}
+
+.props-container.open{
+  display:block;
+}
+
+.props-category{
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.props-category-title{
+  font-weight: 900;
+  margin: 6px 0 10px;
+  color: #e2e8f0;
+}
+
+.prop-row {
+  display: grid;
+  grid-template-columns: 1fr 44px auto;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255,255,255,0.035);
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.prop-player {
+  font-weight: 900;
+}
+
+.prop-line {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.prop-odds {
+  font-weight: 900;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.prop-right{
+  display:flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* =========================================================
+   PAGES + FOOTER + MISC
+   ========================================================= */
+
+.page h1{
+  margin: 0 0 12px;
+}
+
+.card{
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  padding: 14px;
+  margin: 12px 0;
+}
+
+.muted{
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
   font-weight: 800;
 }
 
-/* PROPS */
-
-.props {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(255,255,255,0.12);
+.ep-footer{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 16px 26px;
+  color: rgba(148,163,184,0.9);
+  font-weight: 700;
   font-size: 0.8rem;
-  color: var(--muted);
 }
-
-.hidden { display: none; }

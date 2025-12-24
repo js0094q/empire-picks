@@ -1,13 +1,10 @@
-// /api/events.js — Corrected aggregation engine
+// /api/events.js — FINAL, NORMALIZED
+
 import fetch from "node-fetch";
 
 const API_KEY = process.env.ODDS_API_KEY;
 const SPORT = "americanfootball_nfl";
 const BASE = "https://api.the-odds-api.com/v4";
-
-/* ============================================================
-   SHARP / PUBLIC BOOK WEIGHTING
-   ============================================================ */
 
 const BOOK_WEIGHTS = {
   pinnacle: 1.6,
@@ -19,78 +16,60 @@ const BOOK_WEIGHTS = {
   caesars: 0.9,
   betrivers: 0.85,
   barstool: 0.8,
-  pointsbetus: 0.85,
-  twinspires: 0.75
+  pointsbetus: 0.85
 };
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
+const implied = o =>
+  o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 
-function implied(odds) {
-  return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
+function noVig(pA, pB) {
+  const d = pA + pB - pA * pB;
+  return d > 0 ? [pA / d, pB / d] : [0.5, 0.5];
 }
 
-function noVigSymmetric(pA, pB) {
-  const denom = pA + pB;
-  return denom > 0 ? [pA / denom, pB / denom] : [0.5, 0.5];
+function weightedFair(list) {
+  const w = list.reduce((s, x) => s + x.w, 0);
+  return w ? list.reduce((s, x) => s + x.p * x.w, 0) / w : null;
 }
 
-function weightedAvg(list) {
-  const wSum = list.reduce((s, x) => s + x.w, 0);
-  if (!wSum) return null;
-  return list.reduce((s, x) => s + x.p * x.w, 0) / wSum;
+function variance(arr) {
+  if (arr.length < 2) return 1;
+  const m = arr.reduce((a, b) => a + b, 0) / arr.length;
+  const v = arr.reduce((s, x) => s + (x - m) ** 2, 0) / arr.length;
+  return Math.max(0.15, Math.min(1, 1 - v));
 }
 
-function stabilityScore(list) {
-  if (list.length < 2) return 0.5;
-  const mean = list.reduce((a, b) => a + b, 0) / list.length;
-  const v = list.reduce((s, x) => s + (x - mean) ** 2, 0) / list.length;
-  return Math.max(0.5, Math.min(1, 1 - v * 4));
+function edge(fair, imp, stab) {
+  return fair != null && imp != null ? (fair - imp) * stab : null;
 }
 
-function ev(fair, odds, stability) {
-  const p = implied(odds);
-  return (fair - p) * stability;
-}
-
-/* ============================================================
-   AGGREGATOR
-   ============================================================ */
-
-function aggregateBookmakers(game) {
-  const accum = {
-    ml: { home: [], away: [] },
-    spread: { home: [], away: [] },
-    total: { over: [], under: [] }
+function aggregate(game) {
+  const cons = {
+    h2h: { home: [], away: [] },
+    spreads: { home: [], away: [] },
+    totals: { over: [], under: [] }
   };
 
-  const bestOdds = {
-    ml: { home: null, away: null },
-    spread: { home: null, away: null },
-    total: { over: null, under: null }
-  };
+  const books = { h2h: [], spreads: [], totals: [] };
 
-  for (const book of game.bookmakers || []) {
-    const w = BOOK_WEIGHTS[book.key] || 1;
+  for (const b of game.bookmakers || []) {
+    const w = BOOK_WEIGHTS[b.key] || 1;
 
-    for (const m of book.markets || []) {
+    for (const m of b.markets || []) {
       if (m.key === "h2h") {
         const h = m.outcomes.find(o => o.name === game.home_team);
         const a = m.outcomes.find(o => o.name === game.away_team);
         if (!h || !a) continue;
 
-        const pH = implied(h.price);
-        const pA = implied(a.price);
-        const [fH, fA] = noVigSymmetric(pH, pA);
+        const [fA, fH] = noVig(implied(a.price), implied(h.price));
 
-        accum.ml.home.push({ p: fH, w });
-        accum.ml.away.push({ p: fA, w });
+        cons.h2h.home.push({ p: fH, w });
+        cons.h2h.away.push({ p: fA, w });
 
-        if (!bestOdds.ml.home || h.price > bestOdds.ml.home.price)
-          bestOdds.ml.home = h;
-        if (!bestOdds.ml.away || a.price > bestOdds.ml.away.price)
-          bestOdds.ml.away = a;
+        books.h2h.push({
+          home: { name: game.home_team, odds: h.price, fair: fH },
+          away: { name: game.away_team, odds: a.price, fair: fA }
+        });
       }
 
       if (m.key === "spreads") {
@@ -98,17 +77,15 @@ function aggregateBookmakers(game) {
         const a = m.outcomes.find(o => o.name === game.away_team);
         if (!h || !a) continue;
 
-        const pH = implied(h.price);
-        const pA = implied(a.price);
-        const [fH, fA] = noVigSymmetric(pH, pA);
+        const [fA, fH] = noVig(implied(a.price), implied(h.price));
 
-        accum.spread.home.push({ p: fH, w });
-        accum.spread.away.push({ p: fA, w });
+        cons.spreads.home.push({ p: fH, w });
+        cons.spreads.away.push({ p: fA, w });
 
-        if (!bestOdds.spread.home || h.price > bestOdds.spread.home.price)
-          bestOdds.spread.home = h;
-        if (!bestOdds.spread.away || a.price > bestOdds.spread.away.price)
-          bestOdds.spread.away = a;
+        books.spreads.push({
+          home: { name: game.home_team, point: h.point, odds: h.price, fair: fH },
+          away: { name: game.away_team, point: a.point, odds: a.price, fair: fA }
+        });
       }
 
       if (m.key === "totals") {
@@ -116,76 +93,78 @@ function aggregateBookmakers(game) {
         const u = m.outcomes.find(x => x.name === "Under");
         if (!o || !u) continue;
 
-        const pO = implied(o.price);
-        const pU = implied(u.price);
-        const [fO, fU] = noVigSymmetric(pO, pU);
+        const [fO, fU] = noVig(implied(o.price), implied(u.price));
 
-        accum.total.over.push({ p: fO, w });
-        accum.total.under.push({ p: fU, w });
+        cons.totals.over.push({ p: fO, w });
+        cons.totals.under.push({ p: fU, w });
 
-        if (!bestOdds.total.over || o.price > bestOdds.total.over.price)
-          bestOdds.total.over = o;
-        if (!bestOdds.total.under || u.price > bestOdds.total.under.price)
-          bestOdds.total.under = u;
+        books.totals.push({
+          over: { name: "Over", point: o.point, odds: o.price, fair: fO },
+          under: { name: "Under", point: u.point, odds: u.price, fair: fU }
+        });
       }
     }
   }
 
-  function finalize(side, odds) {
-    const fair = weightedAvg(side);
-    const stability = stabilityScore(side.map(x => x.p));
+  const finalize = (list, odds) => {
+    const fair = weightedFair(list);
+    const stab = variance(list.map(x => x.p));
     return {
       consensus_prob: fair,
-      ev: ev(fair, odds.price, stability),
-      odds: odds.price,
-      point: odds.point
+      stability: stab,
+      ev: edge(fair, implied(odds), stab)
     };
-  }
+  };
 
-  return {
-    best: {
-      ml: {
-        home: finalize(accum.ml.home, bestOdds.ml.home),
-        away: finalize(accum.ml.away, bestOdds.ml.away)
+  const best = {
+    ml: {
+      home: books.h2h[0]?.home && {
+        ...books.h2h[0].home,
+        ...finalize(cons.h2h.home, books.h2h[0].home.odds)
       },
-      spread: {
-        home: finalize(accum.spread.home, bestOdds.spread.home),
-        away: finalize(accum.spread.away, bestOdds.spread.away)
+      away: books.h2h[0]?.away && {
+        ...books.h2h[0].away,
+        ...finalize(cons.h2h.away, books.h2h[0].away.odds)
+      }
+    },
+    spread: {
+      home: books.spreads[0]?.home && {
+        ...books.spreads[0].home,
+        ...finalize(cons.spreads.home, books.spreads[0].home.odds)
       },
-      total: {
-        over: finalize(accum.total.over, bestOdds.total.over),
-        under: finalize(accum.total.under, bestOdds.total.under)
+      away: books.spreads[0]?.away && {
+        ...books.spreads[0].away,
+        ...finalize(cons.spreads.away, books.spreads[0].away.odds)
+      }
+    },
+    total: {
+      over: books.totals[0]?.over && {
+        ...books.totals[0].over,
+        ...finalize(cons.totals.over, books.totals[0].over.odds)
+      },
+      under: books.totals[0]?.under && {
+        ...books.totals[0].under,
+        ...finalize(cons.totals.under, books.totals[0].under.odds)
       }
     }
   };
+
+  return { books, best };
 }
 
-/* ============================================================
-   HANDLER
-   ============================================================ */
-
 export default async function handler(req, res) {
-  try {
-    const url =
-      `${BASE}/sports/${SPORT}/odds?apiKey=${API_KEY}` +
-      `&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
+  const r = await fetch(
+    `${BASE}/sports/${SPORT}/odds?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`
+  );
+  const data = await r.json();
 
-    const r = await fetch(url);
-    if (!r.ok) throw new Error("Odds API failure");
+  const out = data.map(g => ({
+    id: g.id,
+    home_team: g.home_team,
+    away_team: g.away_team,
+    commence_time: g.commence_time,
+    ...aggregate(g)
+  }));
 
-    const events = await r.json();
-
-    const out = events.map(g => ({
-      id: g.id,
-      home_team: g.home_team,
-      away_team: g.away_team,
-      commence_time: g.commence_time,
-      ...aggregateBookmakers(g)
-    }));
-
-    res.status(200).json(out);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
-  }
+  res.status(200).json(out);
 }

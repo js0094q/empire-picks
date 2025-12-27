@@ -1,49 +1,27 @@
 {
   "version": 2,
-
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
-    { "src": "nhl.html", "use": "@vercel/static" },
+    { "src": "nhl/index.html", "use": "@vercel/static" },
+    { "src": "about/index.html", "use": "@vercel/static" },
+
     { "src": "styles.css", "use": "@vercel/static" },
     { "src": "script.js", "use": "@vercel/static" },
     { "src": "teams.js", "use": "@vercel/static" },
 
     { "src": "api/events.js", "use": "@vercel/node" },
-    { "src": "api/events_nhl.js", "use": "@vercel/node" },
-
-    { "src": "api/props.js", "use": "@vercel/node" },
-    { "src": "api/props_nhl.js", "use": "@vercel/node" }
+    { "src": "api/events_nhl.js", "use": "@vercel/node" }
   ],
 
   "routes": [
     {
-      "src": "^/$",
-      "dest": "/index.html"
-    },
-    {
-      "src": "^/nhl/?$",
-      "dest": "/nhl.html"
-    },
-
-    {
-      "src": "/api/events/?$",
+      "src": "/api/events",
       "dest": "/api/events.js",
       "headers": { "Cache-Control": "no-store" }
     },
     {
-      "src": "/api/events_nhl/?$",
+      "src": "/api/events_nhl",
       "dest": "/api/events_nhl.js",
-      "headers": { "Cache-Control": "no-store" }
-    },
-
-    {
-      "src": "/api/props/?$",
-      "dest": "/api/props.js",
-      "headers": { "Cache-Control": "no-store" }
-    },
-    {
-      "src": "/api/props_nhl/?$",
-      "dest": "/api/props_nhl.js",
       "headers": { "Cache-Control": "no-store" }
     }
   ]

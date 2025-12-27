@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks · NHL Odds</title>
+  <title>EmpirePicks • NHL Odds</title>
 
-  <link rel="stylesheet" href="styles.css" />
-  <script type="module" src="script.js" defer></script>
+  <link rel="stylesheet" href="/styles.css" />
+  <script type="module" src="/script.js" defer></script>
 </head>
 
 <body data-sport="nhl">
@@ -14,31 +14,40 @@
     <div class="brand">
       <div class="logo">🏛️ EmpirePicks</div>
       <nav class="nav">
-        <a href="/">NFL</a>
-        <a href="/nhl" class="active">NHL</a>
-        <a href="/about">About</a>
+        <a class="nav-link" href="/">NFL</a>
+        <a class="nav-link active" href="/nhl">NHL</a>
+        <a class="nav-link" href="/about">About</a>
       </nav>
     </div>
 
-    <button id="refresh-btn">Refresh Odds</button>
+    <button id="refresh-btn" title="Refresh latest odds">Refresh Odds</button>
   </header>
 
   <main class="layout">
     <section class="hero">
-      <h1>NHL Market Intelligence</h1>
-      <p>
-        Moneyline, puck line, and totals derived from consensus pricing
-        across major sportsbooks.
-      </p>
+      <div class="hero-inner">
+        <div class="hero-kicker">NHL Market Intelligence</div>
+        <h1>See how sportsbooks price hockey games</h1>
+        <p>
+          EmpirePicks removes margin, weights sharper books more heavily, and
+          highlights puck-line bias, totals pressure, and consensus stability.
+        </p>
+
+        <div class="hero-bullets">
+          <div class="hero-pill"><span class="dot dot-lean"></span> Market Lean</div>
+          <div class="hero-pill"><span class="dot dot-signal"></span> Value Signal</div>
+          <div class="hero-pill"><span class="dot dot-stability"></span> Consensus</div>
+        </div>
+      </div>
     </section>
 
     <div id="games-container">
-      <div class="muted">Loading NHL games…</div>
+      <div class="loading">Loading NHL games…</div>
     </div>
   </main>
 
   <footer class="ep-footer">
-    Data from The Odds API · EmpirePicks
+    Data from The Odds API • EmpirePicks
   </footer>
 </body>
 </html>

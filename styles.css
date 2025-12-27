@@ -340,3 +340,17 @@ body {
   font-size: 0.85rem;
   margin-top: 12px;
 }
+
+.props-toggle {
+  margin-top: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+.props-list {
+  margin-top: 12px;
+}

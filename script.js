@@ -1,11 +1,16 @@
 import { Teams } from "./teams.js";
 
 /* =========================================================
-   BASIC HELPERS
+   GLOBALS & HELPERS
    ========================================================= */
 
-const pct = x => (Number.isFinite(x) ? (x * 100).toFixed(1) + "%" : "—");
-const fmtOdds = o => (Number.isFinite(o) ? (o > 0 ? `+${o}` : `${o}`) : "—");
+const SPORT = document.body?.dataset?.sport || "nfl";
+
+const pct = x =>
+  Number.isFinite(x) ? (x * 100).toFixed(1) + "%" : "—";
+
+const fmtOdds = o =>
+  Number.isFinite(o) ? (o > 0 ? `+${o}` : `${o}`) : "—";
 
 const impliedFromOdds = o =>
   Number.isFinite(o)
@@ -32,59 +37,57 @@ function signalFromDistribution(ev, evs) {
 }
 
 /* =========================================================
-   SPORT-AWARE FETCH
+   FETCH
    ========================================================= */
-
-const SPORT = document.body?.dataset?.sport || "nfl";
 
 async function fetchGames() {
   const url = SPORT === "nhl" ? "/api/events_nhl" : "/api/events";
   const r = await fetch(url);
-  if (!r.ok) throw new Error("Games API failed");
+  if (!r.ok) throw new Error("Failed to fetch games");
   return r.json();
 }
 
 /* =========================================================
-   ML RENDERING
+   MARKET RENDERING (GENERIC)
    ========================================================= */
 
-function renderML(game) {
-  const ml = game?.best?.ml;
-  if (!ml || !ml.home || !ml.away) return "";
+function renderMarketRows(type, label, rows) {
+  const viable = rows.filter(
+    o => o && Number.isFinite(o.odds) && Number.isFinite(o.consensus_prob)
+  );
+  if (!viable.length) return "";
 
-  const rows = [
-    { ...ml.away, team: game.away_team },
-    { ...ml.home, team: game.home_team }
-  ].filter(o => Number.isFinite(o.odds) && Number.isFinite(o.consensus_prob));
-
-  if (!rows.length) return "";
-
-  const evs = rows.map(r => r.ev).filter(Number.isFinite);
-  const maxProb = Math.max(...rows.map(r => impliedFromOdds(r.odds) || 0));
+  const evs = viable.map(o => o.ev).filter(Number.isFinite);
+  const maxProb = Math.max(...viable.map(o => impliedFromOdds(o.odds)));
   const maxEv = evs.length ? Math.max(...evs) : null;
 
-  return rows
+  return viable
     .map(o => {
       const sig = signalFromDistribution(o.ev, evs);
       const booksFavor = impliedFromOdds(o.odds) === maxProb;
-      const bestValue = Number.isFinite(o.ev) && o.ev === maxEv && maxEv > 0;
+      const bestValue =
+        Number.isFinite(o.ev) && o.ev === maxEv && maxEv > 0;
 
       return `
-        <div class="market-row">
-          <span class="market-tag ml">ML</span>
+        <div class="market-row ${bestValue ? "best-value" : ""}">
+          <span class="market-tag ${type}">${label}</span>
+
           <div class="market-main">
             <div class="market-name">
-              ${o.team}
+              ${o.label}
               ${booksFavor ? `<span class="pill-mini pill-fav">BOOKS FAVOR</span>` : ""}
               ${bestValue ? `<span class="pill-mini pill-value">BEST VALUE</span>` : ""}
             </div>
+
             <div class="market-odds">${fmtOdds(o.odds)}</div>
+
             <div class="market-meta">
               Books ${pct(impliedFromOdds(o.odds))}
               · Consensus ${pct(o.consensus_prob)}
               · Value ${Number.isFinite(o.ev) ? (o.ev * 100).toFixed(1) + "%" : "—"}
             </div>
           </div>
+
           <div class="signal-bubble ${sig.cls}">${sig.txt}</div>
         </div>
       `;
@@ -93,16 +96,70 @@ function renderML(game) {
 }
 
 /* =========================================================
-   GAME NARRATIVE (SAFE)
+   PER-MARKET HELPERS
+   ========================================================= */
+
+function renderML(game) {
+  const ml = game?.best?.ml;
+  if (!ml?.home || !ml?.away) return "";
+
+  return renderMarketRows("ml", "ML", [
+    {
+      ...ml.away,
+      label: game.away_team
+    },
+    {
+      ...ml.home,
+      label: game.home_team
+    }
+  ]);
+}
+
+function renderSpreadOrPuck(game) {
+  const m = SPORT === "nhl" ? game?.best?.puck : game?.best?.spread;
+  if (!m?.home || !m?.away) return "";
+
+  const tag = SPORT === "nhl" ? "PUCK" : "SPREAD";
+
+  return renderMarketRows("spread", tag, [
+    {
+      ...m.away,
+      label: `${game.away_team} ${m.away.point > 0 ? "+" : ""}${m.away.point}`
+    },
+    {
+      ...m.home,
+      label: `${game.home_team} ${m.home.point > 0 ? "+" : ""}${m.home.point}`
+    }
+  ]);
+}
+
+function renderTotals(game) {
+  const t = game?.best?.total;
+  if (!t?.over || !t?.under) return "";
+
+  return renderMarketRows("total", "TOTAL", [
+    {
+      ...t.over,
+      label: `Over ${t.over.point}`
+    },
+    {
+      ...t.under,
+      label: `Under ${t.under.point}`
+    }
+  ]);
+}
+
+/* =========================================================
+   GAME NARRATIVE
    ========================================================= */
 
 function gameNarrative(game) {
-  const h = game?.best?.ml?.home;
-  const a = game?.best?.ml?.away;
-  if (!h || !a) return "";
+  const mlH = game?.best?.ml?.home;
+  const mlA = game?.best?.ml?.away;
+  if (!mlH || !mlA) return "";
 
   const lean =
-    h.consensus_prob > a.consensus_prob
+    mlH.consensus_prob > mlA.consensus_prob
       ? game.home_team
       : game.away_team;
 
@@ -114,7 +171,7 @@ function gameNarrative(game) {
 }
 
 /* =========================================================
-   GAME CARD (DEFENSIVE)
+   FULL GAME CARD (AUTHORITATIVE)
    ========================================================= */
 
 function gameCard(game) {
@@ -133,43 +190,44 @@ function gameCard(game) {
     <div class="game-card">
       <div class="game-header">
         <div class="teams">
-          ${away?.logo ? `<img src="${away.logo}" />` : `<span>${game.away_team}</span>`}
+          ${
+            away?.logo
+              ? `<img src="${away.logo}" alt="${game.away_team}" />`
+              : `<span>${game.away_team}</span>`
+          }
           <span>@</span>
-          ${home?.logo ? `<img src="${home.logo}" />` : `<span>${game.home_team}</span>`}
+          ${
+            home?.logo
+              ? `<img src="${home.logo}" alt="${game.home_team}" />`
+              : `<span>${game.home_team}</span>`
+          }
         </div>
         <div class="kickoff">${kickoff}</div>
       </div>
 
       ${gameNarrative(game)}
-      ${renderML(game)}
 
-      <div class="props-container"></div>
+      ${renderML(game)}
+      ${renderSpreadOrPuck(game)}
+      ${renderTotals(game)}
     </div>
   `;
 }
 
 /* =========================================================
-   BOOTSTRAP (FAIL SAFE)
+   BOOTSTRAP
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");
-
-  if (!container) {
-    console.error("Missing #games-container");
-    return;
-  }
+  if (!container) return;
 
   try {
     const games = await fetchGames();
-    if (!Array.isArray(games) || !games.length) {
-      container.innerHTML = `<div class="muted">No games available.</div>`;
-      return;
-    }
-
     container.innerHTML = games.map(gameCard).join("");
   } catch (e) {
     console.error(e);
-    container.innerHTML = `<div class="muted">Failed to load games.</div>`;
+    container.innerHTML =
+      `<div class="muted">Failed to load games.</div>`;
   }
 });

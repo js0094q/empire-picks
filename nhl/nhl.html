@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks • NHL Odds</title>
+  <title>EmpirePicks · NHL Odds</title>
+
   <link rel="stylesheet" href="styles.css" />
   <script type="module" src="script.js" defer></script>
 </head>
@@ -14,22 +15,30 @@
       <div class="logo">🏛️ EmpirePicks</div>
       <nav class="nav">
         <a href="/">NFL</a>
-        <a href="/nhl.html" class="active">NHL</a>
+        <a href="/nhl" class="active">NHL</a>
         <a href="/about">About</a>
       </nav>
     </div>
+
     <button id="refresh-btn">Refresh Odds</button>
   </header>
 
   <main class="layout">
     <section class="hero">
       <h1>NHL Market Intelligence</h1>
-      <p>Moneyline, puck line, and totals with consensus probabilities.</p>
+      <p>
+        Moneyline, puck line, and totals derived from consensus pricing
+        across major sportsbooks.
+      </p>
     </section>
 
     <div id="games-container">
       <div class="muted">Loading NHL games…</div>
     </div>
   </main>
+
+  <footer class="ep-footer">
+    Data from The Odds API · EmpirePicks
+  </footer>
 </body>
 </html>

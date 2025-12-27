@@ -3,94 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks • About</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>EmpirePicks · NHL Odds</title>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <script type="module" src="/script.js" defer></script>
 </head>
 
-<body>
+<body data-sport="nhl">
   <header class="ep-header">
     <div class="brand">
       <div class="logo">🏛️ EmpirePicks</div>
+
       <nav class="nav">
-        <a class="nav-link" href="/">Home</a>
+        <a href="/">NFL</a>
+        <a href="/nhl" class="active">NHL</a>
+        <a href="/about">About</a>
       </nav>
     </div>
+
+    <button id="refresh-btn">Refresh Odds</button>
   </header>
 
   <main class="layout">
-    <section class="page">
-      <h1>About EmpirePicks</h1>
-      <p class="muted">
-        EmpirePicks is an odds intelligence platform. We analyze sportsbook pricing to estimate
-        consensus probabilities, reveal market lean, and highlight potential value signals.
-        We do not guarantee outcomes.
+    <section class="hero">
+      <span class="hero-pill">NHL MARKET INTELLIGENCE</span>
+      <h1>See how sportsbooks price hockey games</h1>
+      <p>
+        Moneyline, puck line, and totals derived from vig-free,
+        weighted consensus across major books.
       </p>
-
-      <div class="card">
-        <h2>What EmpirePicks is</h2>
-        <ul>
-          <li><b>Market interpretation</b>, using sportsbook prices as data.</li>
-          <li><b>Consensus probability</b>, after removing margin and weighting sharper books.</li>
-          <li><b>Value signals</b>, showing when a price diverges from consensus.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2>What EmpirePicks is not</h2>
-        <ul>
-          <li>Not betting advice, not financial advice.</li>
-          <li>Not a guarantee of profit or outcomes.</li>
-          <li>Not “locks” or “sure things”.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2>Key terms</h2>
-
-        <h3>Market Implied Probability</h3>
-        <p class="muted">
-          The probability suggested by a specific sportsbook’s odds. This includes the sportsbook’s margin.
-          On the game page, “Books favor” reflects this, it is the market’s current lean based on price.
-        </p>
-
-        <h3>Consensus Probability</h3>
-        <p class="muted">
-          An estimate of the “fair” probability after removing margin (no-vig) and aggregating across books,
-          with sharper books weighted more heavily.
-        </p>
-
-        <h3>Value Signal</h3>
-        <p class="muted">
-          A relative indicator showing how favorable a price is versus consensus for that market, adjusted for stability.
-          It is not a prediction of the outcome, it is a pricing signal.
-        </p>
-
-        <h3>Consensus Stability</h3>
-        <p class="muted">
-          A measure of how tightly sportsbooks agree. If books disagree widely, stability is lower,
-          and value signals are dampened.
-        </p>
-
-        <h3>Sharp vs Public Books</h3>
-        <p class="muted">
-          Some books tend to be more efficient in pricing, and are weighted more heavily in consensus.
-          This reduces “public bias” from dominating the aggregate.
-        </p>
-      </div>
-
-      <div class="card">
-        <h2>How to read a game</h2>
-        <ul>
-          <li><b>Market Lean</b>: which side the books are currently favoring (by implied probability).</li>
-          <li><b>Best Value</b>: which option shows the strongest value signal versus consensus.</li>
-          <li><b>Consensus</b>: whether books are aligned (higher stability) or dispersed (lower stability).</li>
-        </ul>
-      </div>
     </section>
+
+    <div id="games-container">
+      <div class="muted">Loading NHL games…</div>
+    </div>
   </main>
 
   <footer class="ep-footer">
-    EmpirePicks • About
+    Data from The Odds API · EmpirePicks
   </footer>
 </body>
 </html>

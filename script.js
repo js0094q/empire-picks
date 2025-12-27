@@ -12,106 +12,104 @@ const impliedFromOdds = o =>
 
 const safe = x => (Number.isFinite(x) ? x : null);
 
-/*
-  VALUE SIGNAL
-  Percentile rank of EV within a market
-*/
-function signalFromDistribution(ev, evs) {
-  if (ev == null || evs.length < 2) {
-    return { cls: "signal-weak", txt: "MIN" };
-  }
+/* =========================================================
+   SIGNAL LOGIC
+   ========================================================= */
 
+function signalFromDistribution(ev, evs) {
+  if (ev == null || evs.length < 2) return { cls: "signal-weak", txt: "MIN" };
   const sorted = [...evs].sort((a, b) => a - b);
   const rank = sorted.lastIndexOf(ev) / (sorted.length - 1);
-
   if (rank >= 0.9) return { cls: "signal-very-strong", txt: "HIGH" };
   if (rank >= 0.7) return { cls: "signal-strong", txt: "MED" };
   if (rank >= 0.4) return { cls: "signal-moderate", txt: "LOW" };
   return { cls: "signal-weak", txt: "MIN" };
 }
 
-function stabilityLabel(v) {
-  if (v == null) return "—";
-  if (v >= 0.85) return "High";
-  if (v >= 0.7) return "Medium";
-  return "Low";
-}
-
 /* =========================================================
-   FETCH
+   SPORT-AWARE FETCH
    ========================================================= */
 
+const SPORT = document.body.dataset.sport || "nfl";
+
 const fetchGames = async () => {
-  const r = await fetch("/api/events");
+  const url = SPORT === "nhl" ? "/api/events_nhl" : "/api/events";
+  const r = await fetch(url);
   if (!r.ok) throw new Error("Failed to load games");
   return r.json();
 };
 
 const fetchProps = async id => {
-  const r = await fetch(`/api/props?id=${encodeURIComponent(id)}`);
+  const url =
+    SPORT === "nhl"
+      ? `/api/props_nhl?id=${encodeURIComponent(id)}`
+      : `/api/props?id=${encodeURIComponent(id)}`;
+
+  const r = await fetch(url);
   if (!r.ok) throw new Error("Failed to load props");
   return r.json();
 };
 
 /* =========================================================
-   MARKET ROWS
+   MARKET RENDERING
    ========================================================= */
-
-function formatMarketLabel(type, o) {
-  if (type === "ml") return o.team;
-  if (type === "spread") {
-    const s = o.point > 0 ? "+" : "";
-    return `${o.team} ${s}${o.point}`;
-  }
-  if (type === "total") return `${o.side} ${o.point}`;
-  return "—";
-}
 
 function renderMarketRows(type, label, options) {
   const viable = options.filter(o => o && o.odds != null && o.consensus_prob != null);
   if (!viable.length) return "";
 
-  const marketProbs = viable.map(o => impliedFromOdds(o.odds));
-  const maxMarketProb = Math.max(...marketProbs);
-
   const evs = viable.map(o => safe(o.ev)).filter(v => v != null);
+  const maxProb = Math.max(...viable.map(o => impliedFromOdds(o.odds)));
   const maxEv = evs.length ? Math.max(...evs) : null;
 
   return viable.map(o => {
-    const marketProb = impliedFromOdds(o.odds);
     const s = signalFromDistribution(o.ev, evs);
-
-    const booksFavor = marketProb === maxMarketProb;
+    const booksFavor = impliedFromOdds(o.odds) === maxProb;
     const bestValue = o.ev != null && o.ev === maxEv && maxEv > 0;
 
     return `
       <div class="market-row ${booksFavor ? "book-fav" : ""} ${bestValue ? "best-value" : ""}">
         <span class="market-tag ${type}">${label}</span>
-
         <div class="market-main">
           <div class="market-name">
-            ${formatMarketLabel(type, o)}
+            ${o.team || o.side}
             ${booksFavor ? `<span class="pill-mini pill-fav">BOOKS FAVOR</span>` : ""}
             ${bestValue ? `<span class="pill-mini pill-value">BEST VALUE</span>` : ""}
           </div>
-
           <div class="market-odds">${fmtOdds(o.odds)}</div>
-
           <div class="market-meta">
-            Books ${pct(marketProb)}
+            Books ${pct(impliedFromOdds(o.odds))}
             · Consensus ${pct(o.consensus_prob)}
-            · Value ${(safe(o.ev) == null ? "—" : (o.ev * 100).toFixed(1) + "%")}
+            · Value ${(o.ev * 100).toFixed(1)}%
           </div>
         </div>
-
-        <div class="signal-bubble ${s.cls}" title="Relative value signal">${s.txt}</div>
+        <div class="signal-bubble ${s.cls}">${s.txt}</div>
       </div>
     `;
   }).join("");
 }
 
 /* =========================================================
-   PROPS
+   GAME NARRATIVE
+   ========================================================= */
+
+function gameNarrative(game) {
+  const h = game.best?.ml?.home;
+  const a = game.best?.ml?.away;
+  if (!h || !a) return "";
+
+  const lean = h.consensus_prob > a.consensus_prob ? game.home_team : game.away_team;
+  const value = h.ev > a.ev ? game.home_team : game.away_team;
+
+  return `
+    <div class="muted" style="margin:10px 0;font-size:0.8rem">
+      Market leans <b>${lean}</b>. Strongest value signal currently on <b>${value}</b>.
+    </div>
+  `;
+}
+
+/* =========================================================
+   PROPS RENDERING
    ========================================================= */
 
 function renderProps(container, categories) {
@@ -136,7 +134,7 @@ function renderProps(container, categories) {
     return `
       <div class="props-category">
         <div class="props-category-title">${cat}</div>
-        ${rows.slice(0, 4).map(r => {
+        ${rows.map(r => {
           const s = signalFromDistribution(r.ev, evs);
           const bestValue = r.ev === maxEv && maxEv > 0;
 
@@ -149,12 +147,10 @@ function renderProps(container, categories) {
                   ${bestValue ? `<span class="pill-mini pill-value">BEST VALUE</span>` : ""}
                 </div>
                 <div class="market-meta">
-                  Consensus ${pct(r.prob)}
-                  · Value ${(r.ev * 100).toFixed(1)}%
+                  Consensus ${pct(r.prob)} · Value ${(r.ev * 100).toFixed(1)}%
                 </div>
               </div>
-
-              <div class="prop-right">
+              <div>
                 <div class="signal-bubble ${s.cls}">${s.txt}</div>
                 <div class="prop-odds">${fmtOdds(r.odds)}</div>
               </div>
@@ -167,76 +163,12 @@ function renderProps(container, categories) {
 }
 
 /* =========================================================
-   PER-GAME SUMMARY
-   ========================================================= */
-
-function buildGameSummary(game) {
-  const opts = [];
-
-  const push = (market, label, o) => {
-    if (!o) return;
-    opts.push({
-      market,
-      label,
-      bookP: impliedFromOdds(o.odds),
-      ev: safe(o.ev),
-      stab: safe(o.stability)
-    });
-  };
-
-  push("ML", game.home_team, game.best?.ml?.home);
-  push("ML", game.away_team, game.best?.ml?.away);
-
-  const spread = game.best?.spread;
-  if (spread?.home) push("SPREAD", `${game.home_team} ${spread.home.point}`, spread.home);
-  if (spread?.away) push("SPREAD", `${game.away_team} ${spread.away.point}`, spread.away);
-
-  const total = game.best?.total;
-  if (total?.over) push("TOTAL", `Over ${total.over.point}`, total.over);
-  if (total?.under) push("TOTAL", `Under ${total.under.point}`, total.under);
-
-  if (!opts.length) return "";
-
-  const lean = [...opts].sort((a, b) => b.bookP - a.bookP)[0];
-  const value = [...opts].filter(o => o.ev != null).sort((a, b) => b.ev - a.ev)[0];
-
-  const avgStab =
-    opts.map(o => o.stab).filter(v => v != null).reduce((a, b) => a + b, 0) /
-    opts.filter(o => o.stab != null).length || null;
-
-  return `
-    <div class="game-summary">
-      <div class="summary-item">
-        <span class="badge badge-lean">Market Lean</span>
-        ${lean.market} • ${lean.label} (${pct(lean.bookP)})
-      </div>
-
-      <div class="summary-item">
-        <span class="badge badge-value">Best Value</span>
-        ${value ? `${value.market} • ${value.label} (${(value.ev * 100).toFixed(1)}%)` : "—"}
-      </div>
-
-      <div class="summary-item">
-        <span class="badge badge-stability">Consensus</span>
-        ${stabilityLabel(avgStab)}
-      </div>
-    </div>
-  `;
-}
-
-/* =========================================================
    GAME CARD
    ========================================================= */
 
 function gameCard(game) {
   const home = Teams[game.home_team];
   const away = Teams[game.away_team];
-
-  const kickoff = new Date(game.commence_time).toLocaleString("en-US", {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit"
-  });
 
   return `
     <div class="game-card" data-game-id="${game.id}">
@@ -246,10 +178,9 @@ function gameCard(game) {
           <span>@</span>
           <img src="${home?.logo || ""}" />
         </div>
-        <div class="kickoff">${kickoff}</div>
       </div>
 
-      ${buildGameSummary(game)}
+      ${gameNarrative(game)}
 
       <button class="props-toggle">Show Props</button>
 
@@ -258,21 +189,7 @@ function gameCard(game) {
         { ...game.best?.ml?.home, team: game.home_team }
       ])}
 
-      ${renderMarketRows("spread", "SPREAD", [
-        { ...game.best?.spread?.away, team: game.away_team },
-        { ...game.best?.spread?.home, team: game.home_team }
-      ])}
-
-      ${renderMarketRows("total", "TOTAL", [
-        { ...game.best?.total?.over, side: "Over" },
-        { ...game.best?.total?.under, side: "Under" }
-      ])}
-
       <div class="props-container"></div>
-
-      <div class="muted" style="margin-top:8px;font-size:0.75rem">
-        Value Signal reflects pricing divergence, not outcome certainty.
-      </div>
     </div>
   `;
 }
@@ -283,10 +200,7 @@ function gameCard(game) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");
-  const games = (await fetchGames()).sort(
-    (a, b) => new Date(a.commence_time) - new Date(b.commence_time)
-  );
-
+  const games = await fetchGames();
   container.innerHTML = games.map(gameCard).join("");
 
   container.addEventListener("click", async e => {

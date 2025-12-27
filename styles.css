@@ -1,217 +1,158 @@
 /* =========================================================
-   GLOBAL
+   BASE RESET
 ========================================================= */
 
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: "Inter", sans-serif;
+  box-sizing: border-box;
 }
 
 body {
-  background: #0f1323;
-  color: #eceff4;
-  line-height: 1.5;
+  font-family: "Inter", sans-serif;
   font-size: 15px;
-  padding-top: 60px;
+  background: #0A0F24;
+  color: #E5E9F0;
+  line-height: 1.6;
+  padding: 60px 16px 24px;
 }
 
 /* =========================================================
-   HEADER + NAV
+   HEADER + NAVIGATION
 ========================================================= */
 
 .ep-header {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  padding: 10px 24px;
+  right: 0;
+  height: 50px;
+  background: #0A0F24;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  background: rgba(16, 19, 35, 0.95);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  z-index: 100;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 24px;
+  z-index: 1000;
+  padding: 0 20px;
 }
 
 .logo {
   font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
-  text-decoration: none;
+  color: #FFFFFF;
 }
 
 .nav {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 
 .nav-link {
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 999px;
-  text-decoration: none;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  transition: 120ms ease;
+  text-decoration: none;
+  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.10);
+  transition: 140ms ease;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255,255,255,0.12);
   transform: translateY(-1px);
 }
 
 .nav-link.active {
-  background: rgba(92, 155, 255, 0.30);
-  border-color: rgba(92, 155, 255, 0.50);
-  color: #fff;
+  background: #5661DB;
+  border-color: #5661DB;
+  color: #FFF;
 }
 
 #refresh-btn {
-  padding: 6px 12px;
+  background: #5661DB;
+  color: #FFF;
   border: none;
-  border-radius: 7px;
-  background: #4855a3;
-  color: white;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 13px;
-  transition: 140ms ease;
+  transition: background 160ms ease;
 }
 
 #refresh-btn:hover {
-  background: #3a447d;
+  background: #3E4ABD;
 }
 
 /* =========================================================
-   LAYOUT + MAIN
-========================================================= */
-
-.layout {
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 0 16px 40px;
-}
-
-.hero {
-  background: #1e2439;
-  border-radius: 12px;
-  padding: 28px;
-  margin-bottom: 18px;
-}
-
-.hero h1 {
-  font-size: 26px;
-  color: #fff;
-  margin-bottom: 10px;
-}
-
-.hero p {
-  color: rgba(255, 255, 255, 0.75);
-  margin-bottom: 14px;
-}
-
-.hero-bullets {
-  display: flex;
-  gap: 8px;
-}
-
-.hero-pill {
-  background: rgba(255,255,255,0.12);
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  color: #fff;
-}
-
-/* =========================================================
-   LOADING + ERROR STATES
+   LOADING AND MUTED STATES
 ========================================================= */
 
 .loading,
 .muted {
-  padding: 18px 0;
   text-align: center;
-  color: rgba(255, 255, 255, 0.65);
+  padding: 18px;
+  color: rgba(255,255,255,0.65);
   font-size: 14px;
 }
 
 /* =========================================================
-   GAME CARD
+   GAME CARD BASE
 ========================================================= */
 
 .game-card {
-  background: #19203a;
+  background: #131933;
   border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
   padding: 18px;
   margin-bottom: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .game-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .teams {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.team-logo {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
+.team-logo,
+.team-initials {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #1E2439;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #E5E9F0;
+}
+
+.team-initials {
+  border: 2px solid #5661DB;
 }
 
 .at {
-  color: #8c95a1;
+  color: rgba(255,255,255,0.55);
   font-size: 14px;
   font-weight: 600;
 }
 
-.game-meta-right {
-  text-align: right;
-}
-
-.game-time {
-  color: rgba(255, 255, 255, 0.57);
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-
-.game-summary {
-  text-align: right;
+.lean-indicator {
   font-size: 14px;
   font-weight: 600;
-}
-
-.game-summary .summary-label {
-  color: #a7b1cc;
-  font-size: 12px;
-  margin-right: 6px;
-}
-
-.game-summary .summary-team {
-  font-weight: 700;
-  margin-right: 4px;
-}
-
-.game-summary .summary-meta {
-  opacity: 0.85;
-  font-size: 13px;
+  color: #E5E9F0;
 }
 
 /* =========================================================
@@ -219,14 +160,14 @@ body {
 ========================================================= */
 
 .market-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 10px;
+  background: #19203a;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
   margin-top: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .market-left {
@@ -236,36 +177,47 @@ body {
 }
 
 .market-tag {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   padding: 4px 8px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.10);
-  color: #fff;
+  background: rgba(86,97,219,0.25);
+  color: #FFFFFF;
 }
 
-.market-tag.ml { background: rgba(92, 155, 255, 0.20); }
-.market-tag.spread { background: rgba(255, 149, 157, 0.20); }
-.market-tag.puck { background: rgba(255, 149, 157, 0.20); }
-.market-tag.total { background: rgba(120, 214, 168, 0.20); }
-.market-tag.prop { background: rgba(178, 136, 255, 0.20); }
+.market-tag.ml {
+  background: rgba(86,97,219,0.40);
+}
+
+.market-tag.spread,
+.market-tag.puck {
+  background: rgba(138,59,215,0.40);
+}
+
+.market-tag.total {
+  background: rgba(35,182,204,0.40);
+}
+
+.market-tag.prop {
+  background: rgba(178, 136, 255, 0.25);
+}
 
 .market-team {
   font-size: 15px;
   font-weight: 600;
-  color: #fff;
+  color: #FFF;
 }
 
 .market-odds {
   font-size: 14px;
   font-weight: 700;
-  color: #daf1e8;
+  color: #A6E3E9;
 }
 
 .market-meta {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255,255,255,0.65);
 }
 
 /* =========================================================
@@ -278,40 +230,69 @@ body {
   padding: 4px 6px;
   border-radius: 6px;
   text-transform: uppercase;
-  color: #fff;
+  color: #FFF;
 }
 
 .badge-best {
-  background: rgba(76, 209, 55, 0.75);
+  background: #57D78D;
 }
 
 .badge-fade {
-  background: rgba(255, 69, 58, 0.70);
+  background: #FF69B4;
 }
 
 .signal-bubble {
   font-size: 11px;
   font-weight: 700;
-  padding: 4px 6px;
   text-transform: uppercase;
+  padding: 4px 6px;
   border-radius: 6px;
-  color: #fff;
+  color: #FFF;
+  background: rgba(86,97,219,0.60);
 }
 
 .signal-high {
-  background: rgba(76, 209, 55, 0.85);
+  background: #57D78D;
 }
 
 .signal-med {
-  background: rgba(255, 184, 0, 0.85);
+  background: #46D0E0;
 }
 
 .signal-low {
-  background: rgba(92, 155, 255, 0.70);
+  background: #5661DB;
 }
 
 .signal-min {
-  background: rgba(128, 128, 128, 0.50);
+  background: rgba(128, 128, 128, 0.45);
+}
+
+/* =========================================================
+   CONSENSUS BAR
+========================================================= */
+
+.consensus-bar {
+  position: relative;
+  background: rgba(86,97,219,0.18);
+  border-radius: 6px;
+  width: 96px;
+  height: 6px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.consensus-fill {
+  background: #46D0E0;
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+.consensus-text {
+  font-size: 10px;
+  color: #FFF;
+  position: absolute;
+  right: 6px;
+  top: -14px;
 }
 
 /* =========================================================
@@ -319,52 +300,58 @@ body {
 ========================================================= */
 
 .props-wrap {
-  margin-top: 10px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 10px;
 }
 
 .props-group {
-  margin-top: 10px;
-  padding: 10px;
+  background: #131933;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 10px;
+  margin-top: 12px;
 }
 
 .props-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: #E5E9F0;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
-  margin-bottom: 6px;
 }
 
-.market-row.prop {
-  border-left: 3px solid rgba(178, 136, 255, 0.75);
+.prop-ev-filter {
+  background: #0F1323;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #E5E9F0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
 }
 
 /* =========================================================
    BUTTONS
 ========================================================= */
 
-button.props-toggle {
+button.props-toggle,
+button.toggle-all {
   margin-top: 12px;
   padding: 8px 12px;
+  background: #5661DB;
   border: none;
   border-radius: 8px;
-  background: rgba(92, 155, 255, 0.25);
-  color: #fff;
+  color: #FFF;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: 160ms ease;
+  transition: background 180ms ease;
 }
 
-button.props-toggle:hover {
-  background: rgba(92, 155, 255, 0.40);
+button.props-toggle:hover,
+button.toggle-all:hover {
+  background: #3E4ABD;
 }
 
 /* =========================================================
@@ -372,8 +359,23 @@ button.props-toggle:hover {
 ========================================================= */
 
 .ep-footer {
-  text-align: center;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
   margin-top: 24px;
+  font-size: 12px;
+  text-align: center;
+  color: rgba(255,255,255,0.55);
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 720px) {
+  .market-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .consensus-bar {
+    width: 72px;
+  }
 }

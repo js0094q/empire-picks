@@ -2,29 +2,25 @@ import { Teams } from "./teams.js";
 
 /* =========================================================
    CONFIG
-   ========================================================= */
+========================================================= */
 
 const sport = document.body.dataset.sport || "nfl";
-
-const API_EVENTS =
-  sport === "nhl" ? "/api/events_nhl" : "/api/events";
-
-const API_PROPS =
-  sport === "nhl" ? "/api/props_nhl" : "/api/props";
+const API_EVENTS = sport === "nhl" ? "/api/events_nhl" : "/api/events";
+// Props always use the same endpoint with `?id=` query
+const API_PROPS = "/api/props";
 
 /* =========================================================
-   SAFE HELPERS
-   ========================================================= */
+   HELPERS
+========================================================= */
 
 const pct = x =>
   Number.isFinite(x) ? (x * 100).toFixed(1) + "%" : "—";
 
 const fmtOdds = o =>
-  typeof o === "number" ? (o > 0 ? `+${o}` : `${o}`) : "—";
+  Number.isFinite(o) ? (o > 0 ? `+${o}` : `${o}`) : "—";
 
 function signalFromEV(ev) {
-  if (!Number.isFinite(ev)) return "MIN";
-  const a = Math.abs(ev);
+  const a = Math.abs(ev || 0);
   if (a >= 0.08) return "HIGH";
   if (a >= 0.04) return "MED";
   if (a >= 0.015) return "LOW";
@@ -32,7 +28,7 @@ function signalFromEV(ev) {
 }
 
 function signalClass(level) {
-  return `signal-${level.toLowerCase()}`;
+  return `signal-${String(level).toLowerCase()}`;
 }
 
 function badge(ev) {
@@ -43,82 +39,52 @@ function badge(ev) {
 }
 
 /* =========================================================
-   NORMALIZATION (THE FIX)
-   ========================================================= */
-
-function normalizeOutcome(o = {}, fallbackTeam = "") {
-  const team =
-    o.team ||
-    o.name ||
-    o.label ||
-    fallbackTeam ||
-    "—";
-
-  return {
-    team,
-    label: o.label || team,
-    side: o.side || null,
-    point: Number.isFinite(o.point) ? o.point : null,
-    odds: Number.isFinite(o.odds) ? o.odds : Number(o.price),
-    ev: Number.isFinite(o.ev) ? o.ev : 0,
-    consensus: Number.isFinite(o.consensus_prob)
-      ? o.consensus_prob
-      : Number.isFinite(o.consensus)
-      ? o.consensus
-      : null
-  };
-}
-
-/* =========================================================
-   GAME SUMMARY (MARKET LEAN)
-   ========================================================= */
+   GAME SUMMARY
+========================================================= */
 
 function summarizeGame(game) {
-  const candidates = [];
+  const allOutcomes = [];
 
-  const collect = (type, o, team) => {
-    if (!o || !Number.isFinite(o.ev)) return;
-    candidates.push({ type, team, ev: o.ev });
+  const push = (label, outcome) => {
+    if (!outcome || !Number.isFinite(outcome.ev)) return;
+    allOutcomes.push({ label, ev: outcome.ev });
   };
 
   if (game.best?.ml) {
-    collect("ML", game.best.ml.away, game.away_team);
-    collect("ML", game.best.ml.home, game.home_team);
+    push(game.best.ml.away?.name || game.away_team, game.best.ml.away);
+    push(game.best.ml.home?.name || game.home_team, game.best.ml.home);
   }
 
-  if (game.best?.spread) {
-    collect("SPREAD", game.best.spread.away, game.away_team);
-    collect("SPREAD", game.best.spread.home, game.home_team);
+  if (sport === "nhl" && game.best?.puck) {
+    push(game.best.puck.away?.name || game.away_team, game.best.puck.away);
+    push(game.best.puck.home?.name || game.home_team, game.best.puck.home);
   }
 
-  if (game.best?.puck) {
-    collect("PUCK", game.best.puck.away, game.away_team);
-    collect("PUCK", game.best.puck.home, game.home_team);
+  if (sport !== "nhl" && game.best?.spread) {
+    push(game.best.spread.away?.name || game.away_team, game.best.spread.away);
+    push(game.best.spread.home?.name || game.home_team, game.best.spread.home);
   }
 
   if (game.best?.total) {
-    collect("TOTAL", game.best.total.over, "Over");
-    collect("TOTAL", game.best.total.under, "Under");
+    push("Over", game.best.total.over);
+    push("Under", game.best.total.under);
   }
 
-  if (!candidates.length) {
-    return { team: "—", market: "—", strength: "MIN" };
-  }
+  if (!allOutcomes.length) return { label: "—", strength: "MIN" };
 
-  const best = candidates.reduce((a, b) =>
+  const best = allOutcomes.reduce((a, b) =>
     Math.abs(b.ev) > Math.abs(a.ev) ? b : a
   );
 
   return {
-    team: best.team,
-    market: best.type,
-    strength: signalFromEV(best.ev)
+    label: best.label,
+    strength: signalFromEV(best.ev),
   };
 }
 
 /* =========================================================
    FETCHERS
-   ========================================================= */
+========================================================= */
 
 async function fetchGames() {
   const r = await fetch(API_EVENTS);
@@ -126,31 +92,29 @@ async function fetchGames() {
 }
 
 async function fetchProps(gameId) {
-  const r = await fetch(`${API_PROPS}?eventId=${gameId}`);
+  const r = await fetch(`${API_PROPS}?id=${encodeURIComponent(gameId)}`);
   return r.json();
 }
 
 /* =========================================================
-   MARKET ROW RENDER
-   ========================================================= */
+   MARKET ROWS
+========================================================= */
 
-function renderRows(type, rows, fallbackTeam) {
+function renderRows(type, rows = []) {
   if (!Array.isArray(rows) || !rows.length) return "";
 
-  const norm = rows.map(o => normalizeOutcome(o, fallbackTeam));
-  const evs = norm.map(o => o.ev).filter(Number.isFinite);
-  const level = signalFromEV(Math.max(...evs.map(Math.abs)));
+  const level = signalFromEV(
+    Math.max(...rows.map(o => Math.abs(o.ev || 0)))
+  );
 
-  return norm
-    .map(
-      o => `
+  return rows.map(o => `
     <div class="market-row ${signalClass(level)}">
       <div class="market-left">
         <span class="market-tag ${type}">${type.toUpperCase()}</span>
-        <div class="market-team">${o.label}</div>
+        <div class="market-team">${o.name || "—"}${o.point != null ? ` ${o.point > 0 ? "+" : ""}${o.point}` : ""}</div>
         <div class="market-odds">${fmtOdds(o.odds)}</div>
         <div class="market-meta">
-          Consensus ${pct(o.consensus)} · EV ${pct(o.ev)}
+          Consensus ${pct(o.consensus_prob)} · EV ${pct(o.ev)}
         </div>
       </div>
       <div class="market-right">
@@ -158,14 +122,12 @@ function renderRows(type, rows, fallbackTeam) {
         <span class="signal-bubble ${signalClass(level)}">${level}</span>
       </div>
     </div>
-  `
-    )
-    .join("");
+  `).join("");
 }
 
 /* =========================================================
    PROPS
-   ========================================================= */
+========================================================= */
 
 async function loadProps(gameId) {
   const el = document.getElementById(`props-${gameId}`);
@@ -174,89 +136,105 @@ async function loadProps(gameId) {
   el.dataset.loaded = "1";
   el.innerHTML = `<div class="loading">Loading props…</div>`;
 
-  const groups = await fetchProps(gameId);
+  let data;
+  try {
+    data = await fetchProps(gameId);
+  } catch (err) {
+    el.innerHTML = `<div class="muted">Props error</div>`;
+    return;
+  }
 
-  if (!groups || !groups.length) {
+  // props endpoint returns { categories: { ... } }
+  const categories = data.categories || {};
+  const keys = Object.keys(categories);
+
+  if (!keys.length) {
     el.innerHTML = `<div class="muted">No props available</div>`;
     return;
   }
 
-  el.innerHTML = groups
-    .map(g => {
-      const norm = g.outcomes.map(o => normalizeOutcome(o));
-      const evs = norm.map(o => o.ev).filter(Number.isFinite);
-      const level = signalFromEV(Math.max(...evs.map(Math.abs)));
+  el.innerHTML = keys.map(market => {
+    const outcomes = categories[market].map(item => ({
+      name: item.label || item.player || "—",
+      odds: item.odds ?? item.price,
+      ev: item.ev,
+      consensus_prob: item.consensus_prob ?? item.consensus
+    }));
 
-      return `
-        <div class="props-group">
-          <div class="props-header">
-            <span>${g.market}</span>
-            <span class="signal-bubble ${signalClass(level)}">${level}</span>
-          </div>
-          ${renderRows("prop", norm)}
+    const level = signalFromEV(
+      Math.max(...outcomes.map(o => Math.abs(o.ev || 0)))
+    );
+
+    return `
+      <div class="props-group">
+        <div class="props-header">
+          <span>${market}</span>
+          <span class="signal-bubble ${signalClass(level)}">${level}</span>
         </div>
-      `;
-    })
-    .join("");
+        ${renderRows("prop", outcomes)}
+      </div>
+    `;
+  }).join("");
 }
 
 /* =========================================================
    GAME CARD
-   ========================================================= */
+========================================================= */
 
 function gameCard(game) {
-  const away = Teams[game.away_team] || {};
-  const home = Teams[game.home_team] || {};
+  const awayLogo = Teams[game.away_team]?.logo || "";
+  const homeLogo = Teams[game.home_team]?.logo || "";
   const summary = summarizeGame(game);
 
   return `
-  <section class="game-card">
-    <header class="game-header">
-      <div class="teams">
-        ${away.logo ? `<img src="${away.logo}" />` : ""}
-        <span>@</span>
-        ${home.logo ? `<img src="${home.logo}" />` : ""}
-      </div>
+    <section class="game-card">
+      <header class="game-header">
+        <div class="teams">
+          ${awayLogo ? `<img src="${awayLogo}" />` : ""}
+          <span>@</span>
+          ${homeLogo ? `<img src="${homeLogo}" />` : ""}
+        </div>
 
-      <div class="game-summary ${signalClass(summary.strength)}">
-        <span class="summary-label">Market Lean</span>
-        <span class="summary-team">${summary.team}</span>
-        <span class="summary-meta">
-          ${summary.market} · ${summary.strength}
-        </span>
-      </div>
-    </header>
+        <div class="game-summary ${signalClass(summary.strength)}">
+          <span class="summary-label">Market Lean</span>
+          <span class="summary-team">${summary.label}</span>
+          <span class="summary-meta">${summary.strength}</span>
+        </div>
+      </header>
 
-    ${renderRows("ml", [
-      game.best?.ml?.away,
-      game.best?.ml?.home
-    ], game.away_team)}
+      ${renderRows("ml", [
+        game.best?.ml?.away,
+        game.best?.ml?.home
+      ].filter(Boolean))}
 
-    ${renderRows(
-      sport === "nhl" ? "puck" : "spread",
-      sport === "nhl"
-        ? [game.best?.puck?.away, game.best?.puck?.home]
-        : [game.best?.spread?.away, game.best?.spread?.home],
-      game.away_team
-    )}
+      ${sport === "nhl"
+        ? renderRows("puck", [
+            game.best?.puck?.away,
+            game.best?.puck?.home
+          ].filter(Boolean))
+        : renderRows("spread", [
+            game.best?.spread?.away,
+            game.best?.spread?.home
+          ].filter(Boolean))
+      }
 
-    ${renderRows("total", [
-      game.best?.total?.over,
-      game.best?.total?.under
-    ])}
+      ${renderRows("total", [
+        game.best?.total?.over,
+        game.best?.total?.under
+      ].filter(Boolean))}
 
-    <button class="props-toggle" onclick="loadProps('${game.id}')">
-      Show Props
-    </button>
+      <button class="props-toggle" onclick="loadProps('${game.id}')">
+        Show Props
+      </button>
 
-    <div id="props-${game.id}" class="props-wrap"></div>
-  </section>
+      <div id="props-${game.id}" class="props-wrap"></div>
+    </section>
   `;
 }
 
 /* =========================================================
    BOOTSTRAP
-   ========================================================= */
+========================================================= */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const wrap = document.getElementById("games-container");

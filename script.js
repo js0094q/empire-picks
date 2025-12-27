@@ -1,174 +1,110 @@
 import { Teams } from "./teams.js";
 
 /* =========================================================
-   GLOBALS
+   CONFIG
    ========================================================= */
 
-const SPORT = document.body?.dataset?.sport || "nfl";
+const sport = document.body.dataset.sport || "nfl";
+const API_EVENTS = sport === "nhl" ? "/api/events_nhl" : "/api/events";
+const API_PROPS  = "/api/props";
 
 /* =========================================================
    HELPERS
    ========================================================= */
 
-const pct = x =>
-  Number.isFinite(x) ? (x * 100).toFixed(1) + "%" : "—";
+const pct = x => (x * 100).toFixed(1) + "%";
+const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
-const fmtOdds = o =>
-  Number.isFinite(o) ? (o > 0 ? `+${o}` : `${o}`) : "—";
+function computeMarketSignal(groups) {
+  const evs = groups
+    .flat()
+    .map(o => o?.ev)
+    .filter(Number.isFinite);
 
-const impliedProb = o =>
-  Number.isFinite(o)
-    ? o > 0
-      ? 100 / (o + 100)
-      : Math.abs(o) / (Math.abs(o) + 100)
-    : null;
+  if (!evs.length) return { cls: "signal-weak", txt: "MIN" };
 
-/* =========================================================
-   SIGNAL
-   ========================================================= */
-
-function signalFromEV(ev, all) {
-  if (!Number.isFinite(ev) || all.length < 2)
-    return { cls: "signal-weak", txt: "MIN" };
-
-  const sorted = [...all].sort((a, b) => a - b);
-  const rank = sorted.indexOf(ev) / (sorted.length - 1);
-
-  if (rank >= 0.9) return { cls: "signal-very-strong", txt: "HIGH" };
-  if (rank >= 0.7) return { cls: "signal-strong", txt: "MED" };
-  if (rank >= 0.4) return { cls: "signal-moderate", txt: "LOW" };
+  const max = Math.max(...evs);
+  if (max > 0.08) return { cls: "signal-very-strong", txt: "HIGH" };
+  if (max > 0.04) return { cls: "signal-strong", txt: "MED" };
+  if (max > 0.01) return { cls: "signal-moderate", txt: "LOW" };
   return { cls: "signal-weak", txt: "MIN" };
 }
 
+function badge(ev) {
+  if (ev > 0.04) return `<span class="badge badge-best">BEST VALUE</span>`;
+  if (ev < -0.04) return `<span class="badge badge-fade">BOOKS FAVOR</span>`;
+  return "";
+}
+
 /* =========================================================
-   FETCH
+   FETCHERS
    ========================================================= */
 
 async function fetchGames() {
-  const url = SPORT === "nhl" ? "/api/events_nhl" : "/api/events";
-  const r = await fetch(url);
-  if (!r.ok) throw new Error("Failed games");
+  const r = await fetch(API_EVENTS);
   return r.json();
 }
 
-async function fetchProps(gameId) {
-  const url =
-    SPORT === "nhl"
-      ? `/api/props_nhl?event_id=${gameId}`
-      : `/api/props?event_id=${gameId}`;
-
-  const r = await fetch(url);
-  if (!r.ok) return [];
+async function fetchProps(eventId) {
+  const r = await fetch(`${API_PROPS}?eventId=${eventId}`);
   return r.json();
 }
 
 /* =========================================================
-   MARKETS
+   RENDER ROWS
    ========================================================= */
 
 function renderMarketRows(type, label, rows) {
-  const viable = rows.filter(
-    o => o && Number.isFinite(o.odds) && Number.isFinite(o.consensus_prob)
-  );
-  if (!viable.length) return "";
+  if (!rows || !rows.length) return "";
 
-  const evs = viable.map(o => o.ev).filter(Number.isFinite);
-  const maxEv = evs.length ? Math.max(...evs) : null;
+  const signal = computeMarketSignal([rows]);
 
-  return viable.map(o => {
-    const sig = signalFromEV(o.ev, evs);
-    const best = o.ev === maxEv && maxEv > 0;
-
-    return `
-      <div class="market-row ${best ? "best-value" : ""}">
+  return rows.map(o => `
+    <div class="market-row ${signal.cls}">
+      <div class="market-left">
         <span class="market-tag ${type}">${label}</span>
-        <div class="market-main">
-          <div class="market-name">
-            ${o.label}
-            ${best ? `<span class="pill-mini pill-value">BEST</span>` : ""}
-          </div>
-          <div class="market-odds">${fmtOdds(o.odds)}</div>
-          <div class="market-meta">
-            Consensus ${pct(o.consensus_prob)} · EV ${
-      Number.isFinite(o.ev) ? (o.ev * 100).toFixed(1) + "%" : "—"
-    }
-          </div>
+        <div class="market-team">${o.label || o.team}</div>
+        <div class="market-odds">${fmtOdds(o.odds)}</div>
+        <div class="market-meta">
+          Consensus ${pct(o.consensus_prob)} · EV ${pct(o.ev)}
         </div>
-        <div class="signal-bubble ${sig.cls}">${sig.txt}</div>
       </div>
-    `;
-  }).join("");
-}
-
-function renderML(game) {
-  const ml = game?.best?.ml;
-  if (!ml?.home || !ml?.away) return "";
-
-  return renderMarketRows("ml", "ML", [
-    { ...ml.away, label: game.away_team },
-    { ...ml.home, label: game.home_team }
-  ]);
-}
-
-function renderSpreadOrPuck(game) {
-  const m =
-    SPORT === "nhl" ? game?.best?.puck : game?.best?.spread;
-  if (!m?.home || !m?.away) return "";
-
-  return renderMarketRows(
-    "spread",
-    SPORT === "nhl" ? "PUCK" : "SPREAD",
-    [
-      {
-        ...m.away,
-        label: `${game.away_team} ${m.away.point > 0 ? "+" : ""}${m.away.point}`
-      },
-      {
-        ...m.home,
-        label: `${game.home_team} ${m.home.point > 0 ? "+" : ""}${m.home.point}`
-      }
-    ]
-  );
-}
-
-function renderTotals(game) {
-  const t = game?.best?.total;
-  if (!t?.over || !t?.under) return "";
-
-  return renderMarketRows("total", "TOTAL", [
-    { ...t.over, label: `Over ${t.over.point}` },
-    { ...t.under, label: `Under ${t.under.point}` }
-  ]);
+      <div class="market-right">
+        ${badge(o.ev)}
+        <span class="signal-bubble ${signal.cls}">${signal.txt}</span>
+      </div>
+    </div>
+  `).join("");
 }
 
 /* =========================================================
    PROPS
    ========================================================= */
 
-function propsContainer(gameId) {
-  return `
-    <button class="props-toggle" data-id="${gameId}">
-      Show Props
-    </button>
-    <div class="props-list" id="props-${gameId}" hidden></div>
-  `;
-}
-
 async function loadProps(gameId) {
-  const wrap = document.getElementById(`props-${gameId}`);
-  if (!wrap || wrap.dataset.loaded) return;
+  const el = document.getElementById(`props-${gameId}`);
+  if (!el || el.dataset.loaded) return;
+  el.dataset.loaded = "1";
 
-  const props = await fetchProps(gameId);
-  wrap.dataset.loaded = "1";
+  const groups = await fetchProps(gameId);
 
-  if (!props.length) {
-    wrap.innerHTML = `<div class="muted">No props available</div>`;
+  if (!groups?.length) {
+    el.innerHTML = `<div class="muted">No props available</div>`;
     return;
   }
 
-  wrap.innerHTML = props.map(p =>
-    renderMarketRows("prop", p.market, p.outcomes)
-  ).join("");
+  el.innerHTML = groups.map(g => {
+    const signal = computeMarketSignal([g.outcomes]);
+    return `
+      <div class="props-group">
+        <div class="props-header">
+          <span>${g.market}</span>
+          <span class="signal-bubble ${signal.cls}">${signal.txt}</span>
+        </div>
+        ${renderMarketRows("prop", "PROP", g.outcomes)}
+      </div>
+    `;
+  }).join("");
 }
 
 /* =========================================================
@@ -176,27 +112,69 @@ async function loadProps(gameId) {
    ========================================================= */
 
 function gameCard(game) {
-  const home = Teams[game.home_team];
-  const away = Teams[game.away_team];
+  const away = Teams[game.away_team] || {};
+  const home = Teams[game.home_team] || {};
+
+  const markets = [];
+
+  if (game.best?.ml) markets.push(
+    game.best.ml.away,
+    game.best.ml.home
+  );
+  if (game.best?.spread) markets.push(
+    game.best.spread.away,
+    game.best.spread.home
+  );
+  if (game.best?.puck) markets.push(
+    game.best.puck.away,
+    game.best.puck.home
+  );
+  if (game.best?.total) markets.push(
+    game.best.total.over,
+    game.best.total.under
+  );
+
+  const signal = computeMarketSignal([markets]);
 
   return `
-    <div class="game-card">
-      <div class="game-header">
+    <section class="game-card">
+      <header class="game-header">
         <div class="teams">
-          ${away?.logo ? `<img src="${away.logo}" />` : ""}
-          <span>${game.away_team}</span>
+          <img src="${away.logo || ""}" />
           <span>@</span>
-          ${home?.logo ? `<img src="${home.logo}" />` : ""}
-          <span>${game.home_team}</span>
+          <img src="${home.logo || ""}" />
         </div>
-      </div>
+        <div class="game-signal ${signal.cls}">
+          Market Lean · <strong>${signal.txt}</strong>
+        </div>
+      </header>
 
-      ${renderML(game)}
-      ${renderSpreadOrPuck(game)}
-      ${renderTotals(game)}
+      ${renderMarketRows("ml", "ML", game.best?.ml ? [
+        game.best.ml.away,
+        game.best.ml.home
+      ] : [])}
 
-      ${propsContainer(game.id)}
-    </div>
+      ${renderMarketRows(
+        sport === "nhl" ? "puck" : "spread",
+        sport === "nhl" ? "PUCK" : "SPREAD",
+        game.best?.puck || game.best?.spread
+          ? [game.best.puck?.away || game.best.spread?.away,
+             game.best.puck?.home || game.best.spread?.home]
+          : []
+      )}
+
+      ${renderMarketRows("total", "TOTAL", game.best?.total ? [
+        game.best.total.over,
+        game.best.total.under
+      ] : [])}
+
+      <button class="props-toggle"
+        onclick="loadProps('${game.id}')">
+        Show Props
+      </button>
+
+      <div id="props-${game.id}" class="props-wrap"></div>
+    </section>
   `;
 }
 
@@ -205,18 +183,9 @@ function gameCard(game) {
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const container = document.getElementById("games-container");
+  const wrap = document.getElementById("games-container");
+  wrap.innerHTML = `<div class="loading">Loading ${sport.toUpperCase()} games…</div>`;
+
   const games = await fetchGames();
-  container.innerHTML = games.map(gameCard).join("");
-
-  document.addEventListener("click", async e => {
-    const btn = e.target.closest(".props-toggle");
-    if (!btn) return;
-
-    const id = btn.dataset.id;
-    const wrap = document.getElementById(`props-${id}`);
-    wrap.hidden = !wrap.hidden;
-    btn.textContent = wrap.hidden ? "Show Props" : "Hide Props";
-    await loadProps(id);
-  });
+  wrap.innerHTML = games.map(gameCard).join("");
 });

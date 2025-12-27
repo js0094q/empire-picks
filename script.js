@@ -6,7 +6,23 @@ import { Teams } from "./teams.js";
 
 const sport = document.body.dataset.sport || "nfl";
 const API_EVENTS = sport === "nhl" ? "/api/events_nhl" : "/api/events";
-const API_PROPS = "/api/props";
+const API_PROPS  = sport === "nhl" ? "/api/props_nhl" : "/api/props";
+
+/* =========================================================
+   NORMALIZATION
+   ========================================================= */
+
+function normalizeOutcome(o, type) {
+  return {
+    team: o.team || o.name || null,
+    label: o.label || o.team || o.name || null,
+    side: o.side || null,
+    point: o.point ?? null,
+    odds: o.odds ?? o.price,
+    ev: Number.isFinite(o.ev) ? o.ev : 0,
+    consensus: o.consensus_prob ?? o.consensus ?? null
+  };
+}
 
 /* =========================================================
    HELPERS
@@ -15,39 +31,90 @@ const API_PROPS = "/api/props";
 const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
-function formatOutcomeLabel(type, o) {
-  if (type === "ml") return o.team;
-
-  if (type === "spread" || type === "puck") {
-    const sign = o.point > 0 ? "+" : "";
-    return `${o.team} ${sign}${o.point}`;
-  }
-
-  if (type === "total") {
-    return `${o.side} ${o.point}`;
-  }
-
-  if (type === "prop") {
-    return o.label;
-  }
-
-  return "—";
+function signalFromEV(ev) {
+  if (Math.abs(ev) >= 0.08) return "HIGH";
+  if (Math.abs(ev) >= 0.04) return "MED";
+  if (Math.abs(ev) >= 0.015) return "LOW";
+  return "MIN";
 }
 
-function computeSignal(evs) {
-  if (!evs.length) return { cls: "signal-min", txt: "MIN" };
-
-  const max = Math.max(...evs);
-  if (max >= 0.08) return { cls: "signal-high", txt: "HIGH" };
-  if (max >= 0.04) return { cls: "signal-med", txt: "MED" };
-  if (max >= 0.015) return { cls: "signal-low", txt: "LOW" };
-  return { cls: "signal-min", txt: "MIN" };
+function signalClass(level) {
+  return `signal-${level.toLowerCase()}`;
 }
 
 function badge(ev) {
   if (ev >= 0.04) return `<span class="badge badge-best">BEST VALUE</span>`;
   if (ev <= -0.04) return `<span class="badge badge-fade">BOOKS FAVOR</span>`;
   return "";
+}
+
+function formatLabel(type, o) {
+  if (type === "ml") return o.team;
+  if (type === "spread" || type === "puck") {
+    const s = o.point > 0 ? "+" : "";
+    return `${o.team} ${s}${o.point}`;
+  }
+  if (type === "total") {
+    return `${o.side} ${o.point}`;
+  }
+  if (type === "prop") return o.label;
+  return "—";
+}
+
+/* =========================================================
+   GAME SUMMARY (AUTHORITATIVE)
+   ========================================================= */
+
+function summarizeGame(game) {
+  const candidates = [];
+
+  const push = (type, o, side) => {
+    if (!o || !Number.isFinite(o.ev)) return;
+    candidates.push({
+      type,
+      team: o.team || o.name || o.label,
+      side,
+      ev: o.ev
+    });
+  };
+
+  if (game.best?.ml) {
+    push("ML", game.best.ml.away, "AWAY");
+    push("ML", game.best.ml.home, "HOME");
+  }
+
+  if (game.best?.spread) {
+    push("SPREAD", game.best.spread.away, "AWAY");
+    push("SPREAD", game.best.spread.home, "HOME");
+  }
+
+  if (game.best?.puck) {
+    push("PUCK", game.best.puck.away, "AWAY");
+    push("PUCK", game.best.puck.home, "HOME");
+  }
+
+  if (game.best?.total) {
+    push("TOTAL", game.best.total.over, "OVER");
+    push("TOTAL", game.best.total.under, "UNDER");
+  }
+
+  if (!candidates.length) {
+    return {
+      team: "—",
+      market: "—",
+      strength: "MIN"
+    };
+  }
+
+  const best = candidates.reduce((a, b) =>
+    Math.abs(b.ev) > Math.abs(a.ev) ? b : a
+  );
+
+  return {
+    team: best.team,
+    market: best.type,
+    strength: signalFromEV(best.ev)
+  };
 }
 
 /* =========================================================
@@ -68,25 +135,26 @@ async function fetchProps(eventId) {
    MARKET ROWS
    ========================================================= */
 
-function renderMarketRows(type, rows) {
-  if (!rows || !rows.length) return "";
+function renderRows(type, rows) {
+  if (!rows?.length) return "";
 
-  const evs = rows.map(o => o.ev).filter(Number.isFinite);
-  const signal = computeSignal(evs);
+  const norm = rows.map(o => normalizeOutcome(o, type));
+  const evs = norm.map(o => o.ev).filter(Number.isFinite);
+  const level = signalFromEV(Math.max(...evs.map(Math.abs)));
 
-  return rows.map(o => `
-    <div class="market-row ${signal.cls}">
+  return norm.map(o => `
+    <div class="market-row ${signalClass(level)}">
       <div class="market-left">
         <span class="market-tag ${type}">${type.toUpperCase()}</span>
-        <div class="market-team">${formatOutcomeLabel(type, o)}</div>
+        <div class="market-team">${formatLabel(type, o)}</div>
         <div class="market-odds">${fmtOdds(o.odds)}</div>
         <div class="market-meta">
-          Books ${pct(o.book_prob)} · Consensus ${pct(o.consensus_prob)} · EV ${pct(o.ev)}
+          Consensus ${o.consensus != null ? pct(o.consensus) : "—"} · EV ${pct(o.ev)}
         </div>
       </div>
       <div class="market-right">
         ${badge(o.ev)}
-        <span class="signal-bubble ${signal.cls}">${signal.txt}</span>
+        <span class="signal-bubble ${signalClass(level)}">${level}</span>
       </div>
     </div>
   `).join("");
@@ -103,22 +171,23 @@ async function loadProps(gameId) {
 
   const groups = await fetchProps(gameId);
 
-  if (!groups || !groups.length) {
+  if (!groups?.length) {
     el.innerHTML = `<div class="muted">No props available</div>`;
     return;
   }
 
   el.innerHTML = groups.map(g => {
-    const evs = g.outcomes.map(o => o.ev).filter(Number.isFinite);
-    const signal = computeSignal(evs);
+    const norm = g.outcomes.map(o => normalizeOutcome(o, "prop"));
+    const evs = norm.map(o => o.ev).filter(Number.isFinite);
+    const level = signalFromEV(Math.max(...evs.map(Math.abs)));
 
     return `
       <div class="props-group">
         <div class="props-header">
           <span>${g.market}</span>
-          <span class="signal-bubble ${signal.cls}">${signal.txt}</span>
+          <span class="signal-bubble ${signalClass(level)}">${level}</span>
         </div>
-        ${renderMarketRows("prop", g.outcomes)}
+        ${renderRows("prop", norm)}
       </div>
     `;
   }).join("");
@@ -131,16 +200,7 @@ async function loadProps(gameId) {
 function gameCard(game) {
   const away = Teams[game.away_team] || {};
   const home = Teams[game.home_team] || {};
-
-  const allOutcomes = [];
-
-  if (game.best?.ml) allOutcomes.push(game.best.ml.away, game.best.ml.home);
-  if (game.best?.spread) allOutcomes.push(game.best.spread.away, game.best.spread.home);
-  if (game.best?.puck) allOutcomes.push(game.best.puck.away, game.best.puck.home);
-  if (game.best?.total) allOutcomes.push(game.best.total.over, game.best.total.under);
-
-  const evs = allOutcomes.map(o => o.ev).filter(Number.isFinite);
-  const gameSignal = computeSignal(evs);
+  const summary = summarizeGame(game);
 
   return `
     <section class="game-card">
@@ -150,24 +210,27 @@ function gameCard(game) {
           <span>@</span>
           ${home.logo ? `<img src="${home.logo}" />` : ""}
         </div>
-        <div class="game-signal ${gameSignal.cls}">
-          Market Lean · <strong>${gameSignal.txt}</strong>
+
+        <div class="game-summary ${signalClass(summary.strength)}">
+          <span class="summary-label">Market Lean</span>
+          <span class="summary-team">${summary.team}</span>
+          <span class="summary-meta">${summary.market} · ${summary.strength}</span>
         </div>
       </header>
 
-      ${renderMarketRows("ml", game.best?.ml ? [
+      ${renderRows("ml", game.best?.ml ? [
         game.best.ml.away,
         game.best.ml.home
       ] : [])}
 
-      ${renderMarketRows(
+      ${renderRows(
         sport === "nhl" ? "puck" : "spread",
         sport === "nhl"
           ? game.best?.puck ? [game.best.puck.away, game.best.puck.home] : []
           : game.best?.spread ? [game.best.spread.away, game.best.spread.home] : []
       )}
 
-      ${renderMarketRows("total", game.best?.total ? [
+      ${renderRows("total", game.best?.total ? [
         game.best.total.over,
         game.best.total.under
       ] : [])}

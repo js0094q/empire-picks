@@ -6,7 +6,7 @@ import { Teams } from "./teams.js";
 
 const sport = document.body.dataset.sport || "nfl";
 const API_EVENTS = sport === "nhl" ? "/api/events_nhl" : "/api/events";
-const API_PROPS  = "/api/props";
+const API_PROPS = "/api/props";
 
 /* =========================================================
    HELPERS
@@ -15,24 +15,38 @@ const API_PROPS  = "/api/props";
 const pct = x => (x * 100).toFixed(1) + "%";
 const fmtOdds = o => (o > 0 ? `+${o}` : `${o}`);
 
-function computeMarketSignal(groups) {
-  const evs = groups
-    .flat()
-    .map(o => o?.ev)
-    .filter(Number.isFinite);
+function formatOutcomeLabel(type, o) {
+  if (type === "ml") return o.team;
 
-  if (!evs.length) return { cls: "signal-weak", txt: "MIN" };
+  if (type === "spread" || type === "puck") {
+    const sign = o.point > 0 ? "+" : "";
+    return `${o.team} ${sign}${o.point}`;
+  }
+
+  if (type === "total") {
+    return `${o.side} ${o.point}`;
+  }
+
+  if (type === "prop") {
+    return o.label;
+  }
+
+  return "—";
+}
+
+function computeSignal(evs) {
+  if (!evs.length) return { cls: "signal-min", txt: "MIN" };
 
   const max = Math.max(...evs);
-  if (max > 0.08) return { cls: "signal-very-strong", txt: "HIGH" };
-  if (max > 0.04) return { cls: "signal-strong", txt: "MED" };
-  if (max > 0.01) return { cls: "signal-moderate", txt: "LOW" };
-  return { cls: "signal-weak", txt: "MIN" };
+  if (max >= 0.08) return { cls: "signal-high", txt: "HIGH" };
+  if (max >= 0.04) return { cls: "signal-med", txt: "MED" };
+  if (max >= 0.015) return { cls: "signal-low", txt: "LOW" };
+  return { cls: "signal-min", txt: "MIN" };
 }
 
 function badge(ev) {
-  if (ev > 0.04) return `<span class="badge badge-best">BEST VALUE</span>`;
-  if (ev < -0.04) return `<span class="badge badge-fade">BOOKS FAVOR</span>`;
+  if (ev >= 0.04) return `<span class="badge badge-best">BEST VALUE</span>`;
+  if (ev <= -0.04) return `<span class="badge badge-fade">BOOKS FAVOR</span>`;
   return "";
 }
 
@@ -51,22 +65,23 @@ async function fetchProps(eventId) {
 }
 
 /* =========================================================
-   RENDER ROWS
+   MARKET ROWS
    ========================================================= */
 
-function renderMarketRows(type, label, rows) {
+function renderMarketRows(type, rows) {
   if (!rows || !rows.length) return "";
 
-  const signal = computeMarketSignal([rows]);
+  const evs = rows.map(o => o.ev).filter(Number.isFinite);
+  const signal = computeSignal(evs);
 
   return rows.map(o => `
     <div class="market-row ${signal.cls}">
       <div class="market-left">
-        <span class="market-tag ${type}">${label}</span>
-        <div class="market-team">${o.label || o.team}</div>
+        <span class="market-tag ${type}">${type.toUpperCase()}</span>
+        <div class="market-team">${formatOutcomeLabel(type, o)}</div>
         <div class="market-odds">${fmtOdds(o.odds)}</div>
         <div class="market-meta">
-          Consensus ${pct(o.consensus_prob)} · EV ${pct(o.ev)}
+          Books ${pct(o.book_prob)} · Consensus ${pct(o.consensus_prob)} · EV ${pct(o.ev)}
         </div>
       </div>
       <div class="market-right">
@@ -88,20 +103,22 @@ async function loadProps(gameId) {
 
   const groups = await fetchProps(gameId);
 
-  if (!groups?.length) {
+  if (!groups || !groups.length) {
     el.innerHTML = `<div class="muted">No props available</div>`;
     return;
   }
 
   el.innerHTML = groups.map(g => {
-    const signal = computeMarketSignal([g.outcomes]);
+    const evs = g.outcomes.map(o => o.ev).filter(Number.isFinite);
+    const signal = computeSignal(evs);
+
     return `
       <div class="props-group">
         <div class="props-header">
           <span>${g.market}</span>
           <span class="signal-bubble ${signal.cls}">${signal.txt}</span>
         </div>
-        ${renderMarketRows("prop", "PROP", g.outcomes)}
+        ${renderMarketRows("prop", g.outcomes)}
       </div>
     `;
   }).join("");
@@ -115,61 +132,47 @@ function gameCard(game) {
   const away = Teams[game.away_team] || {};
   const home = Teams[game.home_team] || {};
 
-  const markets = [];
+  const allOutcomes = [];
 
-  if (game.best?.ml) markets.push(
-    game.best.ml.away,
-    game.best.ml.home
-  );
-  if (game.best?.spread) markets.push(
-    game.best.spread.away,
-    game.best.spread.home
-  );
-  if (game.best?.puck) markets.push(
-    game.best.puck.away,
-    game.best.puck.home
-  );
-  if (game.best?.total) markets.push(
-    game.best.total.over,
-    game.best.total.under
-  );
+  if (game.best?.ml) allOutcomes.push(game.best.ml.away, game.best.ml.home);
+  if (game.best?.spread) allOutcomes.push(game.best.spread.away, game.best.spread.home);
+  if (game.best?.puck) allOutcomes.push(game.best.puck.away, game.best.puck.home);
+  if (game.best?.total) allOutcomes.push(game.best.total.over, game.best.total.under);
 
-  const signal = computeMarketSignal([markets]);
+  const evs = allOutcomes.map(o => o.ev).filter(Number.isFinite);
+  const gameSignal = computeSignal(evs);
 
   return `
     <section class="game-card">
       <header class="game-header">
         <div class="teams">
-          <img src="${away.logo || ""}" />
+          ${away.logo ? `<img src="${away.logo}" />` : ""}
           <span>@</span>
-          <img src="${home.logo || ""}" />
+          ${home.logo ? `<img src="${home.logo}" />` : ""}
         </div>
-        <div class="game-signal ${signal.cls}">
-          Market Lean · <strong>${signal.txt}</strong>
+        <div class="game-signal ${gameSignal.cls}">
+          Market Lean · <strong>${gameSignal.txt}</strong>
         </div>
       </header>
 
-      ${renderMarketRows("ml", "ML", game.best?.ml ? [
+      ${renderMarketRows("ml", game.best?.ml ? [
         game.best.ml.away,
         game.best.ml.home
       ] : [])}
 
       ${renderMarketRows(
         sport === "nhl" ? "puck" : "spread",
-        sport === "nhl" ? "PUCK" : "SPREAD",
-        game.best?.puck || game.best?.spread
-          ? [game.best.puck?.away || game.best.spread?.away,
-             game.best.puck?.home || game.best.spread?.home]
-          : []
+        sport === "nhl"
+          ? game.best?.puck ? [game.best.puck.away, game.best.puck.home] : []
+          : game.best?.spread ? [game.best.spread.away, game.best.spread.home] : []
       )}
 
-      ${renderMarketRows("total", "TOTAL", game.best?.total ? [
+      ${renderMarketRows("total", game.best?.total ? [
         game.best.total.over,
         game.best.total.under
       ] : [])}
 
-      <button class="props-toggle"
-        onclick="loadProps('${game.id}')">
+      <button class="props-toggle" onclick="loadProps('${game.id}')">
         Show Props
       </button>
 

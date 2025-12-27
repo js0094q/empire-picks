@@ -1,190 +1,157 @@
 /* =========================================================
-   ROOT + RESET
-   ========================================================= */
-
-:root {
-  --bg: #0b0f1a;
-  --bg-soft: #11162a;
-  --card: #151b34;
-  --card-soft: #1a2142;
-
-  --text: #ffffff;
-  --muted: rgba(255, 255, 255, 0.65);
-
-  --blue: #4da3ff;
-  --green: #44d19a;
-  --purple: #b18cff;
-  --gray: rgba(255, 255, 255, 0.18);
-}
+   GLOBAL
+========================================================= */
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", sans-serif;
 }
 
 body {
-  margin: 0;
-  background: radial-gradient(1200px 800px at 30% -10%, #16204a, var(--bg));
-  color: var(--text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, Inter, Helvetica, Arial, sans-serif;
+  background: #0f1323;
+  color: #eceff4;
+  line-height: 1.5;
+  font-size: 15px;
+  padding-top: 60px;
 }
 
 /* =========================================================
    HEADER + NAV
-   ========================================================= */
+========================================================= */
 
 .ep-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
-  background: rgba(10, 14, 30, 0.85);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(16, 19, 35, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  z-index: 100;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 24px;
 }
 
 .logo {
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 0.4px;
+  color: #ffffff;
+  text-decoration: none;
 }
 
 .nav {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .nav-link {
-  font-size: 0.85rem;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
-  color: var(--muted);
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  transition: 120ms ease;
 }
 
 .nav-link:hover {
-  color: #fff;
   background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
 }
 
 .nav-link.active {
+  background: rgba(92, 155, 255, 0.30);
+  border-color: rgba(92, 155, 255, 0.50);
   color: #fff;
-  background: linear-gradient(
-    135deg,
-    rgba(77, 163, 255, 0.35),
-    rgba(68, 209, 154, 0.35)
-  );
-  border-color: rgba(120, 200, 255, 0.45);
-  box-shadow: 0 0 0 1px rgba(120, 200, 255, 0.25);
 }
 
 #refresh-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 7px;
+  background: #4855a3;
+  color: white;
+  font-weight: 600;
   cursor: pointer;
+  font-size: 13px;
+  transition: 140ms ease;
 }
 
 #refresh-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: #3a447d;
 }
 
 /* =========================================================
-   LAYOUT + HERO
-   ========================================================= */
+   LAYOUT + MAIN
+========================================================= */
 
 .layout {
-  max-width: 960px;
+  max-width: 1024px;
   margin: 0 auto;
-  padding: 24px 16px 60px;
+  padding: 0 16px 40px;
 }
 
 .hero {
-  background: linear-gradient(
-    135deg,
-    rgba(77, 163, 255, 0.18),
-    rgba(68, 209, 154, 0.18)
-  );
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 32px;
-}
-
-.hero-inner {
-  max-width: 640px;
-}
-
-.hero-kicker {
-  font-size: 0.7rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  opacity: 0.7;
+  background: #1e2439;
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 18px;
 }
 
 .hero h1 {
-  margin: 8px 0;
-  font-size: 1.6rem;
+  font-size: 26px;
+  color: #fff;
+  margin-bottom: 10px;
 }
 
 .hero p {
-  color: var(--muted);
-  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 14px;
 }
 
 .hero-bullets {
   display: flex;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
 }
 
 .hero-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  background: rgba(255,255,255,0.12);
+  padding: 6px 10px;
   border-radius: 999px;
-  font-size: 0.8rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  color: #fff;
 }
 
-.hero-pill .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
+/* =========================================================
+   LOADING + ERROR STATES
+========================================================= */
 
-.dot-lean {
-  background: var(--blue);
-}
-.dot-signal {
-  background: var(--green);
-}
-.dot-stability {
-  background: #c0c7ff;
+.loading,
+.muted {
+  padding: 18px 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 14px;
 }
 
 /* =========================================================
    GAME CARD
-   ========================================================= */
+========================================================= */
 
 .game-card {
-  background: linear-gradient(
-    180deg,
-    var(--card),
-    var(--card-soft)
-  );
-  border-radius: 16px;
+  background: #19203a;
+  border-radius: 12px;
   padding: 18px;
   margin-bottom: 22px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -192,9 +159,9 @@ body {
 
 .game-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  margin-bottom: 14px;
 }
 
 .teams {
@@ -203,154 +170,210 @@ body {
   gap: 10px;
 }
 
-.teams img {
+.team-logo {
   width: 26px;
   height: 26px;
+  object-fit: contain;
 }
 
-.kickoff {
-  font-size: 0.75rem;
-  opacity: 0.7;
+.at {
+  color: #8c95a1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.game-meta-right {
+  text-align: right;
+}
+
+.game-time {
+  color: rgba(255, 255, 255, 0.57);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.game-summary {
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.game-summary .summary-label {
+  color: #a7b1cc;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.game-summary .summary-team {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.game-summary .summary-meta {
+  opacity: 0.85;
+  font-size: 13px;
 }
 
 /* =========================================================
    MARKET ROWS
-   ========================================================= */
+========================================================= */
 
 .market-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 14px;
-  padding: 12px;
-  border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
-  margin-top: 10px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.market-row.best-value {
-  outline: 1px solid rgba(68, 209, 154, 0.4);
-  background: rgba(68, 209, 154, 0.08);
+.market-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .market-tag {
-  min-width: 56px;
-  text-align: center;
-  font-size: 0.65rem;
-  letter-spacing: 0.6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
   padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.10);
+  color: #fff;
 }
 
-.market-tag.ml {
-  background: rgba(77, 163, 255, 0.35);
-}
+.market-tag.ml { background: rgba(92, 155, 255, 0.20); }
+.market-tag.spread { background: rgba(255, 149, 157, 0.20); }
+.market-tag.puck { background: rgba(255, 149, 157, 0.20); }
+.market-tag.total { background: rgba(120, 214, 168, 0.20); }
+.market-tag.prop { background: rgba(178, 136, 255, 0.20); }
 
-.market-tag.spread {
-  background: rgba(177, 140, 255, 0.35);
-}
-
-.market-tag.total {
-  background: rgba(68, 209, 154, 0.35);
-}
-
-.market-main {
-  flex: 1;
-}
-
-.market-name {
+.market-team {
+  font-size: 15px;
   font-weight: 600;
-  font-size: 0.9rem;
+  color: #fff;
 }
 
 .market-odds {
-  font-size: 1.1rem;
-  margin: 4px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #daf1e8;
 }
 
 .market-meta {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.pill-mini {
-  font-size: 0.6rem;
-  padding: 2px 6px;
-  margin-left: 6px;
-  border-radius: 999px;
-}
-
-.pill-fav {
-  background: rgba(77, 163, 255, 0.3);
-}
-
-.pill-value {
-  background: rgba(68, 209, 154, 0.3);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 /* =========================================================
-   SIGNAL BUBBLES
-   ========================================================= */
+   SIGNAL + BADGES
+========================================================= */
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 6px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.badge-best {
+  background: rgba(76, 209, 55, 0.75);
+}
+
+.badge-fade {
+  background: rgba(255, 69, 58, 0.70);
+}
 
 .signal-bubble {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 700;
+  padding: 4px 6px;
+  text-transform: uppercase;
+  border-radius: 6px;
+  color: #fff;
 }
 
-.signal-very-strong {
-  background: rgba(68, 209, 154, 0.85);
+.signal-high {
+  background: rgba(76, 209, 55, 0.85);
 }
 
-.signal-strong {
-  background: rgba(77, 163, 255, 0.75);
+.signal-med {
+  background: rgba(255, 184, 0, 0.85);
 }
 
-.signal-moderate {
-  background: rgba(177, 140, 255, 0.65);
+.signal-low {
+  background: rgba(92, 155, 255, 0.70);
 }
 
-.signal-weak {
-  background: rgba(255, 255, 255, 0.25);
+.signal-min {
+  background: rgba(128, 128, 128, 0.50);
+}
+
+/* =========================================================
+   PROPS
+========================================================= */
+
+.props-wrap {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.props-group {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.props-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 6px;
+}
+
+.market-row.prop {
+  border-left: 3px solid rgba(178, 136, 255, 0.75);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+button.props-toggle {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(92, 155, 255, 0.25);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+button.props-toggle:hover {
+  background: rgba(92, 155, 255, 0.40);
 }
 
 /* =========================================================
    FOOTER
-   ========================================================= */
+========================================================= */
 
 .ep-footer {
   text-align: center;
-  font-size: 0.7rem;
-  color: var(--muted);
-  padding: 20px;
-}
-
-/* =========================================================
-   UTILITY
-   ========================================================= */
-
-.loading,
-.muted {
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin-top: 12px;
-}
-
-.props-toggle {
-  margin-top: 12px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #fff;
-  cursor: pointer;
-}
-
-.props-list {
-  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 24px;
 }

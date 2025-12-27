@@ -56,22 +56,47 @@ export const Teams = {
   "Arizona Cardinals": { abbr: "ari", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png" }
 };
 
-// NHL Teams (minimum viable set)
-Teams["Boston Bruins"] = { logo: "/logos/nhl/bos.svg" };
-Teams["Toronto Maple Leafs"] = { logo: "/logos/nhl/tor.svg" };
-Teams["Montreal Canadiens"] = { logo: "/logos/nhl/mtl.svg" };
-Teams["New York Rangers"] = { logo: "/logos/nhl/nyr.svg" };
-Teams["New Jersey Devils"] = { logo: "/logos/nhl/njd.svg" };
-Teams["Philadelphia Flyers"] = { logo: "/logos/nhl/phi.svg" };
-Teams["Pittsburgh Penguins"] = { logo: "/logos/nhl/pit.svg" };
-Teams["Washington Capitals"] = { logo: "/logos/nhl/wsh.svg" };
+/* =========================================================
+   NHL TEAMS (SAFE FALLBACK)
+   ========================================================= */
 
-Teams["Tampa Bay Lightning"] = { logo: "/logos/nhl/tbl.svg" };
-Teams["Florida Panthers"] = { logo: "/logos/nhl/fla.svg" };
-Teams["Carolina Hurricanes"] = { logo: "/logos/nhl/car.svg" };
+const nhlTeams = [
+  "Anaheim Ducks",
+  "Arizona Coyotes",
+  "Boston Bruins",
+  "Buffalo Sabres",
+  "Calgary Flames",
+  "Carolina Hurricanes",
+  "Chicago Blackhawks",
+  "Colorado Avalanche",
+  "Columbus Blue Jackets",
+  "Dallas Stars",
+  "Detroit Red Wings",
+  "Edmonton Oilers",
+  "Florida Panthers",
+  "Los Angeles Kings",
+  "Minnesota Wild",
+  "Montreal Canadiens",
+  "Nashville Predators",
+  "New Jersey Devils",
+  "New York Islanders",
+  "New York Rangers",
+  "Ottawa Senators",
+  "Philadelphia Flyers",
+  "Pittsburgh Penguins",
+  "San Jose Sharks",
+  "Seattle Kraken",
+  "St. Louis Blues",
+  "Tampa Bay Lightning",
+  "Toronto Maple Leafs",
+  "Vancouver Canucks",
+  "Vegas Golden Knights",
+  "Washington Capitals",
+  "Winnipeg Jets"
+];
 
-Teams["Colorado Avalanche"] = { logo: "/logos/nhl/col.svg" };
-Teams["Vegas Golden Knights"] = { logo: "/logos/nhl/vgk.svg" };
-Teams["Edmonton Oilers"] = { logo: "/logos/nhl/edm.svg" };
-Teams["Calgary Flames"] = { logo: "/logos/nhl/cgy.svg" };
-Teams["Vancouver Canucks"] = { logo: "/logos/nhl/van.svg" };
+nhlTeams.forEach(team => {
+  if (!Teams[team]) {
+    Teams[team] = { logo: null };
+  }
+});

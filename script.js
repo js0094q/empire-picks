@@ -24,7 +24,7 @@ const impliedProb = o =>
     : null;
 
 /* =========================================================
-   SIGNAL STRENGTH
+   SIGNAL
    ========================================================= */
 
 function signalFromEV(ev, all) {
@@ -45,17 +45,25 @@ function signalFromEV(ev, all) {
    ========================================================= */
 
 async function fetchGames() {
-  const url = SPORT === "nhl"
-    ? "/api/events_nhl"
-    : "/api/events";
+  const url = SPORT === "nhl" ? "/api/events_nhl" : "/api/events";
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("Failed games");
+  return r.json();
+}
+
+async function fetchProps(gameId) {
+  const url =
+    SPORT === "nhl"
+      ? `/api/props_nhl?event_id=${gameId}`
+      : `/api/props?event_id=${gameId}`;
 
   const r = await fetch(url);
-  if (!r.ok) throw new Error("Failed to fetch games");
+  if (!r.ok) return [];
   return r.json();
 }
 
 /* =========================================================
-   GENERIC MARKET RENDERER
+   MARKETS
    ========================================================= */
 
 function renderMarketRows(type, label, rows) {
@@ -65,44 +73,32 @@ function renderMarketRows(type, label, rows) {
   if (!viable.length) return "";
 
   const evs = viable.map(o => o.ev).filter(Number.isFinite);
-  const maxProb = Math.max(...viable.map(o => impliedProb(o.odds)));
   const maxEv = evs.length ? Math.max(...evs) : null;
 
   return viable.map(o => {
     const sig = signalFromEV(o.ev, evs);
-    const booksFavor = impliedProb(o.odds) === maxProb;
-    const bestValue =
-      Number.isFinite(o.ev) && o.ev === maxEv && maxEv > 0;
+    const best = o.ev === maxEv && maxEv > 0;
 
     return `
-      <div class="market-row ${bestValue ? "best-value" : ""}">
+      <div class="market-row ${best ? "best-value" : ""}">
         <span class="market-tag ${type}">${label}</span>
-
         <div class="market-main">
           <div class="market-name">
             ${o.label}
-            ${booksFavor ? `<span class="pill-mini pill-fav">BOOKS FAVOR</span>` : ""}
-            ${bestValue ? `<span class="pill-mini pill-value">BEST VALUE</span>` : ""}
+            ${best ? `<span class="pill-mini pill-value">BEST</span>` : ""}
           </div>
-
           <div class="market-odds">${fmtOdds(o.odds)}</div>
-
           <div class="market-meta">
-            Books ${pct(impliedProb(o.odds))}
-            · Consensus ${pct(o.consensus_prob)}
-            · Value ${Number.isFinite(o.ev) ? (o.ev * 100).toFixed(1) + "%" : "—"}
+            Consensus ${pct(o.consensus_prob)} · EV ${
+      Number.isFinite(o.ev) ? (o.ev * 100).toFixed(1) + "%" : "—"
+    }
           </div>
         </div>
-
         <div class="signal-bubble ${sig.cls}">${sig.txt}</div>
       </div>
     `;
   }).join("");
 }
-
-/* =========================================================
-   MARKET TYPES
-   ========================================================= */
 
 function renderML(game) {
   const ml = game?.best?.ml;
@@ -115,24 +111,24 @@ function renderML(game) {
 }
 
 function renderSpreadOrPuck(game) {
-  const m = SPORT === "nhl"
-    ? game?.best?.puck
-    : game?.best?.spread;
-
+  const m =
+    SPORT === "nhl" ? game?.best?.puck : game?.best?.spread;
   if (!m?.home || !m?.away) return "";
 
-  const tag = SPORT === "nhl" ? "PUCK" : "SPREAD";
-
-  return renderMarketRows("spread", tag, [
-    {
-      ...m.away,
-      label: `${game.away_team} ${m.away.point > 0 ? "+" : ""}${m.away.point}`
-    },
-    {
-      ...m.home,
-      label: `${game.home_team} ${m.home.point > 0 ? "+" : ""}${m.home.point}`
-    }
-  ]);
+  return renderMarketRows(
+    "spread",
+    SPORT === "nhl" ? "PUCK" : "SPREAD",
+    [
+      {
+        ...m.away,
+        label: `${game.away_team} ${m.away.point > 0 ? "+" : ""}${m.away.point}`
+      },
+      {
+        ...m.home,
+        label: `${game.home_team} ${m.home.point > 0 ? "+" : ""}${m.home.point}`
+      }
+    ]
+  );
 }
 
 function renderTotals(game) {
@@ -146,24 +142,33 @@ function renderTotals(game) {
 }
 
 /* =========================================================
-   GAME NARRATIVE
+   PROPS
    ========================================================= */
 
-function gameNarrative(game) {
-  const mlH = game?.best?.ml?.home;
-  const mlA = game?.best?.ml?.away;
-  if (!mlH || !mlA) return "";
-
-  const lean =
-    mlH.consensus_prob > mlA.consensus_prob
-      ? game.home_team
-      : game.away_team;
-
+function propsContainer(gameId) {
   return `
-    <div class="muted" style="margin:8px 0;font-size:0.8rem">
-      Market pricing leans toward <b>${lean}</b>.
-    </div>
+    <button class="props-toggle" data-id="${gameId}">
+      Show Props
+    </button>
+    <div class="props-list" id="props-${gameId}" hidden></div>
   `;
+}
+
+async function loadProps(gameId) {
+  const wrap = document.getElementById(`props-${gameId}`);
+  if (!wrap || wrap.dataset.loaded) return;
+
+  const props = await fetchProps(gameId);
+  wrap.dataset.loaded = "1";
+
+  if (!props.length) {
+    wrap.innerHTML = `<div class="muted">No props available</div>`;
+    return;
+  }
+
+  wrap.innerHTML = props.map(p =>
+    renderMarketRows("prop", p.market, p.outcomes)
+  ).join("");
 }
 
 /* =========================================================
@@ -171,33 +176,26 @@ function gameNarrative(game) {
    ========================================================= */
 
 function gameCard(game) {
-  const home = Teams?.[game.home_team];
-  const away = Teams?.[game.away_team];
-
-  const kickoff = game.commence_time
-    ? new Date(game.commence_time).toLocaleString("en-US", {
-        weekday: "short",
-        hour: "numeric",
-        minute: "2-digit"
-      })
-    : "—";
+  const home = Teams[game.home_team];
+  const away = Teams[game.away_team];
 
   return `
     <div class="game-card">
       <div class="game-header">
         <div class="teams">
-          ${away?.logo ? `<img src="${away.logo}" />` : `<span>${game.away_team}</span>`}
+          ${away?.logo ? `<img src="${away.logo}" />` : ""}
+          <span>${game.away_team}</span>
           <span>@</span>
-          ${home?.logo ? `<img src="${home.logo}" />` : `<span>${game.home_team}</span>`}
+          ${home?.logo ? `<img src="${home.logo}" />` : ""}
+          <span>${game.home_team}</span>
         </div>
-        <div class="kickoff">${kickoff}</div>
       </div>
-
-      ${gameNarrative(game)}
 
       ${renderML(game)}
       ${renderSpreadOrPuck(game)}
       ${renderTotals(game)}
+
+      ${propsContainer(game.id)}
     </div>
   `;
 }
@@ -208,14 +206,17 @@ function gameCard(game) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");
-  if (!container) return;
+  const games = await fetchGames();
+  container.innerHTML = games.map(gameCard).join("");
 
-  try {
-    const games = await fetchGames();
-    container.innerHTML = games.map(gameCard).join("");
-  } catch (e) {
-    console.error(e);
-    container.innerHTML =
-      `<div class="muted">Failed to load games.</div>`;
-  }
+  document.addEventListener("click", async e => {
+    const btn = e.target.closest(".props-toggle");
+    if (!btn) return;
+
+    const id = btn.dataset.id;
+    const wrap = document.getElementById(`props-${id}`);
+    wrap.hidden = !wrap.hidden;
+    btn.textContent = wrap.hidden ? "Show Props" : "Hide Props";
+    await loadProps(id);
+  });
 });

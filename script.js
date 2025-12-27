@@ -13,7 +13,7 @@ const impliedFromOdds = o =>
 const safe = x => (Number.isFinite(x) ? x : null);
 
 /* =========================================================
-   VALUE SIGNAL
+   SIGNAL LOGIC
    ========================================================= */
 
 function signalFromDistribution(ev, evs) {
@@ -26,15 +26,8 @@ function signalFromDistribution(ev, evs) {
   return { cls: "signal-weak", txt: "MIN" };
 }
 
-function stabilityLabel(v) {
-  if (v == null) return "—";
-  if (v >= 0.85) return "High";
-  if (v >= 0.7) return "Medium";
-  return "Low";
-}
-
 /* =========================================================
-   SPORT AWARE FETCH
+   SPORT-AWARE FETCH
    ========================================================= */
 
 const SPORT = document.body.dataset.sport || "nfl";
@@ -61,16 +54,6 @@ const fetchProps = async id => {
    MARKET RENDERING
    ========================================================= */
 
-function formatMarketLabel(type, o) {
-  if (type === "ml") return o.team;
-  if (type === "spread") {
-    const s = o.point > 0 ? "+" : "";
-    return `${o.team} ${s}${o.point}`;
-  }
-  if (type === "total") return `${o.side} ${o.point}`;
-  return "—";
-}
-
 function renderMarketRows(type, label, options) {
   const viable = options.filter(o => o && o.odds != null && o.consensus_prob != null);
   if (!viable.length) return "";
@@ -87,10 +70,9 @@ function renderMarketRows(type, label, options) {
     return `
       <div class="market-row ${booksFavor ? "book-fav" : ""} ${bestValue ? "best-value" : ""}">
         <span class="market-tag ${type}">${label}</span>
-
         <div class="market-main">
           <div class="market-name">
-            ${formatMarketLabel(type, o)}
+            ${o.team || o.side}
             ${booksFavor ? `<span class="pill-mini pill-fav">BOOKS FAVOR</span>` : ""}
             ${bestValue ? `<span class="pill-mini pill-value">BEST VALUE</span>` : ""}
           </div>
@@ -98,10 +80,9 @@ function renderMarketRows(type, label, options) {
           <div class="market-meta">
             Books ${pct(impliedFromOdds(o.odds))}
             · Consensus ${pct(o.consensus_prob)}
-            · Value ${(safe(o.ev) == null ? "—" : (o.ev * 100).toFixed(1) + "%")}
+            · Value ${(o.ev * 100).toFixed(1)}%
           </div>
         </div>
-
         <div class="signal-bubble ${s.cls}">${s.txt}</div>
       </div>
     `;
@@ -122,13 +103,13 @@ function gameNarrative(game) {
 
   return `
     <div class="muted" style="margin:10px 0;font-size:0.8rem">
-      Books lean <b>${lean}</b>. Strongest current value signal appears on <b>${value}</b>.
+      Market leans <b>${lean}</b>. Strongest value signal currently on <b>${value}</b>.
     </div>
   `;
 }
 
 /* =========================================================
-   PROPS
+   PROPS RENDERING
    ========================================================= */
 
 function renderProps(container, categories) {
@@ -153,7 +134,7 @@ function renderProps(container, categories) {
     return `
       <div class="props-category">
         <div class="props-category-title">${cat}</div>
-        ${rows.slice(0, 4).map(r => {
+        ${rows.map(r => {
           const s = signalFromDistribution(r.ev, evs);
           const bestValue = r.ev === maxEv && maxEv > 0;
 
@@ -169,8 +150,7 @@ function renderProps(container, categories) {
                   Consensus ${pct(r.prob)} · Value ${(r.ev * 100).toFixed(1)}%
                 </div>
               </div>
-
-              <div class="prop-right">
+              <div>
                 <div class="signal-bubble ${s.cls}">${s.txt}</div>
                 <div class="prop-odds">${fmtOdds(r.odds)}</div>
               </div>
@@ -190,12 +170,6 @@ function gameCard(game) {
   const home = Teams[game.home_team];
   const away = Teams[game.away_team];
 
-  const kickoff = new Date(game.commence_time).toLocaleString("en-US", {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-
   return `
     <div class="game-card" data-game-id="${game.id}">
       <div class="game-header">
@@ -204,7 +178,6 @@ function gameCard(game) {
           <span>@</span>
           <img src="${home?.logo || ""}" />
         </div>
-        <div class="kickoff">${kickoff}</div>
       </div>
 
       ${gameNarrative(game)}
@@ -227,10 +200,7 @@ function gameCard(game) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");
-  const games = (await fetchGames()).sort(
-    (a, b) => new Date(a.commence_time) - new Date(b.commence_time)
-  );
-
+  const games = await fetchGames();
   container.innerHTML = games.map(gameCard).join("");
 
   container.addEventListener("click", async e => {

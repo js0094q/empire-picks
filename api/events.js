@@ -1,7 +1,4 @@
 // /api/events.js
 export default function handler(req, res) {
-  res.status(200).json({
-    ok: true,
-    message: "events endpoint is alive"
-  });
+  res.status(200).json([]);
 }

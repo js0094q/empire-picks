@@ -2,50 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>EmpirePicks | NFL Market Intelligence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EmpirePicks • NFL Market Intelligence</title>
-
-  <link rel="stylesheet" href="styles.css" />
-  <script type="module" src="script.js" defer></script>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 
-  <script type="module" src="/script.js"></script>
-  
 <body>
-  <header class="ep-header">
-    <div class="brand">
-      <div class="logo">EmpirePicks</div>
-      <nav class="nav">
-        <a href="/about" class="nav-link">About</a>
-      </nav>
-    </div>
+  <header class="topbar">
+    <div class="brand">EmpirePicks</div>
+    <button class="about-btn">About</button>
   </header>
 
   <main class="layout">
     <section class="hero">
-      <div class="hero-inner">
-        <div class="hero-kicker">NFL Market Intelligence</div>
-        <h1>See what sportsbooks agree on, and where value diverges</h1>
-        <p>
-          EmpirePicks aggregates sharp and public books, removes vig,
-          and highlights the most likely outcomes and best value prices.
-        </p>
-
-        <div class="hero-bullets">
-          <div class="hero-pill"><span class="dot dot-lean"></span> Most Likely Outcome</div>
-          <div class="hero-pill"><span class="dot dot-signal"></span> Value Signal</div>
-          <div class="hero-pill"><span class="dot dot-stability"></span> Consensus Stability</div>
-        </div>
+      <span class="pill">NFL MARKET INTELLIGENCE</span>
+      <h1>See where sportsbooks agree — and where value diverges</h1>
+      <p>
+        EmpirePicks aggregates sharp and public books, removes vig,
+        and highlights consensus outcomes and value discrepancies.
+      </p>
+      <div class="legend">
+        <span class="dot blue"></span> Most Likely Outcome
+        <span class="dot green"></span> Value Signal
+        <span class="dot purple"></span> Consensus Stability
       </div>
     </section>
 
-    <section id="games-container">
-      <div class="loading">Loading NFL games…</div>
+    <section id="games-container" class="games">
+      <div class="muted">Loading games…</div>
     </section>
   </main>
 
-  <footer class="ep-footer">
-    Data powered by The Odds API • EmpirePicks
+  <footer class="footer">
+    Data powered by The Odds API · EmpirePicks
   </footer>
+
+  <script type="module" src="/script.js"></script>
 </body>
 </html>

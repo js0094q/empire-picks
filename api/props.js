@@ -1,11 +1,8 @@
-// /api/props.js
-
-import fetch from "node-fetch";
 import {
-  SPORT,
   BASE_URL,
   BOOK_WEIGHTS
 } from "./config.js";
+
 import {
   impliedProb,
   noVig,
@@ -16,113 +13,106 @@ import {
 
 const API_KEY = process.env.ODDS_API_KEY;
 
-function normalizePlayer(name) {
-  return name
-    ?.replace(/\s+/g, " ")
-    .replace(/ Jr\.?| III| II| IV| V/g, "")
-    .trim();
-}
-
 export default async function handler(req, res) {
   try {
-    const { id } = req.query;
-    if (!id) return res.status(400).json({ error: "Missing event id" });
+    const eventId = req.query.id;
 
-    const markets = [
-      "player_pass_yds",
-      "player_pass_tds",
-      "player_rush_yds",
-      "player_receptions",
-      "player_reception_yds",
-      "player_anytime_td"
-    ];
+    if (!eventId) {
+      return res.status(400).json({ error: "Missing event id" });
+    }
+
+    if (!API_KEY) {
+      throw new Error("Missing ODDS_API_KEY");
+    }
 
     const url =
-      `${BASE_URL}/sports/${SPORT}/events/${id}/odds` +
-      `?regions=us&markets=${markets.join(",")}&oddsFormat=american&apiKey=${API_KEY}`;
+      `${BASE_URL}/sports/americanfootball_nfl/events/${eventId}/odds` +
+      `?regions=us&markets=player_pass_yds,player_rush_yds,player_receptions` +
+      `&oddsFormat=american&apiKey=${API_KEY}`;
 
     const r = await fetch(url);
-    if (!r.ok) throw new Error("Props API failure");
+
+    if (!r.ok) {
+      return res.status(200).json({ markets: {} });
+    }
 
     const data = await r.json();
-    const event = Array.isArray(data) ? data[0] : data;
 
-    const output = {};
+    if (!data.bookmakers?.length) {
+      return res.status(200).json({ markets: {} });
+    }
 
-    for (const b of event.bookmakers || []) {
-      const weight = BOOK_WEIGHTS[b.key] || 1;
+    const out = {};
 
-      for (const m of b.markets || []) {
-        if (!output[m.key]) output[m.key] = {};
+    for (const book of data.bookmakers) {
+      const weight = BOOK_WEIGHTS[book.key] || 1;
 
-        for (const o of m.outcomes || []) {
-          const player = normalizePlayer(o.description);
-          const side = o.name.toLowerCase().includes("over") ? "over" : "under";
-          const point = o.point ?? null;
-          const key = `${player}|${point}`;
+      for (const market of book.markets || []) {
+        if (!market.outcomes?.length) continue;
 
-          if (!output[m.key][key]) {
-            output[m.key][key] = {
+        if (!out[market.key]) out[market.key] = {};
+
+        for (const o of market.outcomes) {
+          const player = o.description || o.name;
+          if (!player) continue;
+
+          if (!out[market.key][player]) {
+            out[market.key][player] = {
               player,
-              point,
+              point: o.point,
               over: [],
               under: []
             };
           }
 
-          output[m.key][key][side].push({
-            p: impliedProb(o.price),
+          const side = o.name.toLowerCase().includes("over")
+            ? "over"
+            : "under";
+
+          out[market.key][player][side].push({
             odds: o.price,
+            prob: impliedProb(o.price),
             w: weight
           });
         }
       }
     }
 
-    const finalized = {};
+    const markets = {};
 
-    for (const mkt in output) {
-      finalized[mkt] = Object.values(output[mkt])
-        .map(p => {
-          if (!p.over.length || !p.under.length) return null;
+    for (const [marketKey, players] of Object.entries(out)) {
+      markets[marketKey] = Object.values(players).map(p => {
+        if (!p.over.length || !p.under.length) return null;
 
-          const fairOver = weightedAverage(p.over);
-          const fairUnder = weightedAverage(p.under);
+        const oFair = weightedAverage(p.over);
+        const uFair = weightedAverage(p.under);
+        const [fOver, fUnder] = noVig(oFair, uFair);
 
-          const [fO, fU] = noVig(fairOver, fairUnder);
+        const stability = stabilityScore([
+          ...p.over.map(x => x.prob),
+          ...p.under.map(x => x.prob)
+        ]);
 
-          const stab = stabilityScore([
-            ...p.over.map(x => x.p),
-            ...p.under.map(x => x.p)
-          ]);
-
-          return {
-            player: p.player,
-            point: p.point,
-            over: {
-              prob: fO,
-              ev: expectedValue(fO, p.over[0].odds, stab),
-              odds: Math.max(...p.over.map(x => x.odds))
-            },
-            under: {
-              prob: fU,
-              ev: expectedValue(fU, p.under[0].odds, stab),
-              odds: Math.max(...p.under.map(x => x.odds))
-            }
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => {
-          const ae = Math.max(a.over.ev, a.under.ev);
-          const be = Math.max(b.over.ev, b.under.ev);
-          return be - ae;
-        })
-        .slice(0, 3);
+        return {
+          player: p.player,
+          point: p.point,
+          over: {
+            odds: p.over[0].odds,
+            prob: fOver,
+            ev: expectedValue(fOver, p.over[0].odds, stability)
+          },
+          under: {
+            odds: p.under[0].odds,
+            prob: fUnder,
+            ev: expectedValue(fUnder, p.under[0].odds, stability)
+          }
+        };
+      }).filter(Boolean);
     }
 
-    res.status(200).json({ markets: finalized });
+    res.status(200).json({ markets });
   } catch (err) {
-    console.error(err);
+    console.error("PROPS ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 }

@@ -2,7 +2,7 @@
 import { Teams } from "./teams.js";
 
 /* =========================================================
-   FORMATTERS & MATH
+   SIMPLE FORMATTERS (NO LOGIC)
    ========================================================= */
 
 const pct = v =>
@@ -10,29 +10,6 @@ const pct = v =>
 
 const fmtOdds = o =>
   o == null ? "—" : o > 0 ? `+${o}` : `${o}`;
-
-const impliedFromOdds = o =>
-  o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
-
-/*
-  Percentile-based EV signal
-*/
-function valueSignal(ev, dist) {
-  if (ev == null || dist.length < 2) return { cls: "signal-weak", txt: "MIN" };
-  const s = [...dist].sort((a, b) => a - b);
-  const r = s.lastIndexOf(ev) / (s.length - 1);
-  if (r >= 0.9) return { cls: "signal-very-strong", txt: "HIGH" };
-  if (r >= 0.7) return { cls: "signal-strong", txt: "MED" };
-  if (r >= 0.4) return { cls: "signal-moderate", txt: "LOW" };
-  return { cls: "signal-weak", txt: "MIN" };
-}
-
-function stabilityLabel(v) {
-  if (v == null) return "—";
-  if (v >= 0.85) return "High";
-  if (v >= 0.7) return "Medium";
-  return "Low";
-}
 
 /* =========================================================
    FETCH
@@ -51,109 +28,27 @@ const fetchProps = async id => {
 };
 
 /* =========================================================
-   MOST LIKELY OUTCOME ENGINE (LEAN-BASED)
+   MARKET RENDERERS (DISPLAY ONLY)
    ========================================================= */
 
-function mostLikelyOutcome(game) {
-  const candidates = [];
-
-  function ingest(label, side) {
-    if (!side?.consensus_prob) return;
-    candidates.push({
-      label,
-      prob: side.consensus_prob,
-      stability: side.stability || 0.75
-    });
-  }
-
-  const h2h = game.markets?.h2h;
-  if (h2h) {
-    const firstBook = Object.values(h2h)[0];
-    firstBook?.forEach(o => ingest(o.name, o));
-  }
-
-  const spreads = game.markets?.spreads;
-  if (spreads) {
-    const firstBook = Object.values(spreads)[0];
-    firstBook?.forEach(o =>
-      ingest(`${o.name} ${o.point > 0 ? "+" : ""}${o.point}`, o)
-    );
-  }
-
-  const totals = game.markets?.totals;
-  if (totals) {
-    const firstBook = Object.values(totals)[0];
-    firstBook?.forEach(o =>
-      ingest(`${o.name} ${o.point}`, o)
-    );
-  }
-
-  if (!candidates.length) return null;
-
-  return candidates
-    .map(c => ({ ...c, score: c.prob * c.stability }))
-    .sort((a, b) => b.score - a.score)[0];
-}
-
-/* =========================================================
-   GAME SUMMARY
-   ========================================================= */
-
-function buildSummary(game) {
-  const likely = mostLikelyOutcome(game);
-  if (!likely) return "";
-
-  return `
-    <div class="game-summary">
-      <div class="summary-item">
-        <span class="badge badge-lean">Most Likely</span>
-        ${likely.label} (${pct(likely.prob)})
-      </div>
-      <div class="summary-item">
-        <span class="badge badge-stability">Consensus</span>
-        ${stabilityLabel(likely.stability)}
-      </div>
-    </div>
-  `;
-}
-
-/* =========================================================
-   MARKET RENDERERS
-   ========================================================= */
-
-function renderMarket(type, tag, rows) {
+function renderMarket(tag, rows) {
   if (!rows.length) return "";
 
-  const evs = rows.map(r => r.ev).filter(v => v != null);
-  const maxEv = evs.length ? Math.max(...evs) : null;
+  return rows.map(r => `
+    <div class="market-row">
+      <span class="market-tag">${tag}</span>
 
-  return rows.map(r => {
-    const sig = valueSignal(r.ev, evs);
-    const best = r.ev === maxEv && maxEv > 0;
+      <div class="market-main">
+        <div class="market-name">${r.label}</div>
+        <div class="market-odds">${fmtOdds(r.odds)}</div>
 
-    return `
-      <div class="market-row ${best ? "best-value" : ""}">
-        <span class="market-tag ${type}">${tag}</span>
-
-        <div class="market-main">
-          <div class="market-name">
-            ${r.label}
-            ${best ? `<span class="pill-mini pill-value">BEST VALUE</span>` : ""}
-          </div>
-
-          <div class="market-odds">${fmtOdds(r.odds)}</div>
-
-          <div class="market-meta">
-            Books ${pct(impliedFromOdds(r.odds))}
-            · Consensus ${pct(r.prob)}
-            · Value ${(r.ev * 100).toFixed(1)}%
-          </div>
+        <div class="market-meta">
+          Consensus ${pct(r.prob)}
+          ${r.ev != null ? `· EV ${(r.ev * 100).toFixed(1)}%` : ""}
         </div>
-
-        <div class="signal-bubble ${sig.cls}">${sig.txt}</div>
       </div>
-    `;
-  }).join("");
+    </div>
+  `).join("");
 }
 
 function collectMarket(game, marketKey, formatter) {
@@ -176,7 +71,7 @@ function collectMarket(game, marketKey, formatter) {
 }
 
 /* =========================================================
-   PROPS
+   PROPS (DISPLAY ONLY)
    ========================================================= */
 
 function renderProps(container, data) {
@@ -187,39 +82,34 @@ function renderProps(container, data) {
 
   container.innerHTML = Object.entries(data.markets).map(([k, props]) => `
     <div class="props-category">
-      <div class="props-category-title">${k.replace(/_/g, " ")}</div>
+      <div class="props-category-title">
+        ${k.replace(/_/g, " ")}
+      </div>
+
       ${props.flatMap(p => {
         const rows = [
           { side: "Over", ...p.over },
           { side: "Under", ...p.under }
         ];
-        const evs = rows.map(r => r.ev).filter(v => v != null);
-        const maxEv = evs.length ? Math.max(...evs) : null;
 
-        return rows.map(r => {
-          const sig = valueSignal(r.ev, evs);
-          const best = r.ev === maxEv && maxEv > 0;
-
-          return `
-            <div class="prop-row">
-              <div>
-                <div class="prop-player">${p.player}</div>
-                <div class="prop-line">
-                  ${r.side} ${p.point}
-                  ${best ? `<span class="pill-mini pill-value">BEST VALUE</span>` : ""}
-                </div>
-                <div class="market-meta">
-                  Consensus ${pct(r.prob)}
-                  · Value ${(r.ev * 100).toFixed(1)}%
-                </div>
+        return rows.map(r => `
+          <div class="prop-row">
+            <div>
+              <div class="prop-player">${p.player}</div>
+              <div class="prop-line">
+                ${r.side} ${p.point}
               </div>
-              <div class="prop-right">
-                <div class="signal-bubble ${sig.cls}">${sig.txt}</div>
-                <div class="prop-odds">${fmtOdds(r.odds)}</div>
+              <div class="market-meta">
+                Consensus ${pct(r.prob)}
+                ${r.ev != null ? `· EV ${(r.ev * 100).toFixed(1)}%` : ""}
               </div>
             </div>
-          `;
-        });
+
+            <div class="prop-right">
+              <div class="prop-odds">${fmtOdds(r.odds)}</div>
+            </div>
+          </div>
+        `);
       }).join("")}
     </div>
   `).join("");
@@ -262,17 +152,15 @@ function gameCard(game) {
         <div class="kickoff">${kickoff}</div>
       </div>
 
-      ${buildSummary(game)}
-
-      ${renderMarket("ml", "ML", ml)}
-      ${renderMarket("spread", "SPREAD", spread)}
-      ${renderMarket("total", "TOTAL", total)}
+      ${renderMarket("ML", ml)}
+      ${renderMarket("SPREAD", spread)}
+      ${renderMarket("TOTAL", total)}
 
       <button class="props-toggle">Show Props</button>
       <div class="props-container"></div>
 
       <div class="muted" style="margin-top:8px;font-size:0.75rem">
-        Most Likely reflects market agreement and stability, not payout value.
+        Props and markets shown without client-side ranking.
       </div>
     </div>
   `;

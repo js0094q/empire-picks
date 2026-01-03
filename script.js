@@ -1,7 +1,7 @@
 import { Teams } from "./teams.js";
 
 /* ===============================
-   HELPERS
+   FORMATTERS
    =============================== */
 
 const pct = v =>
@@ -11,7 +11,7 @@ const fmtOdds = o =>
   o == null || !Number.isFinite(o) ? "—" : o > 0 ? `+${o}` : `${o}`;
 
 /* ===============================
-   FETCH (SAFE)
+   FETCH GAMES (FAIL-SAFE)
    =============================== */
 
 async function fetchGames() {
@@ -26,25 +26,29 @@ async function fetchGames() {
 }
 
 /* ===============================
-   RENDERING
+   MARKET HELPERS
    =============================== */
 
 function renderMarket(title, rows) {
   if (!rows.length) return "";
 
-  return rows.map(r => `
-    <div class="market-row">
-      <span class="market-tag">${title}</span>
-      <div class="market-main">
-        <div class="market-name">${r.label}</div>
-        <div class="market-odds">${fmtOdds(r.odds)}</div>
-        <div class="market-meta">
-          Consensus ${pct(r.prob)}
-          ${r.ev != null ? ` · EV ${(r.ev * 100).toFixed(1)}%` : ""}
+  return rows
+    .map(
+      r => `
+      <div class="market-row">
+        <span class="market-tag">${title}</span>
+        <div class="market-main">
+          <div class="market-name">${r.label}</div>
+          <div class="market-odds">${fmtOdds(r.odds)}</div>
+          <div class="market-meta">
+            Consensus ${pct(r.prob)}
+            ${r.ev != null ? ` · EV ${(r.ev * 100).toFixed(1)}%` : ""}
+          </div>
         </div>
       </div>
-    </div>
-  `).join("");
+    `
+    )
+    .join("");
 }
 
 function collectMarket(game, key, formatter) {
@@ -52,9 +56,9 @@ function collectMarket(game, key, formatter) {
   if (!market) return [];
 
   const out = [];
-  Object.values(market).forEach(v => {
-    if (!Array.isArray(v)) return;
-    v.forEach(o => {
+  Object.values(market).forEach(bookRows => {
+    if (!Array.isArray(bookRows)) return;
+    bookRows.forEach(o => {
       out.push({
         label: formatter(o),
         odds: o.odds,
@@ -63,8 +67,13 @@ function collectMarket(game, key, formatter) {
       });
     });
   });
+
   return out;
 }
+
+/* ===============================
+   GAME CARD (PROPS LINK FIXED)
+   =============================== */
 
 function gameCard(game) {
   const home = Teams[game.home_team];
@@ -85,12 +94,15 @@ function gameCard(game) {
   );
 
   return `
-    <div class="game-card">
+    <a href="/props.html?id=${game.id}"
+       class="game-card"
+       style="text-decoration:none;color:inherit">
+
       <div class="game-header">
         <div class="teams">
-          <img src="${away?.logo || ""}" />
+          <img src="${away?.logo || ""}" alt="${game.away_team}" />
           <span>@</span>
-          <img src="${home?.logo || ""}" />
+          <img src="${home?.logo || ""}" alt="${game.home_team}" />
         </div>
         <div class="kickoff">${kickoff}</div>
       </div>
@@ -100,9 +112,9 @@ function gameCard(game) {
       ${renderMarket("TOTAL", total)}
 
       <div class="muted" style="margin-top:8px;font-size:.75rem">
-        Markets may appear as books post lines.
+        Click to view player props
       </div>
-    </div>
+    </a>
   `;
 }
 

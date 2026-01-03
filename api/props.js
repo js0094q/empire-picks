@@ -1,63 +1,84 @@
-// api/props.js
 import fetch from "node-fetch";
 
 const API_KEY = process.env.ODDS_API_KEY;
 const SPORT = "americanfootball_nfl";
-const BASE = "https://api.the-odds-api.com/v4";
 
-function implied(odds) {
-  return odds > 0
-    ? 100 / (odds + 100)
-    : Math.abs(odds) / (Math.abs(odds) + 100);
-}
-
-function confidenceScore(sharp, pub) {
-  return Math.min(1, Math.abs(sharp - pub) * 4);
-}
+const MARKETS = [
+  "player_pass_yds",
+  "player_rush_yds",
+  "player_receptions",
+  "player_pass_tds",
+  "player_pass_attempts",
+  "player_pass_completions",
+  "player_rush_tds"
+].join(",");
 
 export default async function handler(req, res) {
   const { id } = req.query;
-  if (!id) return res.status(400).json({ error: "missing_event_id" });
+  if (!id) return res.status(400).json({ error: "Missing event id" });
 
   try {
     const url =
-      `${BASE}/sports/${SPORT}/events/${id}/odds` +
-      `?regions=us&markets=player_pass_yds,player_rush_yds&oddsFormat=american&apiKey=${API_KEY}`;
+      `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${id}/odds` +
+      `?regions=us&markets=${MARKETS}&oddsFormat=american&apiKey=${API_KEY}`;
 
     const r = await fetch(url);
-    if (!r.ok) throw new Error("props fetch failed");
+    const data = await r.json();
 
-    const game = await r.json();
+    const markets = {};
 
-    const plays = [];
+    for (const book of data.bookmakers ?? []) {
+      for (const m of book.markets ?? []) {
+        if (!markets[m.key]) markets[m.key] = {};
 
-    game.bookmakers.forEach(bm => {
-      bm.markets.forEach(m => {
-        m.outcomes.forEach(o => {
-          const sharp = implied(o.price);
-          const pub = 0.5; // placeholder until you add handle data
+        for (const o of m.outcomes) {
+          const player = o.description;
+          if (!player) continue;
 
-          const score = confidenceScore(sharp, pub);
+          if (!markets[m.key][player]) {
+            markets[m.key][player] = {
+              player,
+              point: o.point,
+              over: [],
+              under: []
+            };
+          }
 
-          plays.push({
-            market: m.key,
-            player: o.description,
-            side: o.name,
-            line: o.point,
+          const side = o.name.toLowerCase();
+          const prob = americanToProb(o.price);
+
+          markets[m.key][player][side].push({
             odds: o.price,
-            sharpProb: sharp,
-            publicProb: pub,
-            confidenceScore: score,
-            decision: score >= 0.6 ? "PLAY" : "PASS",
-            direction: sharp > pub ? "↑" : "↓"
+            prob,
+            book: book.key
           });
-        });
-      });
-    });
+        }
+      }
+    }
 
-    res.status(200).json({ plays });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "props_failed" });
+    for (const mk of Object.keys(markets)) {
+      for (const p of Object.values(markets[mk])) {
+        for (const side of ["over", "under"]) {
+          const cons = weightedConsensus(p[side]);
+          const best = p[side].sort(
+            (a, b) => calcEV(cons, b.odds) - calcEV(cons, a.odds)
+          )[0];
+
+          p[side] = best
+            ? {
+                odds: best.odds,
+                prob: cons,
+                ev: calcEV(cons, best.odds)
+              }
+            : null;
+        }
+      }
+
+      markets[mk] = Object.values(markets[mk]);
+    }
+
+    res.status(200).json({ markets });
+  } catch {
+    res.status(500).json({ error: "Props failed" });
   }
 }

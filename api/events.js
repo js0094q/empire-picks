@@ -1,109 +1,55 @@
 // /api/events.js
-import {
-  impliedProb,
-  removeVig,
-  stabilityScore,
-  expectedValue,
-  confidenceScore
-} from "./math.js";
-
-const SHARP_BOOKS = ["pinnacle", "betonlineag"];
-const PUBLIC_BOOKS = ["fanduel", "draftkings", "betmgm", "caesars"];
-
-const SHARP_WEIGHT = 1.6;
-const PUBLIC_WEIGHT = 1.0;
-
-function weightedProb(entries) {
-  let total = 0;
-  let weightSum = 0;
-
-  for (const e of entries) {
-    total += e.prob * e.weight;
-    weightSum += e.weight;
-  }
-
-  return total / weightSum;
-}
+import { removeVig, sharpWeight, calculateConfidenceScore, decisionGate, directionArrow } from "./math.js";
 
 export default async function handler(req, res) {
   try {
-    const rawGames = await fetchGamesSomehow(); // ← your existing fetch
+    const rawGames = await fetchGamesSomehow(); // your existing Odds API call
 
-    const output = rawGames.map(game => {
-      const markets = ["ml", "spread", "total"].map(type => {
-        const entries = game.markets[type] || [];
-        if (!entries.length) return null;
+    const games = rawGames.map(game => {
+      const odds = game.books.flatMap(b =>
+        b.markets.find(m => m.key === "h2h")?.outcomes || []
+      );
 
-        const probs = entries.map(e => impliedProb(e.odds));
+      const weighted = odds.map(o => ({
+        odds: o.price,
+        weight: sharpWeight(o.book)
+      }));
 
-        const stable = stabilityScore(probs);
+      const probs = removeVig(weighted.map(o => o.odds));
 
-        const sharp = entries.filter(e => SHARP_BOOKS.includes(e.book));
-        const public_ = entries.filter(e => PUBLIC_BOOKS.includes(e.book));
+      const sharpProb = probs.reduce((a, p, i) =>
+        a + p * weighted[i].weight, 0
+      ) / weighted.reduce((a, o) => a + o.weight, 0);
 
-        if (!sharp.length || !public_.length) return null;
+      const publicProb = probs.reduce((a, b) => a + b, 0) / probs.length;
 
-        const sharpProb = weightedProb(
-          sharp.map(e => ({
-            prob: impliedProb(e.odds),
-            weight: SHARP_WEIGHT
-          }))
-        );
+      const ev = sharpProb - publicProb;
+      const marketWidth = Math.max(...weighted.map(o => o.odds)) -
+                          Math.min(...weighted.map(o => o.odds));
 
-        const publicProb = weightedProb(
-          public_.map(e => ({
-            prob: impliedProb(e.odds),
-            weight: PUBLIC_WEIGHT
-          }))
-        );
-
-        const lean = sharpProb - publicProb;
-
-        const best = entries.sort(
-          (a, b) => expectedValue(sharpProb, b.odds) -
-                    expectedValue(sharpProb, a.odds)
-        )[0];
-
-        const ev = expectedValue(sharpProb, best.odds);
-
-        const confidence = confidenceScore({
-          lean,
-          stability: stable,
-          ev
-        });
-
-        return {
-          type,
-          side: best.side,
-          odds: best.odds,
-          book: best.book,
-          sharpProb,
-          publicProb,
-          lean,
-          stability: stable,
-          ev,
-          confidence
-        };
-      }).filter(Boolean);
-
-      const bestMarket = markets.sort(
-        (a, b) => b.confidence - a.confidence
-      )[0];
+      const confidenceScore = calculateConfidenceScore({
+        sharpProb,
+        publicProb,
+        ev,
+        marketWidth,
+        bookCount: game.books.length
+      });
 
       return {
         gameId: game.id,
-        matchup: game.matchup,
-        time: game.time,
-        bestMarket,
-        play:
-          bestMarket &&
-          bestMarket.confidence >= 0.55 &&
-          bestMarket.stability >= 0.6
+        matchup: game.home + " vs " + game.away,
+        market: "ML",
+        sharpProb,
+        publicProb,
+        ev,
+        confidenceScore,
+        decision: decisionGate(confidenceScore),
+        arrow: directionArrow(sharpProb, publicProb)
       };
     });
 
-    res.json(output.filter(g => g.bestMarket));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json(games);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 }

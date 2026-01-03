@@ -1,39 +1,38 @@
-// /api/math.js
+// api/math.js
 
 export function americanToProb(odds) {
   return odds > 0
     ? 100 / (odds + 100)
-    : -odds / (-odds + 100);
+    : Math.abs(odds) / (Math.abs(odds) + 100);
 }
 
-export function removeVig(probs) {
-  const sum = probs.reduce((a, b) => a + b, 0);
-  return probs.map(p => p / sum);
+export function removeVig(oddsArray) {
+  const probs = oddsArray.map(americanToProb);
+  const total = probs.reduce((a, b) => a + b, 0);
+  return probs.map(p => p / total);
 }
 
-export function weightedAverage(values) {
-  const wSum = values.reduce((a, v) => a + v.weight, 0);
-  return values.reduce((a, v) => a + v.prob * v.weight, 0) / wSum;
+export function sharpWeight(book) {
+  const sharpBooks = ["pinnacle", "circa", "betcris"];
+  return sharpBooks.includes(book.toLowerCase()) ? 1.5 : 1.0;
 }
 
-export function confidenceScore({ sharpProb, publicProb, ev, stability }) {
-  return Math.min(
-    100,
-    Math.round(
-      sharpProb * 40 +
-      Math.abs(sharpProb - publicProb) * 100 * 30 +
-      Math.max(ev, 0) * 20 +
-      stability * 10
-    )
-  );
+export function confidenceScore({ lean, ev, bookCount }) {
+  let score = 50;
+
+  score += lean * 100;
+  score += ev * 15;
+  score += Math.min(bookCount, 6) * 3;
+
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 export function decisionGate(score) {
-  if (score >= 70) return "PLAY";
-  if (score >= 55) return "LEAN";
-  return "PASS";
+  return score >= 65 ? "PLAY" : "PASS";
 }
 
-export function directionArrow(sharpProb, publicProb) {
-  return sharpProb > publicProb ? "↑" : "↓";
+export function directionArrow(lean) {
+  if (lean > 0.02) return "↑";
+  if (lean < -0.02) return "↓";
+  return "→";
 }

@@ -1,26 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>EmpirePicks</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="topbar">
+
+  <header class="topbar">
     <div class="logo">EmpirePicks</div>
-  </div>
+  </header>
 
   <main class="layout">
     <section class="hero">
-      <h1>Where sharp money agrees — and where value diverges</h1>
-      <p>Aggregated sharp vs public markets, no-vig probabilities, and confidence-filtered plays.</p>
+      <h1>NFL Market Intelligence</h1>
+      <p>Sharp vs public, no-vig, confidence filtered.</p>
     </section>
 
-    <section class="games">
-      <div class="loading">Loading market intelligence…</div>
-    </section>
+    <section class="games"></section>
   </main>
 
-  <script src="/script.js"></script>
+  <!-- MODULE SCRIPTS -->
+  <script type="module" src="teams.js"></script>
+  <script type="module" src="script.js"></script>
+
 </body>
 </html>

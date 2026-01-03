@@ -1,119 +1,72 @@
-import fetch from "node-fetch";
+// /api/props.js
+import {
+  impliedProb,
+  stabilityScore,
+  expectedValue,
+  confidenceScore
+} from "./math.js";
 
-const API_KEY = process.env.ODDS_API_KEY;
-const SPORT = "americanfootball_nfl";
-
-const SHARP_BOOKS = {
-  pinnacle: 1.6,
-  betonlineag: 1.35,
-};
-
-const PUBLIC_BOOKS = {
-  fanduel: 1.0,
-  draftkings: 1.0,
-  betmgm: 0.95,
-  caesars: 0.9,
-};
-
-const IMPLIED = o => (o > 0 ? 100 / (o + 100) : -o / (-o + 100));
-const NO_VIG = p => {
-  const s = p.reduce((a, b) => a + b, 0);
-  return p.map(x => x / s);
-};
+const SHARP_BOOKS = ["pinnacle", "betonlineag"];
+const PUBLIC_BOOKS = ["fanduel", "draftkings"];
 
 export default async function handler(req, res) {
   try {
-    const eventId = req.query.eventId;
-    if (!eventId) return res.status(400).json([]);
+    const rawProps = await fetchPropsSomehow();
 
-    const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${eventId}/odds?apiKey=${API_KEY}&regions=us&markets=player_pass_yds,player_rush_yds,player_receptions&oddsFormat=american`;
+    const output = rawProps.map(prop => {
+      const entries = prop.lines || [];
+      if (entries.length < 3) return null;
 
-    const r = await fetch(url);
-    const data = await r.json();
+      const probs = entries.map(e => impliedProb(e.odds));
+      const stability = stabilityScore(probs);
 
-    const props = [];
+      const sharp = entries.filter(e => SHARP_BOOKS.includes(e.book));
+      const public_ = entries.filter(e => PUBLIC_BOOKS.includes(e.book));
 
-    data.bookmakers.forEach(b => {
-      const weight =
-        SHARP_BOOKS[b.key] ?? PUBLIC_BOOKS[b.key] ?? null;
-      if (!weight) return;
-
-      b.markets.forEach(m => {
-        m.outcomes.forEach(o => {
-          props.push({
-            player: o.description,
-            stat: m.key,
-            side: o.name,
-            line: o.point,
-            price: o.price,
-            prob: IMPLIED(o.price),
-            weight,
-            book: b.key,
-          });
-        });
-      });
-    });
-
-    const grouped = {};
-    props.forEach(p => {
-      const k = `${p.player}|${p.stat}|${p.line}`;
-      if (!grouped[k]) grouped[k] = [];
-      grouped[k].push(p);
-    });
-
-    const results = [];
-
-    Object.values(grouped).forEach(entries => {
-      const sharp = entries.filter(e => SHARP_BOOKS[e.book]);
-      const pub = entries.filter(e => PUBLIC_BOOKS[e.book]);
-
-      if (sharp.length < 1 || pub.length < 2) return;
+      if (!sharp.length || !public_.length) return null;
 
       const sharpProb =
-        NO_VIG(sharp.map(e => e.prob)).reduce(
-          (a, p, i) => a + p * sharp[i].weight,
-          0
-        ) /
-        sharp.reduce((a, b) => a + b.weight, 0);
+        sharp.reduce((a, b) => a + impliedProb(b.odds), 0) / sharp.length;
 
-      const pubProb =
-        NO_VIG(pub.map(e => e.prob)).reduce(
-          (a, p, i) => a + p * pub[i].weight,
-          0
-        ) /
-        pub.reduce((a, b) => a + b.weight, 0);
+      const publicProb =
+        public_.reduce((a, b) => a + impliedProb(b.odds), 0) / public_.length;
 
-      const lean = sharpProb - pubProb;
+      const lean = sharpProb - publicProb;
 
-      const best = entries.reduce((a, b) =>
-        IMPLIED(b.price) < IMPLIED(a.price) ? b : a
-      );
+      const best = entries.sort(
+        (a, b) => expectedValue(sharpProb, b.odds) -
+                  expectedValue(sharpProb, a.odds)
+      )[0];
 
-      const payout =
-        best.price > 0 ? best.price / 100 : 100 / Math.abs(best.price);
+      const ev = expectedValue(sharpProb, best.odds);
 
-      const ev = sharpProb * payout - 1;
-
-      if (ev < 0.04 || Math.abs(lean) < 0.025) return;
-
-      results.push({
-        player: best.player,
-        stat: best.stat,
-        side: best.side,
-        line: best.line,
-        price: best.price,
-        book: best.book,
-        sharpLean: lean,
-        ev,
-        stability: sharp.length / entries.length,
-        decision: "PLAY",
-        direction: lean > 0 ? "SHARP_OVER" : "SHARP_UNDER",
+      const confidence = confidenceScore({
+        lean,
+        stability,
+        ev
       });
+
+      return {
+        propId: prop.id,
+        player: prop.player,
+        market: prop.market,
+        side: best.side,
+        odds: best.odds,
+        book: best.book,
+        lean,
+        stability,
+        ev,
+        confidence,
+        direction: lean > 0 ? "sharp" : "public",
+        play:
+          confidence >= 0.6 &&
+          stability >= 0.65 &&
+          ev >= 0.04
+      };
     });
 
-    res.status(200).json(results);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json([]);
+    res.json(output.filter(p => p && p.play));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 }

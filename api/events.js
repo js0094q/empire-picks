@@ -1,112 +1,71 @@
 // api/events.js
-// REAL Odds API – ALL GAMES THIS WEEK
-// ML + SPREAD + TOTAL
-// Sharp vs Public lean, EV, confidence
-// Auto-expire 4h post kickoff
-// NEVER hard-crashes
-
-import {
-  americanToProb,
-  sharpWeight,
-  confidenceScore,
-  decisionGate,
-  directionArrow
-} from "./math.js";
 
 const API_KEY = process.env.ODDS_API_KEY;
 const SPORT = "americanfootball_nfl";
-const BASE = "https://api.the-odds-api.com/v4";
-const FOUR_HOURS = 4 * 60 * 60 * 1000;
+const REGIONS = "us";
+const MARKETS = "h2h,spreads,totals";
 
-function calcEV(prob, odds) {
-  const payout = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
-  return prob * payout - (1 - prob);
-}
+const {
+  americanToProb,
+  confidenceScore,
+  decisionGate,
+  directionArrow
+} = require("./math");
 
-export default async function handler(req, res) {
-  res.setHeader("Cache-Control", "s-maxage=120, stale-while-revalidate=60");
-
+module.exports = async (req, res) => {
   try {
-    const url =
-      `${BASE}/sports/${SPORT}/odds` +
-      `?regions=us&markets=h2h,spreads,totals&oddsFormat=american&apiKey=${API_KEY}`;
+    const r = await fetch(
+      `https://api.the-odds-api.com/v4/sports/${SPORT}/odds?regions=${REGIONS}&markets=${MARKETS}&oddsFormat=american&apiKey=${API_KEY}`
+    );
 
-    const r = await fetch(url);
     const data = await r.json();
-
     const now = Date.now();
 
     const games = data
-      .filter(g => {
-        const t = new Date(g.commence_time).getTime();
-        return now < t + FOUR_HOURS;
-      })
-      .map(g => {
+      .filter(g => now < new Date(g.commence_time).getTime() + 4 * 60 * 60 * 1000)
+      .map(game => {
         const markets = {};
 
-        for (const bm of g.bookmakers ?? []) {
-          for (const m of bm.markets ?? []) {
+        for (const book of game.bookmakers || []) {
+          for (const m of book.markets || []) {
             if (!markets[m.key]) markets[m.key] = [];
             for (const o of m.outcomes) {
               markets[m.key].push({
-                label: o.name,
-                point: o.point,
+                name: o.name,
+                point: o.point ?? null,
                 odds: o.price,
-                prob: americanToProb(o.price),
-                weight: sharpWeight(bm.key)
+                prob: americanToProb(o.price)
               });
             }
           }
         }
 
-        const finalize = rows => {
-          if (!rows.length) return [];
-
-          const totalWeight = rows.reduce((a, r) => a + r.weight, 0);
-          const consensus =
-            rows.reduce((a, r) => a + r.prob * r.weight, 0) / totalWeight;
-
-          return rows.map(r => {
-            const ev = calcEV(consensus, r.odds);
-            const lean = r.prob - consensus;
-            const score = confidenceScore({
-              lean,
-              ev,
-              bookCount: rows.length
-            });
-
-            return {
-              label:
-                r.point != null
-                  ? `${r.label} ${r.point > 0 ? "+" : ""}${r.point}`
-                  : r.label,
-              odds: r.odds,
-              prob: consensus,
-              ev,
-              lean,
-              arrow: directionArrow(lean),
-              confidence: score,
-              decision: decisionGate(score)
-            };
-          });
-        };
+        const normalize = key =>
+          (markets[key] || []).map(o => ({
+            ...o,
+            consensus_prob: o.prob,
+            ev:
+              o.prob *
+                (o.odds > 0 ? o.odds / 100 : 100 / Math.abs(o.odds)) -
+              (1 - o.prob)
+          }));
 
         return {
-          id: g.id,
-          commence_time: g.commence_time,
-          home_team: g.home_team,
-          away_team: g.away_team,
+          id: game.id,
+          commence_time: game.commence_time,
+          home_team: game.home_team,
+          away_team: game.away_team,
           markets: {
-            h2h: finalize(markets.h2h || []),
-            spreads: finalize(markets.spreads || []),
-            totals: finalize(markets.totals || [])
+            h2h: { consensus: normalize("h2h") },
+            spreads: { consensus: normalize("spreads") },
+            totals: { consensus: normalize("totals") }
           }
         };
       });
 
+    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=30");
     res.status(200).json(games);
   } catch (e) {
-    console.error(e);
     res.status(200).json([]);
   }
-}
+};

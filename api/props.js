@@ -2,6 +2,17 @@ import fetch from "node-fetch";
 
 const API_KEY = process.env.ODDS_API_KEY;
 const SPORT = "americanfootball_nfl";
+const PROP_CONFIDENCE_MIN = 0.58;
+
+const BOOK_WEIGHTS = {
+  pinnacle: 1.6,
+  betonlineag: 1.35,
+  fanduel: 1.0,
+  draftkings: 1.0,
+  betmgm: 0.95,
+  caesars: 0.9,
+  betrivers: 0.85
+};
 
 const MARKETS = [
   "player_pass_yds",
@@ -12,6 +23,30 @@ const MARKETS = [
   "player_pass_completions",
   "player_rush_tds"
 ].join(",");
+
+function americanToProb(odds) {
+  if (odds > 0) return 100 / (odds + 100);
+  return -odds / (-odds + 100);
+}
+
+function calcEV(prob, odds) {
+  if (!prob || odds == null) return null;
+  const payout = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
+  return prob * payout - (1 - prob);
+}
+
+function weightedConsensus(outcomes) {
+  let wSum = 0;
+  let pSum = 0;
+
+  for (const o of outcomes) {
+    const w = BOOK_WEIGHTS[o.book] ?? 0.75;
+    wSum += w;
+    pSum += o.prob * w;
+  }
+
+  return wSum ? pSum / wSum : null;
+}
 
 export default async function handler(req, res) {
   const { id } = req.query;
@@ -45,11 +80,9 @@ export default async function handler(req, res) {
           }
 
           const side = o.name.toLowerCase();
-          const prob = americanToProb(o.price);
-
           markets[m.key][player][side].push({
             odds: o.price,
-            prob,
+            prob: americanToProb(o.price),
             book: book.key
           });
         }
@@ -64,21 +97,31 @@ export default async function handler(req, res) {
             (a, b) => calcEV(cons, b.odds) - calcEV(cons, a.odds)
           )[0];
 
-          p[side] = best
-            ? {
-                odds: best.odds,
-                prob: cons,
-                ev: calcEV(cons, best.odds)
-              }
-            : null;
+          p[side] =
+            best && cons >= PROP_CONFIDENCE_MIN
+              ? {
+                  odds: best.odds,
+                  prob: cons,
+                  ev: calcEV(cons, best.odds)
+                }
+              : null;
+        }
+
+        if (!p.over && !p.under) {
+          delete markets[mk][p.player];
         }
       }
 
       markets[mk] = Object.values(markets[mk]);
     }
 
+    res.setHeader(
+      "Cache-Control",
+      "s-maxage=60, stale-while-revalidate=30"
+    );
+
     res.status(200).json({ markets });
   } catch {
-    res.status(500).json({ error: "Props failed" });
+    res.status(500).json({ error: "Failed to load props" });
   }
 }

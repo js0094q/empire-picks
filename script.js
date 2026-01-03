@@ -1,19 +1,10 @@
-// script.js
 import { Teams } from "./teams.js";
-
-/* =========================================================
-   SIMPLE FORMATTERS (NO LOGIC)
-   ========================================================= */
 
 const pct = v =>
   v == null || !Number.isFinite(v) ? "—" : (v * 100).toFixed(1) + "%";
 
 const fmtOdds = o =>
   o == null ? "—" : o > 0 ? `+${o}` : `${o}`;
-
-/* =========================================================
-   FETCH
-   ========================================================= */
 
 const fetchGames = async () => {
   const r = await fetch("/api/events");
@@ -27,10 +18,6 @@ const fetchProps = async id => {
   return r.json();
 };
 
-/* =========================================================
-   MARKET RENDERERS (DISPLAY ONLY)
-   ========================================================= */
-
 function renderMarket(tag, rows) {
   if (!rows.length) return "";
 
@@ -39,12 +26,22 @@ function renderMarket(tag, rows) {
       <span class="market-tag">${tag}</span>
 
       <div class="market-main">
-        <div class="market-name">${r.label}</div>
+        <div class="market-name">
+          ${r.label}
+          ${r.isLean ? `
+            <span class="pill-mini pill-play">
+              Lean · ${pct(r.confidence)}
+            </span>` : ""}
+        </div>
+
         <div class="market-odds">${fmtOdds(r.odds)}</div>
 
         <div class="market-meta">
           Consensus ${pct(r.prob)}
-          ${r.ev != null ? `· EV ${(r.ev * 100).toFixed(1)}%` : ""}
+          ${r.delta != null
+            ? ` · Sharp Δ ${(r.delta * 100).toFixed(1)}%`
+            : ""}
+          ${r.ev != null ? ` · EV ${(r.ev * 100).toFixed(1)}%` : ""}
         </div>
       </div>
     </div>
@@ -52,72 +49,30 @@ function renderMarket(tag, rows) {
 }
 
 function collectMarket(game, marketKey, formatter) {
-  const out = [];
   const market = game.markets?.[marketKey];
-  if (!market) return out;
+  if (!market) return [];
 
-  Object.values(market).forEach(book => {
-    book.forEach(o => {
-      out.push({
-        label: formatter(o),
-        odds: o.odds,
-        prob: o.consensus_prob,
-        ev: o.ev
+  const lean = market.lean;
+
+  const out = [];
+  Object.values(market)
+    .filter(Array.isArray)
+    .forEach(book => {
+      book.forEach(o => {
+        out.push({
+          label: formatter(o),
+          odds: o.odds,
+          prob: o.consensus_prob,
+          ev: o.ev,
+          isLean: lean?.label === o.name,
+          confidence: lean?.confidence,
+          delta: lean?.delta
+        });
       });
     });
-  });
 
   return out;
 }
-
-/* =========================================================
-   PROPS (DISPLAY ONLY)
-   ========================================================= */
-
-function renderProps(container, data) {
-  if (!data?.markets) {
-    container.innerHTML = `<div class="muted">No props available.</div>`;
-    return;
-  }
-
-  container.innerHTML = Object.entries(data.markets).map(([k, props]) => `
-    <div class="props-category">
-      <div class="props-category-title">
-        ${k.replace(/_/g, " ")}
-      </div>
-
-      ${props.flatMap(p => {
-        const rows = [
-          { side: "Over", ...p.over },
-          { side: "Under", ...p.under }
-        ];
-
-        return rows.map(r => `
-          <div class="prop-row">
-            <div>
-              <div class="prop-player">${p.player}</div>
-              <div class="prop-line">
-                ${r.side} ${p.point}
-              </div>
-              <div class="market-meta">
-                Consensus ${pct(r.prob)}
-                ${r.ev != null ? `· EV ${(r.ev * 100).toFixed(1)}%` : ""}
-              </div>
-            </div>
-
-            <div class="prop-right">
-              <div class="prop-odds">${fmtOdds(r.odds)}</div>
-            </div>
-          </div>
-        `);
-      }).join("")}
-    </div>
-  `).join("");
-}
-
-/* =========================================================
-   GAME CARD
-   ========================================================= */
 
 function gameCard(game) {
   const home = Teams[game.home_team];
@@ -158,17 +113,9 @@ function gameCard(game) {
 
       <button class="props-toggle">Show Props</button>
       <div class="props-container"></div>
-
-      <div class="muted" style="margin-top:8px;font-size:0.75rem">
-        Props and markets shown without client-side ranking.
-      </div>
     </div>
   `;
 }
-
-/* =========================================================
-   BOOTSTRAP
-   ========================================================= */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");
@@ -206,8 +153,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         btn.textContent = "Show Props";
       }
     });
-  } catch (err) {
+  } catch {
     container.innerHTML = `<div class="muted">Failed to load games.</div>`;
-    console.error(err);
   }
 });

@@ -3,12 +3,19 @@
   --panel: #0f172a;
   --panel-2: #111827;
   --border: rgba(255,255,255,.08);
+
   --text: #e5e7eb;
   --muted: #94a3b8;
+
   --green: #22c55e;
   --red: #ef4444;
   --blue: #38bdf8;
+  --purple: #a855f7;
 }
+
+/* =====================
+   RESET / BASE
+   ===================== */
 
 * {
   box-sizing: border-box;
@@ -21,17 +28,47 @@ body {
   color: var(--text);
 }
 
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* =====================
+   TOP NAV
+   ===================== */
+
 .topbar {
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   border-bottom: 1px solid var(--border);
 }
 
 .logo {
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
+
+.nav {
+  display: flex;
+  gap: 16px;
+}
+
+.nav-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--blue);
+}
+
+/* =====================
+   LAYOUT
+   ===================== */
 
 .layout {
   max-width: 1100px;
@@ -48,12 +85,17 @@ body {
 }
 
 .hero h1 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
 .hero p {
+  margin: 0;
   color: var(--muted);
 }
+
+/* =====================
+   GRID / CARDS
+   ===================== */
 
 .games {
   display: grid;
@@ -67,132 +109,103 @@ body {
   border: 1px solid var(--border);
 }
 
-.game-header {
+/* =====================
+   MARKET ROWS (used by props + markets)
+   ===================== */
+
+.market-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.teams {
-  font-weight: 600;
-}
-
-.time {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.market {
+  align-items: center;
   padding: 14px;
   background: rgba(255,255,255,.02);
   border-radius: 12px;
   border: 1px solid var(--border);
 }
 
-.pick {
+.market-main {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.market-name {
+  font-weight: 600;
+  display: flex;
   align-items: center;
-}
-
-.market-type {
-  color: var(--blue);
-  font-weight: 600;
-}
-
-.selection {
-  font-weight: 600;
-}
-
-.book {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.badges {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
   gap: 8px;
 }
 
-.badge {
-  padding: 4px 10px;
+.market-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* =====================
+   BADGES / PILLS
+   ===================== */
+
+.pill-mini {
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
-  background: rgba(255,255,255,.06);
-}
-
-.badge.value {
-  background: rgba(34,197,94,.15);
-}
-
-.badge.lean {
-  background: rgba(56,189,248,.15);
-}
-
-.badge.stability {
-  background: rgba(168,85,247,.15);
-}
-
-.badge.decision.PLAY {
-  background: rgba(34,197,94,.25);
+  font-size: 0.7rem;
   font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
-.badge.decision.PASS {
+.pill-play {
+  background: rgba(34,197,94,.25);
+  color: var(--green);
+}
+
+.pill-pass {
   background: rgba(239,68,68,.25);
+  color: var(--red);
 }
 
-.props-toggle {
-  margin-top: 12px;
-  background: none;
-  color: var(--blue);
-  border: none;
-  cursor: pointer;
-}
-
-.props {
-  margin-top: 12px;
-  display: none;
-}
-
-.props.open {
-  display: block;
-}
-
-.prop-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-}
-
-.prop-meta {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
+/* =====================
+   CONFIDENCE / ARROWS
+   ===================== */
 
 .arrow {
+  font-size: 1.25rem;
   font-weight: 700;
 }
 
-.ev {
+.arrow.up {
   color: var(--green);
 }
 
-.decision.PLAY {
-  color: var(--green);
-  font-weight: 700;
+.arrow.down {
+  color: var(--red);
 }
+
+.arrow.flat {
+  color: var(--muted);
+}
+
+/* =====================
+   MUTED / EMPTY STATES
+   ===================== */
 
 .muted {
   color: var(--muted);
-  padding: 20px;
+  padding: 24px;
+  text-align: center;
 }
 
-.loading {
-  color: var(--muted);
+/* =====================
+   RESPONSIVE
+   ===================== */
+
+@media (max-width: 640px) {
+  .market-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .arrow {
+    align-self: flex-end;
+  }
 }

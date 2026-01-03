@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>EmpirePicks – Player Props</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -17,46 +18,14 @@
   <main class="layout">
     <section class="hero">
       <h1>Player Props</h1>
-      <p>Sharp vs public, confidence-filtered player markets.</p>
+      <p>Sharp-weighted, confidence-filtered player markets.</p>
     </section>
 
-    <div id="props-container" class="games"></div>
+    <div id="props-container" class="games">
+      <div class="muted">Loading player props…</div>
+    </div>
   </main>
 
-  <script type="module">
-    const params = new URLSearchParams(window.location.search);
-    const eventId = params.get("id");
-
-    const container = document.getElementById("props-container");
-    if (!eventId) {
-      container.innerHTML = `<div class="muted">Select a game to view props.</div>`;
-    } else {
-      fetch(`/api/props?id=${eventId}`)
-        .then(r => r.json())
-        .then(d => {
-          container.innerHTML = d.plays.map(p => `
-            <div class="game-card">
-              <div class="market-row">
-                <div class="market-main">
-                  <div class="market-name">
-                    ${p.player} – ${p.side} ${p.line}
-                    <span class="pill-mini ${p.decision === "PLAY" ? "pill-play" : "pill-pass"}">
-                      ${p.decision}
-                    </span>
-                  </div>
-                  <div class="market-meta">
-                    Odds ${p.odds} · Confidence ${(p.confidenceScore * 100).toFixed(0)}%
-                  </div>
-                </div>
-                <div class="arrow">${p.direction}</div>
-              </div>
-            </div>
-          `).join("");
-        })
-        .catch(() => {
-          container.innerHTML = `<div class="muted">Failed to load props.</div>`;
-        });
-    }
-  </script>
+  <script type="module" src="/props-client.js"></script>
 </body>
 </html>

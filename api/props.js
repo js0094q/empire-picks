@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 const API_KEY = process.env.ODDS_API_KEY;
 const SPORT = "americanfootball_nfl";
 const PROP_CONFIDENCE_MIN = 0.58;

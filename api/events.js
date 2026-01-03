@@ -1,89 +1,66 @@
-// /api/events.js
-
-import fetch from "node-fetch";
+// api/events.js
 import {
-  americanToProb,
   removeVig,
-  weightedAverage,
+  sharpWeight,
   confidenceScore,
   decisionGate,
   directionArrow
 } from "./math.js";
 
-const API_KEY = process.env.ODDS_API_KEY;
-const BASE = "https://api.the-odds-api.com/v4";
-const SPORT = "americanfootball_nfl";
-
-const BOOK_WEIGHTS = {
-  pinnacle: 1.6,
-  betonlineag: 1.4,
-  fanduel: 1.0,
-  draftkings: 1.0,
-  betmgm: 0.95,
-  caesars: 0.9
-};
-
 export default async function handler(req, res) {
   try {
-    const url = `${BASE}/sports/${SPORT}/odds?markets=h2h,spreads,totals&regions=us&oddsFormat=american&apiKey=${API_KEY}`;
-    const r = await fetch(url);
-    const games = await r.json();
+    const rawGames = await fetchGamesSomehow(); // your existing fetch
 
-    const output = games.map(game => {
-      const marketViews = ["h2h", "spreads", "totals"].map(key => {
-        const entries = [];
+    const games = rawGames.map(game => {
+      const weighted = game.books.map(b => ({
+        prob: removeVig(b.odds)[0],
+        weight: sharpWeight(b.book),
+        odds: b.odds,
+        book: b.book
+      }));
 
-        game.bookmakers.forEach(b => {
-          const m = b.markets.find(x => x.key === key);
-          if (!m) return;
+      const sharpProb =
+        weighted.reduce((a, b) => a + b.prob * b.weight, 0) /
+        weighted.reduce((a, b) => a + b.weight, 0);
 
-          m.outcomes.forEach(o => {
-            entries.push({
-              prob: americanToProb(o.price),
-              odds: o.price,
-              weight: BOOK_WEIGHTS[b.key] || 1,
-              book: b.key,
-              side: o.name,
-              point: o.point ?? null
-            });
-          });
-        });
+      const publicProb =
+        weighted.reduce((a, b) => a + b.prob, 0) / weighted.length;
 
-        if (entries.length < 2) return null;
+      const lean = sharpProb - publicProb;
+      const ev = sharpProb * (Math.abs(weighted[0].odds) / 100) - (1 - sharpProb);
 
-        const sharpProb = weightedAverage(entries);
-        const publicProb =
-          entries.reduce((a, b) => a + b.prob, 0) / entries.length;
-
-        const ev = sharpProb - publicProb;
-        const stability = Math.min(1, entries.length / 10);
-
-        const score = confidenceScore({
-          sharpProb,
-          publicProb,
-          ev,
-          stability
-        });
-
-        return {
-          market: key,
-          bestLine: entries.sort((a, b) => b.odds - a.odds)[0],
-          confidenceScore: score,
-          decision: decisionGate(score),
-          arrow: directionArrow(sharpProb, publicProb)
-        };
-      }).filter(Boolean);
+      const score = confidenceScore({
+        lean,
+        ev,
+        bookCount: weighted.length
+      });
 
       return {
-        gameId: game.id,
-        home: game.home_team,
-        away: game.away_team,
-        commence: game.commence_time,
-        markets: marketViews
+        id: game.id,
+        teams: game.teams,
+        time: game.time,
+        market: {
+          type: "ML",
+          selection: game.selection,
+          odds: game.bestOdds,
+          bestBook: game.bestBook,
+          sharpProb,
+          publicProb,
+          lean,
+          ev,
+          confidenceScore: score,
+          decision: decisionGate(score),
+          direction: directionArrow(lean),
+          badges: {
+            marketLean: Math.abs(lean) > 0.03,
+            bestValue: ev > 0.02,
+            stability: score > 70
+          }
+        }
       };
     });
 
-    res.status(200).json(output);
+    res.status(200).json({ games });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

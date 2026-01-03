@@ -1,48 +1,39 @@
 // /api/math.js
 
-export function removeVig(oddsArray) {
-  const probs = oddsArray.map(o => {
-    if (o > 0) return 100 / (o + 100);
-    return Math.abs(o) / (Math.abs(o) + 100);
-  });
-  const total = probs.reduce((a, b) => a + b, 0);
-  return probs.map(p => p / total);
+export function americanToProb(odds) {
+  return odds > 0
+    ? 100 / (odds + 100)
+    : -odds / (-odds + 100);
 }
 
-export function sharpWeight(book) {
-  const sharpBooks = ["pinnacle", "circa", "betcris"];
-  if (sharpBooks.includes(book)) return 1.5;
-  return 1.0;
+export function removeVig(probs) {
+  const sum = probs.reduce((a, b) => a + b, 0);
+  return probs.map(p => p / sum);
 }
 
-export function calculateConfidenceScore({
-  sharpProb,
-  publicProb,
-  ev,
-  marketWidth,
-  bookCount
-}) {
-  const lean = Math.abs(sharpProb - publicProb);
-  const stability = Math.max(0, 1 - marketWidth / 20);
-  const evScore = Math.min(Math.max(ev * 5, -1), 1);
+export function weightedAverage(values) {
+  const wSum = values.reduce((a, v) => a + v.weight, 0);
+  return values.reduce((a, v) => a + v.prob * v.weight, 0) / wSum;
+}
 
-  const score =
-    lean * 40 +
-    stability * 30 +
-    evScore * 20 +
-    Math.min(bookCount / 10, 1) * 10;
-
-  return Math.round(Math.min(Math.max(score, 0), 100));
+export function confidenceScore({ sharpProb, publicProb, ev, stability }) {
+  return Math.min(
+    100,
+    Math.round(
+      sharpProb * 40 +
+      Math.abs(sharpProb - publicProb) * 100 * 30 +
+      Math.max(ev, 0) * 20 +
+      stability * 10
+    )
+  );
 }
 
 export function decisionGate(score) {
-  if (score >= 75) return "PLAY";
-  if (score >= 60) return "LEAN";
+  if (score >= 70) return "PLAY";
+  if (score >= 55) return "LEAN";
   return "PASS";
 }
 
 export function directionArrow(sharpProb, publicProb) {
-  if (sharpProb - publicProb > 0.03) return "UP";
-  if (publicProb - sharpProb > 0.03) return "DOWN";
-  return "FLAT";
+  return sharpProb > publicProb ? "↑" : "↓";
 }

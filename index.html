@@ -4,39 +4,29 @@
   <meta charset="UTF-8" />
   <title>EmpirePicks | NFL Market Intelligence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
   <header class="topbar">
-    <div class="brand">EmpirePicks</div>
-    <button class="about-btn">About</button>
+    <div class="logo">EmpirePicks</div>
+    <div class="tag">NFL Market Intelligence</div>
   </header>
 
   <main class="layout">
     <section class="hero">
-      <span class="pill">NFL MARKET INTELLIGENCE</span>
-      <h1>See where sportsbooks agree — and where value diverges</h1>
+      <h1>Where sharp money agrees — and where value diverges</h1>
       <p>
-        EmpirePicks aggregates sharp and public books, removes vig,
-        and highlights consensus outcomes and value discrepancies.
+        Aggregated sharp vs public markets, no-vig probabilities, and
+        confidence-filtered plays.
       </p>
-      <div class="legend">
-        <span class="dot blue"></span> Most Likely Outcome
-        <span class="dot green"></span> Value Signal
-        <span class="dot purple"></span> Consensus Stability
-      </div>
     </section>
 
-    <section id="games-container" class="games">
-      <div class="muted">Loading games…</div>
+    <section id="games" class="games">
+      <div class="loading">Loading market intelligence…</div>
     </section>
   </main>
 
-  <footer class="footer">
-    Data powered by The Odds API · EmpirePicks
-  </footer>
-
-  <script type="module" src="/script.js"></script>
+  <script src="markets.js"></script>
 </body>
 </html>

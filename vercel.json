@@ -3,8 +3,10 @@
 
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "props.html", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },
     { "src": "script.js", "use": "@vercel/static" },
+    { "src": "props-client.js", "use": "@vercel/static" },
     { "src": "teams.js", "use": "@vercel/static" },
 
     { "src": "api/events.js", "use": "@vercel/node" },

@@ -1,118 +1,140 @@
-import {
-  BASE_URL,
-  BOOK_WEIGHTS
-} from "./config.js";
-
+import fetch from "node-fetch";
+import { BASE_URL, SPORT } from "./config.js";
 import {
   impliedProb,
   noVig,
   weightedAverage,
-  stabilityScore,
-  expectedValue
+  expectedValue,
+  stabilityScore
 } from "./math.js";
 
 const API_KEY = process.env.ODDS_API_KEY;
 
+const SHARP_BOOKS = ["pinnacle", "circa", "betonlineag"];
+const PUBLIC_BOOKS = ["draftkings", "fanduel", "betmgm", "caesars", "betrivers"];
+
+function splitBooks(bookmakers, marketKey) {
+  const sharp = [];
+  const publicB = [];
+  const all = [];
+
+  for (const b of bookmakers) {
+    const market = b.markets.find(m => m.key === marketKey);
+    if (!market) continue;
+
+    for (const o of market.outcomes) {
+      const entry = {
+        name: o.name,
+        odds: o.price,
+        prob: impliedProb(o.price),
+        book: b.key
+      };
+
+      all.push(entry);
+      if (SHARP_BOOKS.includes(b.key)) sharp.push(entry);
+      if (PUBLIC_BOOKS.includes(b.key)) publicB.push(entry);
+    }
+  }
+
+  return { sharp, publicB, all };
+}
+
+function buildPropView({ sharp, publicB, all }, label) {
+  if (sharp.length < 2 || publicB.length < 2) return null;
+
+  const sharpFair = weightedAverage(sharp);
+  const publicFair = weightedAverage(publicB);
+
+  const [_, sharpProb] = noVig(publicFair, sharpFair);
+
+  const best = all.sort((a, b) => b.odds - a.odds)[0];
+
+  const stability = stabilityScore([
+    ...sharp.map(x => x.prob),
+    ...publicB.map(x => x.prob)
+  ]);
+
+  const ev = expectedValue(sharpProb, best.odds, stability);
+  const sharpLean = sharpProb - publicFair;
+
+  return {
+    label,
+    side: best.name,
+    odds: best.odds,
+
+    sharp_prob: sharpProb,
+    public_prob: publicFair,
+    sharp_lean: sharpLean,
+
+    ev,
+    stability
+  };
+}
+
 export default async function handler(req, res) {
   try {
-    const eventId = req.query.id;
-
-    if (!eventId) {
-      return res.status(400).json({ error: "Missing event id" });
-    }
-
-    if (!API_KEY) {
-      throw new Error("Missing ODDS_API_KEY");
+    const gameId = req.query.id;
+    if (!gameId) {
+      return res.status(400).json({ error: "Missing game id" });
     }
 
     const url =
-      `${BASE_URL}/sports/americanfootball_nfl/events/${eventId}/odds` +
-      `?regions=us&markets=player_pass_yds,player_rush_yds,player_receptions` +
+      `${BASE_URL}/sports/${SPORT}/events/${gameId}/odds` +
+      `?regions=us&markets=player_pass_yds,player_rush_yds,player_receptions,player_rec_yds` +
       `&oddsFormat=american&apiKey=${API_KEY}`;
 
     const r = await fetch(url);
-
-    if (!r.ok) {
-      return res.status(200).json({ markets: {} });
-    }
+    if (!r.ok) throw new Error("Odds API failure");
 
     const data = await r.json();
+    const bookmakers = data.bookmakers ?? [];
 
-    if (!data.bookmakers?.length) {
-      return res.status(200).json({ markets: {} });
+    const output = [];
+
+    for (const market of bookmakers.flatMap(b => b.markets)) {
+      const key = market.key;
+      if (!key.startsWith("player_")) continue;
+
+      const over = buildPropView(
+        splitBooks(bookmakers, key).sharp.filter(o => o.name === "Over"),
+        "OVER"
+      );
+
+      const under = buildPropView(
+        splitBooks(bookmakers, key).sharp.filter(o => o.name === "Under"),
+        "UNDER"
+      );
+
+      if (!over || !under) continue;
+
+      const best = over.ev > under.ev ? over : under;
+
+      // AUTO-HIDE RULES
+      if (best.stability < 0.65) continue;
+      if (Math.abs(best.sharp_lean) < 0.03) continue;
+      if (best.ev < 0.015) continue;
+
+      output.push({
+        market: key,
+        player: market.outcomes[0]?.description ?? "Unknown",
+
+        ...best,
+
+        decision:
+          best.ev >= 0.02 && best.stability >= 0.75
+            ? "PLAY"
+            : "PASS",
+
+        confidence:
+          best.ev >= 0.03 && best.stability >= 0.8
+            ? "HIGH"
+            : "MEDIUM"
+      });
     }
 
-    const out = {};
-
-    for (const book of data.bookmakers) {
-      const weight = BOOK_WEIGHTS[book.key] || 1;
-
-      for (const market of book.markets || []) {
-        if (!market.outcomes?.length) continue;
-
-        if (!out[market.key]) out[market.key] = {};
-
-        for (const o of market.outcomes) {
-          const player = o.description || o.name;
-          if (!player) continue;
-
-          if (!out[market.key][player]) {
-            out[market.key][player] = {
-              player,
-              point: o.point,
-              over: [],
-              under: []
-            };
-          }
-
-          const side = o.name.toLowerCase().includes("over")
-            ? "over"
-            : "under";
-
-          out[market.key][player][side].push({
-            odds: o.price,
-            prob: impliedProb(o.price),
-            w: weight
-          });
-        }
-      }
-    }
-
-    const markets = {};
-
-    for (const [marketKey, players] of Object.entries(out)) {
-      markets[marketKey] = Object.values(players).map(p => {
-        if (!p.over.length || !p.under.length) return null;
-
-        const oFair = weightedAverage(p.over);
-        const uFair = weightedAverage(p.under);
-        const [fOver, fUnder] = noVig(oFair, uFair);
-
-        const stability = stabilityScore([
-          ...p.over.map(x => x.prob),
-          ...p.under.map(x => x.prob)
-        ]);
-
-        return {
-          player: p.player,
-          point: p.point,
-          over: {
-            odds: p.over[0].odds,
-            prob: fOver,
-            ev: expectedValue(fOver, p.over[0].odds, stability)
-          },
-          under: {
-            odds: p.under[0].odds,
-            prob: fUnder,
-            ev: expectedValue(fUnder, p.under[0].odds, stability)
-          }
-        };
-      }).filter(Boolean);
-    }
-
-    res.status(200).json({ markets });
+    res.status(200).json(output);
   } catch (err) {
-    console.error("PROPS ERROR:", err.message);
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 }

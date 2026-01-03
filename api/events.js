@@ -1,137 +1,150 @@
-// /api/events.js
 import fetch from "node-fetch";
 
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
+const API_KEY = process.env.ODDS_API_KEY;
 const SPORT = "americanfootball_nfl";
 const REGIONS = "us";
 const MARKETS = "h2h,spreads,totals";
 
-const SHARP_BOOKS = ["pinnacle", "betonlineag"];
-const PUBLIC_BOOKS = ["draftkings", "fanduel", "betmgm", "caesars"];
+const SHARP_BOOKS = {
+  pinnacle: 1.6,
+  betonlineag: 1.35,
+};
 
-function americanToProb(odds) {
-  return odds > 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
-}
+const PUBLIC_BOOKS = {
+  fanduel: 1.0,
+  draftkings: 1.0,
+  betmgm: 0.95,
+  caesars: 0.9,
+  betrivers: 0.85,
+};
 
-function removeVig(p1, p2) {
-  const total = p1 + p2;
-  return [p1 / total, p2 / total];
-}
+const IMPLIED = o => (o > 0 ? 100 / (o + 100) : -o / (-o + 100));
 
-function weightedAvg(values) {
-  let wSum = 0;
-  let total = 0;
-  values.forEach(({ v, w }) => {
-    wSum += v * w;
-    total += w;
-  });
-  return total ? wSum / total : null;
-}
-
-function scoreMarket({ ev, sharpLean, stability }) {
-  if (ev < 0.02 || stability < 0.7) return "PASS";
-  if (ev > 0.04 && Math.abs(sharpLean) > 0.04) return "PLAY";
-  return "PASS";
-}
+const NO_VIG = probs => {
+  const sum = probs.reduce((a, b) => a + b, 0);
+  return probs.map(p => p / sum);
+};
 
 export default async function handler(req, res) {
   try {
-    const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/odds/?apiKey=${ODDS_API_KEY}&regions=${REGIONS}&markets=${MARKETS}`;
-    const data = await fetch(url).then(r => r.json());
+    const url = `https://api.the-odds-api.com/v4/sports/${SPORT}/odds?apiKey=${API_KEY}&regions=${REGIONS}&markets=${MARKETS}&oddsFormat=american`;
 
-    const games = data.map(game => {
-      const markets = { ml: [], spread: [], total: [] };
+    const response = await fetch(url);
+    const games = await response.json();
 
-      game.bookmakers.forEach(bm => {
+    const output = games.map(game => {
+      const markets = { h2h: [], spreads: [], totals: [] };
+
+      game.bookmakers.forEach(b => {
         const weight =
-          SHARP_BOOKS.includes(bm.key) ? 1.5 :
-          PUBLIC_BOOKS.includes(bm.key) ? 1.0 : 0.5;
+          SHARP_BOOKS[b.key] ?? PUBLIC_BOOKS[b.key] ?? null;
+        if (!weight) return;
 
-        bm.markets.forEach(m => {
-          if (!["h2h", "spreads", "totals"].includes(m.key)) return;
-
-          const outcomes = m.outcomes;
-          if (outcomes.length !== 2) return;
-
-          const pA = americanToProb(outcomes[0].price);
-          const pB = americanToProb(outcomes[1].price);
-          const [nvA, nvB] = removeVig(pA, pB);
-
-          markets[
-            m.key === "h2h" ? "ml" :
-            m.key === "spreads" ? "spread" : "total"
-          ].push({
-            sideA: outcomes[0].name,
-            sideB: outcomes[1].name,
-            line: outcomes[0].point ?? null,
-            priceA: outcomes[0].price,
-            priceB: outcomes[1].price,
-            probA: nvA,
-            probB: nvB,
-            weight,
-            sharp: SHARP_BOOKS.includes(bm.key),
-            book: bm.key
+        b.markets.forEach(m => {
+          m.outcomes.forEach(o => {
+            markets[m.key].push({
+              team: o.name,
+              line: o.point ?? null,
+              price: o.price,
+              prob: IMPLIED(o.price),
+              weight,
+              book: b.key,
+            });
           });
         });
       });
 
-      function aggregateMarket(rows) {
-        if (!rows.length) return null;
+      function buildMarket(type) {
+        if (!markets[type].length) return null;
 
-        const sharp = rows.filter(r => r.sharp);
-        const publicRows = rows.filter(r => !r.sharp);
+        const grouped = {};
+        markets[type].forEach(o => {
+          const key = `${o.team}|${o.line}`;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(o);
+        });
 
-        const sharpProb = weightedAvg(sharp.map(r => ({ v: r.probA, w: r.weight })));
-        const publicProb = weightedAvg(publicRows.map(r => ({ v: r.probA, w: r.weight })));
+        let best = null;
 
-        if (!sharpProb || !publicProb) return null;
+        Object.values(grouped).forEach(entries => {
+          const sharp = entries.filter(e => SHARP_BOOKS[e.book]);
+          const pub = entries.filter(e => PUBLIC_BOOKS[e.book]);
 
-        const sharpLean = sharpProb - publicProb;
-        const consensusProb = weightedAvg(rows.map(r => ({ v: r.probA, w: r.weight })));
+          if (sharp.length < 1 || pub.length < 2) return;
 
-        const best = rows.sort((a, b) =>
-          americanToProb(a.priceA) - americanToProb(b.priceA)
-        )[0];
+          const sharpProb =
+            NO_VIG(sharp.map(e => e.prob)).reduce(
+              (a, p, i) => a + p * sharp[i].weight,
+              0
+            ) /
+            sharp.reduce((a, b) => a + b.weight, 0);
 
-        const ev = consensusProb - americanToProb(best.priceA);
-        const stability = 1 - Math.abs(sharpLean);
+          const pubProb =
+            NO_VIG(pub.map(e => e.prob)).reduce(
+              (a, p, i) => a + p * pub[i].weight,
+              0
+            ) /
+            pub.reduce((a, b) => a + b.weight, 0);
 
-        return {
-          pick: best.sideA,
-          market: best.line !== null ? "spread/total" : "moneyline",
-          line: best.line,
-          bestPrice: best.priceA,
-          book: best.book,
-          sharpProb,
-          publicProb,
-          sharpLean,
-          ev,
-          stability,
-          decision: scoreMarket({ ev, sharpLean, stability })
-        };
+          const lean = sharpProb - pubProb;
+
+          const stability =
+            entries.filter(e => Math.abs(e.prob - sharpProb) < 0.015)
+              .length / entries.length;
+
+          const bestLine = entries.reduce((a, b) =>
+            IMPLIED(b.price) < IMPLIED(a.price) ? b : a
+          );
+
+          const payout =
+            bestLine.price > 0
+              ? bestLine.price / 100
+              : 100 / Math.abs(bestLine.price);
+
+          const ev = sharpProb * payout - 1;
+
+          if (!best || ev > best.ev) {
+            best = {
+              market: type,
+              pick: bestLine.team,
+              line: bestLine.line,
+              bestPrice: bestLine.price,
+              book: bestLine.book,
+              sharpProb,
+              publicProb: pubProb,
+              sharpLean: lean,
+              ev,
+              stability,
+              decision:
+                ev >= 0.03 && Math.abs(lean) >= 0.02 ? "PLAY" : "PASS",
+            };
+          }
+        });
+
+        return best;
       }
 
-      const ml = aggregateMarket(markets.ml);
-      const spread = aggregateMarket(markets.spread);
-      const total = aggregateMarket(markets.total);
+      const candidates = [
+        buildMarket("h2h"),
+        buildMarket("spreads"),
+        buildMarket("totals"),
+      ].filter(Boolean);
 
-      const bestMarket = [ml, spread, total]
-        .filter(m => m && m.decision === "PLAY")
-        .sort((a, b) => b.ev - a.ev)[0];
-
-      if (!bestMarket) return null;
+      const bestMarket = candidates.sort((a, b) => b.ev - a.ev)[0];
+      if (!bestMarket || bestMarket.decision !== "PLAY") return null;
 
       return {
         id: game.id,
         commence_time: game.commence_time,
         home: game.home_team,
         away: game.away_team,
-        bestMarket
+        bestMarket,
       };
-    }).filter(Boolean);
+    });
 
-    res.status(200).json({ games });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(200).json(output.filter(Boolean));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "events_failed" });
   }
 }

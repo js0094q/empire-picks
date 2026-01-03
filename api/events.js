@@ -1,48 +1,77 @@
-import fetch from "node-fetch";
+// api/events.js
+// GUARANTEED NOT TO CRASH
+// NO IMPORTS
+// NO ENV VARS
+// NO EXTERNAL CALLS
 
-const API_KEY = process.env.ODDS_API_KEY;
-const SPORT = "americanfootball_nfl";
+module.exports = async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
 
-export default async function handler(req, res) {
   try {
-    const url =
-      `https://api.the-odds-api.com/v4/sports/${SPORT}/odds` +
-      `?regions=us&markets=h2h,spreads,totals&oddsFormat=american&apiKey=${API_KEY}`;
-
-    const r = await fetch(url);
-    const text = await r.text();
-    const data = JSON.parse(text);
-
-    if (!Array.isArray(data)) {
-      res.status(200).json([]);
-      return;
-    }
-
-    const games = data.map(g => ({
-      id: g.id,
-      commence_time: g.commence_time,
-      home_team: g.home_team,
-      away_team: g.away_team,
-      markets: Object.fromEntries(
-        (g.bookmakers || []).flatMap(b =>
-          (b.markets || []).map(m => [
-            m.key,
-            {
-              ...(b.key ? { [b.key]: m.outcomes.map(o => ({
-                name: o.name,
-                odds: o.price,
-                point: o.point,
-                consensus_prob: null,
-                ev: null
-              })) } : {})
-            }
-          ])
-        )
-      )
-    }));
-
-    res.status(200).json(games);
+    res.status(200).json([
+      {
+        id: "test-game-1",
+        commence_time: new Date(Date.now() + 3600000).toISOString(),
+        home_team: "Kansas City Chiefs",
+        away_team: "Buffalo Bills",
+        markets: {
+          h2h: {
+            testbook: [
+              {
+                name: "Kansas City Chiefs",
+                odds: -140,
+                consensus_prob: 0.60,
+                ev: 0.05
+              },
+              {
+                name: "Buffalo Bills",
+                odds: +120,
+                consensus_prob: 0.40,
+                ev: -0.03
+              }
+            ]
+          },
+          spreads: {
+            testbook: [
+              {
+                name: "Kansas City Chiefs",
+                point: -3.5,
+                odds: -110,
+                consensus_prob: 0.55,
+                ev: 0.02
+              },
+              {
+                name: "Buffalo Bills",
+                point: +3.5,
+                odds: -110,
+                consensus_prob: 0.45,
+                ev: -0.02
+              }
+            ]
+          },
+          totals: {
+            testbook: [
+              {
+                name: "Over",
+                point: 47.5,
+                odds: -110,
+                consensus_prob: 0.52,
+                ev: 0.01
+              },
+              {
+                name: "Under",
+                point: 47.5,
+                odds: -110,
+                consensus_prob: 0.48,
+                ev: -0.01
+              }
+            ]
+          }
+        }
+      }
+    ]);
   } catch {
+    // EVEN IF THIS THROWS, WE STILL RETURN JSON
     res.status(200).json([]);
   }
-}
+};

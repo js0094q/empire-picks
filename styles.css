@@ -1,14 +1,13 @@
 :root {
   --bg: #020617;
   --panel: #0f172a;
-  --panel-2: rgba(255,255,255,0.04);
-  --border: rgba(255,255,255,0.08);
-  --text: #f8fafc;
+  --panel-2: #111827;
+  --border: rgba(255,255,255,.08);
+  --text: #e5e7eb;
   --muted: #94a3b8;
-
-  --blue: #60a5fa;
-  --green: #4ade80;
-  --purple: #c084fc;
+  --green: #22c55e;
+  --red: #ef4444;
+  --blue: #38bdf8;
 }
 
 * {
@@ -17,160 +16,183 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #020617, #000);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background: radial-gradient(1200px 600px at 50% -20%, #0f172a, #020617);
   color: var(--text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .topbar {
+  padding: 16px 24px;
   display: flex;
   justify-content: space-between;
-  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
 }
 
-.brand {
-  font-weight: 600;
-}
-
-.about-btn {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 6px 12px;
-  cursor: pointer;
+.logo {
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .layout {
-  max-width: 880px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 24px;
 }
 
 .hero {
-  background: linear-gradient(135deg, #020617, #052e2b);
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #0f172a, #020617);
+  padding: 28px;
   border-radius: 16px;
-  padding: 32px;
-  margin-bottom: 32px;
-  text-align: center;
+  border: 1px solid var(--border);
+  margin-bottom: 28px;
 }
 
 .hero h1 {
-  margin: 12px 0;
-  font-size: 1.6rem;
+  margin: 0 0 8px;
 }
 
 .hero p {
   color: var(--muted);
 }
 
-.pill {
-  display: inline-block;
-  background: var(--panel-2);
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-}
-
-.legend {
-  margin-top: 16px;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin: 0 6px;
-}
-
-.dot.blue { background: var(--blue); }
-.dot.green { background: var(--green); }
-.dot.purple { background: var(--purple); }
-
 .games {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  gap: 20px;
 }
 
 .game-card {
-  background: var(--panel);
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border-radius: 16px;
+  padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px;
 }
 
 .game-header {
   display: flex;
   justify-content: space-between;
   margin-bottom: 12px;
-  font-size: 0.85rem;
-  color: var(--muted);
 }
 
-.market-row {
+.teams {
+  font-weight: 600;
+}
+
+.time {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.market {
+  padding: 14px;
+  background: rgba(255,255,255,.02);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.pick {
   display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  border-radius: 10px;
-  background: var(--panel-2);
-  margin-bottom: 6px;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.market-row.best {
-  outline: 1px solid var(--green);
+.market-type {
+  color: var(--blue);
+  font-weight: 600;
 }
 
-.market-label {
-  font-weight: 500;
+.selection {
+  font-weight: 600;
 }
 
-.market-meta {
-  font-size: 0.75rem;
+.book {
   color: var(--muted);
+  font-size: 13px;
+}
+
+.badges {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: rgba(255,255,255,.06);
+}
+
+.badge.value {
+  background: rgba(34,197,94,.15);
+}
+
+.badge.lean {
+  background: rgba(56,189,248,.15);
+}
+
+.badge.stability {
+  background: rgba(168,85,247,.15);
+}
+
+.badge.decision.PLAY {
+  background: rgba(34,197,94,.25);
+  font-weight: 700;
+}
+
+.badge.decision.PASS {
+  background: rgba(239,68,68,.25);
 }
 
 .props-toggle {
-  margin-top: 10px;
+  margin-top: 12px;
   background: none;
-  border: none;
   color: var(--blue);
+  border: none;
   cursor: pointer;
-  font-size: 0.8rem;
 }
 
-.props-container {
-  max-height: 260px;
-  overflow-y: auto;
-  margin-top: 10px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
+.props {
+  margin-top: 12px;
   display: none;
 }
 
-.props-container.open {
+.props.open {
   display: block;
 }
 
 .prop-row {
-  padding: 6px 0;
-  font-size: 0.8rem;
-  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
 }
 
-.footer {
-  text-align: center;
-  font-size: 0.7rem;
+.prop-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.arrow {
+  font-weight: 700;
+}
+
+.ev {
+  color: var(--green);
+}
+
+.decision.PLAY {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.muted {
   color: var(--muted);
   padding: 20px;
 }
 
-.muted {
+.loading {
   color: var(--muted);
 }

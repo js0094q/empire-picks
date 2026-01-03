@@ -1,43 +1,53 @@
 // /api/props.js
-import { removeVig, sharpWeight, calculateConfidenceScore, decisionGate, directionArrow } from "./math.js";
+
+import fetch from "node-fetch";
+import {
+  americanToProb,
+  weightedAverage,
+  confidenceScore,
+  decisionGate,
+  directionArrow
+} from "./math.js";
+
+const API_KEY = process.env.ODDS_API_KEY;
+const BASE = "https://api.the-odds-api.com/v4";
 
 export default async function handler(req, res) {
   try {
-    const rawProps = await fetchPropsSomehow();
+    const url = `${BASE}/sports/americanfootball_nfl/odds?markets=player_pass_yds,player_rush_yds&regions=us&oddsFormat=american&apiKey=${API_KEY}`;
+    const r = await fetch(url);
+    const games = await r.json();
 
-    const props = rawProps.map(p => {
-      const weighted = p.books.map(b => ({
-        odds: b.price,
-        weight: sharpWeight(b.book)
-      }));
+    const props = [];
 
-      const probs = removeVig(weighted.map(o => o.odds));
-      const sharpProb = probs.reduce((a, p, i) =>
-        a + p * weighted[i].weight, 0
-      ) / weighted.reduce((a, o) => a + o.weight, 0);
+    games.forEach(g => {
+      g.bookmakers.forEach(b => {
+        b.markets.forEach(m => {
+          m.outcomes.forEach(o => {
+            const sharpProb = americanToProb(o.price);
+            const publicProb = 0.5;
 
-      const publicProb = probs.reduce((a, b) => a + b, 0) / probs.length;
-      const ev = sharpProb - publicProb;
+            const score = confidenceScore({
+              sharpProb,
+              publicProb,
+              ev: sharpProb - publicProb,
+              stability: 0.6
+            });
 
-      const confidenceScore = calculateConfidenceScore({
-        sharpProb,
-        publicProb,
-        ev,
-        marketWidth: p.lineRange,
-        bookCount: p.books.length
+            props.push({
+              label: `${o.name} ${m.key.replace("_", " ")}`,
+              line: o.point,
+              odds: o.price,
+              confidenceScore: score,
+              decision: decisionGate(score),
+              arrow: directionArrow(sharpProb, publicProb)
+            });
+          });
+        });
       });
-
-      return {
-        propId: p.id,
-        label: p.player + " " + p.type,
-        line: p.line,
-        confidenceScore,
-        decision: decisionGate(confidenceScore),
-        arrow: directionArrow(sharpProb, publicProb)
-      };
     });
 
-    res.json(props);
+    res.status(200).json(props.filter(p => p.decision !== "PASS"));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

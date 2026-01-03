@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="layout">
+    <h1>Player Props</h1>
+    <div id="props"></div>
+  </main>
+  <script type="module">
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+    fetch(`/api/props?id=${id}`)
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById("props").innerHTML =
+          d.plays.map(p =>
+            `<div>${p.player} ${p.side} ${p.line} ${p.decision}</div>`
+          ).join("");
+      });
+  </script>
+</body>
+</html>

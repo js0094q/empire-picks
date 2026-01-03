@@ -1,52 +1,48 @@
 // /api/math.js
 
-// ---------- Odds & Probability ----------
-
-export function impliedProb(odds) {
-  return odds > 0
-    ? 100 / (odds + 100)
-    : -odds / (-odds + 100);
+export function removeVig(oddsArray) {
+  const probs = oddsArray.map(o => {
+    if (o > 0) return 100 / (o + 100);
+    return Math.abs(o) / (Math.abs(o) + 100);
+  });
+  const total = probs.reduce((a, b) => a + b, 0);
+  return probs.map(p => p / total);
 }
 
-export function removeVig(probA, probB) {
-  const total = probA + probB;
-  return {
-    a: probA / total,
-    b: probB / total
-  };
+export function sharpWeight(book) {
+  const sharpBooks = ["pinnacle", "circa", "betcris"];
+  if (sharpBooks.includes(book)) return 1.5;
+  return 1.0;
 }
 
-// ---------- Stability (SINGLE FUNCTION) ----------
-// Measures dispersion across books
-// 1.0 = perfect agreement, 0 = chaos
+export function calculateConfidenceScore({
+  sharpProb,
+  publicProb,
+  ev,
+  marketWidth,
+  bookCount
+}) {
+  const lean = Math.abs(sharpProb - publicProb);
+  const stability = Math.max(0, 1 - marketWidth / 20);
+  const evScore = Math.min(Math.max(ev * 5, -1), 1);
 
-export function stabilityScore(probabilities) {
-  if (probabilities.length < 2) return 0;
+  const score =
+    lean * 40 +
+    stability * 30 +
+    evScore * 20 +
+    Math.min(bookCount / 10, 1) * 10;
 
-  const mean =
-    probabilities.reduce((a, b) => a + b, 0) / probabilities.length;
-
-  const variance =
-    probabilities.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) /
-    probabilities.length;
-
-  return Math.max(0, 1 - variance * 400);
+  return Math.round(Math.min(Math.max(score, 0), 100));
 }
 
-// ---------- Expected Value ----------
-
-export function expectedValue(prob, odds) {
-  const payout = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
-  return prob * payout - (1 - prob);
+export function decisionGate(score) {
+  if (score >= 75) return "PLAY";
+  if (score >= 60) return "LEAN";
+  return "PASS";
 }
 
-// ---------- Confidence Score ----------
-// Single composite metric used everywhere
-
-export function confidenceScore({ lean, stability, ev }) {
-  return (
-    Math.abs(lean) * 0.45 +
-    stability * 0.35 +
-    Math.max(0, ev) * 0.20
-  );
+export function directionArrow(sharpProb, publicProb) {
+  if (sharpProb - publicProb > 0.03) return "UP";
+  if (publicProb - sharpProb > 0.03) return "DOWN";
+  return "FLAT";
 }

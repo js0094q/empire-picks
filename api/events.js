@@ -1,80 +1,124 @@
-import {
-  SPORT,
-  BASE_URL,
-  BOOK_WEIGHTS,
-  GAME_HIDE_HOURS
-} from "./config.js";
-
+import fetch from "node-fetch";
+import { BASE_URL, SPORT, GAME_HIDE_HOURS } from "./config.js";
 import {
   impliedProb,
   noVig,
   weightedAverage,
-  stabilityScore,
-  expectedValue
+  expectedValue,
+  stabilityScore
 } from "./math.js";
 
 const API_KEY = process.env.ODDS_API_KEY;
 
+const SHARP_BOOKS = ["pinnacle", "circa", "betonlineag"];
+const PUBLIC_BOOKS = ["draftkings", "fanduel", "betmgm", "caesars", "betrivers"];
+
 function isExpired(commenceTime) {
   const kickoff = new Date(commenceTime).getTime();
-  const cutoff = kickoff + GAME_HIDE_HOURS * 3600 * 1000;
-  return Date.now() > cutoff;
+  return Date.now() > kickoff + GAME_HIDE_HOURS * 3600 * 1000;
 }
 
-function aggregateMarket(bookmakers, marketKey) {
-  const buckets = {};
+function splitBooks(bookmakers, marketKey) {
+  const sharp = [];
+  const publicB = [];
+  const all = [];
 
-  for (const b of bookmakers || []) {
-    const weight = BOOK_WEIGHTS[b.key] || 1;
-    const market = b.markets?.find(m => m.key === marketKey);
+  for (const b of bookmakers) {
+    const market = b.markets.find(m => m.key === marketKey);
     if (!market) continue;
 
-    if (!buckets[b.key]) buckets[b.key] = [];
-
-    for (const o of market.outcomes || []) {
-      buckets[b.key].push({
+    for (const o of market.outcomes) {
+      const entry = {
         name: o.name,
         point: o.point ?? null,
         odds: o.price,
         prob: impliedProb(o.price),
-        w: weight
-      });
+        book: b.key
+      };
+
+      all.push(entry);
+      if (SHARP_BOOKS.includes(b.key)) sharp.push(entry);
+      if (PUBLIC_BOOKS.includes(b.key)) publicB.push(entry);
     }
   }
 
-  return buckets;
+  return { sharp, publicB, all };
+}
+
+function buildMarketView({ sharp, publicB, all }) {
+  if (sharp.length < 2 || publicB.length < 2) return null;
+
+  const sharpFair = weightedAverage(sharp);
+  const publicFair = weightedAverage(publicB);
+
+  const [_, sharpProb] = noVig(publicFair, sharpFair);
+
+  const best = all.sort((a, b) => b.odds - a.odds)[0];
+
+  const stability = stabilityScore([
+    ...sharp.map(x => x.prob),
+    ...publicB.map(x => x.prob)
+  ]);
+
+  const ev = expectedValue(sharpProb, best.odds, stability);
+  const sharpLean = sharpProb - publicFair;
+
+  return {
+    selection: best.name,
+    point: best.point,
+    odds: best.odds,
+
+    sharp_prob: sharpProb,
+    public_prob: publicFair,
+    sharp_lean: sharpLean,
+
+    ev,
+    stability
+  };
 }
 
 export default async function handler(req, res) {
   try {
-    if (!API_KEY) throw new Error("Missing ODDS_API_KEY");
-
     const url =
       `${BASE_URL}/sports/${SPORT}/odds` +
       `?regions=us&markets=h2h,spreads,totals&oddsFormat=american&apiKey=${API_KEY}`;
 
     const r = await fetch(url);
-    if (!r.ok) throw new Error(`Odds API failed: ${r.status}`);
+    if (!r.ok) throw new Error("Odds API failure");
 
     const games = await r.json();
 
     const output = games
       .filter(g => !isExpired(g.commence_time))
-      .map(g => ({
-        id: g.id,
-        home_team: g.home_team,
-        away_team: g.away_team,
-        commence_time: g.commence_time,
-        markets: {
-          h2h: aggregateMarket(g.bookmakers, "h2h"),
-          spreads: aggregateMarket(g.bookmakers, "spreads"),
-          totals: aggregateMarket(g.bookmakers, "totals")
-        }
-      }));
+      .map(game => {
+        const ml = buildMarketView(
+          splitBooks(game.bookmakers, "h2h")
+        );
+
+        const spread = buildMarketView(
+          splitBooks(game.bookmakers, "spreads")
+        );
+
+        const total = buildMarketView(
+          splitBooks(game.bookmakers, "totals")
+        );
+
+        return {
+          id: game.id,
+          home_team: game.home_team,
+          away_team: game.away_team,
+          commence_time: game.commence_time,
+          markets: {
+            ml,
+            spread,
+            total
+          }
+        };
+      });
 
     res.status(200).json(output);
   } catch (err) {
-    console.error("EVENTS ERROR:", err.message);
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 }

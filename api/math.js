@@ -19,11 +19,9 @@ export function sharpWeight(book) {
 
 export function confidenceScore({ lean, ev, bookCount }) {
   let score = 50;
-
   score += lean * 100;
   score += ev * 15;
   score += Math.min(bookCount, 6) * 3;
-
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 

@@ -8,7 +8,11 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="logo">EmpirePicks</div>
+    <div class="logo">
+      <span class="logo-dot"></span>
+      <span>EmpirePicks</span>
+    </div>
+
     <nav class="nav">
       <a href="/" class="nav-link">Markets</a>
       <a href="/props.html" class="nav-link active">Player Props</a>
@@ -17,8 +21,18 @@
 
   <main class="layout">
     <section class="hero">
-      <h1>Player Props</h1>
-      <p>Expand a matchup to load props for that game. Some games may have limited or unavailable prop markets.</p>
+      <div class="hero-row">
+        <div>
+          <h1>Player Props</h1>
+          <p>Weighted consensus, sharp vs public splits, book lean, and market lean. Loaded per matchup.</p>
+        </div>
+
+        <div class="hero-meta">
+          <span class="hero-chip info"><strong>Market Lean</strong> vs 50%</span>
+          <span class="hero-chip good"><strong>Book Lean</strong> sharp minus public</span>
+          <span class="hero-chip"><strong>EV</strong> best-book</span>
+        </div>
+      </div>
     </section>
 
     <div id="props-container" class="games">

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>EmpirePicks – Player Props</title>
+  <title>EmpirePicks – Markets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -10,22 +10,22 @@
   <div class="topbar">
     <div class="logo">EmpirePicks</div>
     <nav class="nav">
-      <a href="/" class="nav-link">Markets</a>
-      <a href="/props.html" class="nav-link active">Player Props</a>
+      <a href="/" class="nav-link active">Markets</a>
+      <a href="/props.html" class="nav-link">Player Props</a>
     </nav>
   </div>
 
   <main class="layout">
     <section class="hero">
-      <h1>Player Props</h1>
-      <p>Top probability props only, un-vigged where possible, sharp-influenced consensus.</p>
+      <h1>Markets</h1>
+      <p>Un-vigged book probabilities, sharp vs public splits, and most likely outcomes.</p>
     </section>
 
-    <div id="props-container" class="games">
-      <div class="muted">Loading player props…</div>
+    <div id="games-container" class="games">
+      <div class="muted">Loading markets…</div>
     </div>
   </main>
 
-  <script type="module" src="/props-client.js"></script>
+  <script type="module" src="/script.js"></script>
 </body>
 </html>

@@ -13,10 +13,6 @@
   --purple: #a855f7;
 }
 
-/* =====================
-   RESET / BASE
-   ===================== */
-
 * { box-sizing: border-box; }
 
 body {
@@ -28,10 +24,7 @@ body {
 
 img { max-width: 100%; display: block; }
 
-/* =====================
-   TOP NAV
-   ===================== */
-
+/* TOP NAV */
 .topbar {
   padding: 16px 24px;
   display: flex;
@@ -53,10 +46,7 @@ img { max-width: 100%; display: block; }
 .nav-link:hover,
 .nav-link.active { color: var(--blue); }
 
-/* =====================
-   LAYOUT
-   ===================== */
-
+/* LAYOUT */
 .layout {
   max-width: 1100px;
   margin: 0 auto;
@@ -74,10 +64,7 @@ img { max-width: 100%; display: block; }
 .hero h1 { margin: 0 0 6px; }
 .hero p { margin: 0; color: var(--muted); }
 
-/* =====================
-   GRID / CARDS
-   ===================== */
-
+/* GRID / CARDS */
 .games { display: grid; gap: 20px; }
 
 .game-card {
@@ -87,10 +74,7 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--border);
 }
 
-/* =====================
-   HEADER TEAMS
-   ===================== */
-
+/* HEADER TEAMS */
 .teams {
   display: flex;
   align-items: center;
@@ -125,10 +109,48 @@ img { max-width: 100%; display: block; }
   gap: 12px;
 }
 
-/* =====================
-   MARKET BLOCKS
-   ===================== */
+/* ACCORDION (PROPS PAGE) */
+.acc-btn {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
+  padding: 12px 12px;
+  border-radius: 12px;
+
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+
+  font-weight: 900;
+  letter-spacing: 0.2px;
+
+  cursor: pointer;
+}
+
+.acc-btn:hover {
+  border-color: rgba(56,189,248,.22);
+  background: rgba(56,189,248,.06);
+}
+
+.acc-btn .acc-chevron {
+  color: var(--muted);
+  font-weight: 900;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.acc-btn.open .acc-chevron {
+  transform: rotate(180deg);
+}
+
+.acc-panel {
+  margin-top: 10px;
+}
+
+/* MARKET BLOCKS */
 .market-block {
   margin-top: 12px;
   padding: 12px;
@@ -295,20 +317,14 @@ img { max-width: 100%; display: block; }
   color: var(--muted);
 }
 
-/* =====================
-   MUTED / EMPTY STATES
-   ===================== */
-
+/* MUTED / EMPTY STATES */
 .muted {
   color: var(--muted);
   padding: 24px;
   text-align: center;
 }
 
-/* =====================
-   RESPONSIVE
-   ===================== */
-
+/* RESPONSIVE */
 @media (max-width: 640px) {
   .topbar { padding: 14px 16px; }
   .layout { padding: 16px; }

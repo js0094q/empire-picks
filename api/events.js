@@ -6,28 +6,22 @@ const SPORT = "americanfootball_nfl";
 const REGIONS = "us";
 const MARKETS = "h2h,spreads,totals";
 
-/**
- * Base weights are conservative.
- * Sharp premium is applied via SHARP_GROUP_MULT, not by massive base differences.
- */
 const BOOK_BASE = {
-  pinnacle: 1.35,
-  circa: 1.25,
-  betcris: 1.15,
+  pinnacle: 1.25,
+  circa: 1.20,
+  betcris: 1.10,
 
   betonlineag: 1.05,
 
   fanduel: 1.0,
   draftkings: 1.0,
 
-  betmgm: 0.95,
-  caesars: 0.92,
-  betrivers: 0.90
+  betmgm: 0.97,
+  caesars: 0.95,
+  betrivers: 0.92
 };
 
 const SHARP_BOOKS = new Set(["pinnacle", "circa", "betcris"]);
-const SHARP_GROUP_MULT = 1.15; // modest premium, appropriate for public site
-const PUBLIC_GROUP_MULT = 1.0;
 
 function americanToProb(odds) {
   return odds > 0
@@ -35,9 +29,6 @@ function americanToProb(odds) {
     : Math.abs(odds) / (Math.abs(odds) + 100);
 }
 
-/**
- * Convert a 2-outcome market to no-vig probabilities by normalizing implied probs to sum to 1.
- */
 function noVigTwoWay(outcomes) {
   const probs = outcomes.map(o => americanToProb(o.price));
   const total = probs.reduce((a, b) => a + b, 0);
@@ -51,58 +42,56 @@ function calcEV(prob, odds) {
   return prob * payout - (1 - prob);
 }
 
-function weightConsensus(bookKey) {
-  const base = BOOK_BASE[bookKey] ?? 0.85;
-  const sharpMult = SHARP_BOOKS.has(bookKey) ? SHARP_GROUP_MULT : PUBLIC_GROUP_MULT;
-  return base * sharpMult;
+function baseW(bookKey) {
+  return BOOK_BASE[bookKey] ?? 0.85;
 }
 
-function weightPublic(bookKey) {
-  // Public baseline uses only base weights, no sharp premium
-  return (BOOK_BASE[bookKey] ?? 0.85) * 1.0;
+function weightedAvg(entries, predicateFn) {
+  let wSum = 0;
+  let pSum = 0;
+
+  for (const e of entries) {
+    if (predicateFn && !predicateFn(e)) continue;
+
+    const p = e.prob_novig;
+    if (p == null || !Number.isFinite(p)) continue;
+
+    const w = baseW(e.book);
+    wSum += w;
+    pSum += p * w;
+  }
+
+  return wSum ? pSum / wSum : null;
 }
 
-/**
- * Computes consensus per side using un-vigged probabilities, and also a public baseline.
- * Also picks best EV odds per side.
- */
+function sharpShare(entries) {
+  let sharpW = 0;
+  let totalW = 0;
+
+  for (const e of entries) {
+    const w = baseW(e.book);
+    totalW += w;
+    if (SHARP_BOOKS.has(e.book)) sharpW += w;
+  }
+
+  return totalW ? sharpW / totalW : null;
+}
+
 function consensusForSides(sideBuckets) {
   const out = [];
 
   for (const [sideKey, entries] of Object.entries(sideBuckets)) {
-    let wSum = 0;
-    let pSum = 0;
+    const consensus_prob = weightedAvg(entries);
+    const sharp_prob = weightedAvg(entries, e => SHARP_BOOKS.has(e.book));
+    const public_prob = weightedAvg(entries, e => !SHARP_BOOKS.has(e.book));
+    const lean = sharp_prob != null && public_prob != null ? sharp_prob - public_prob : null;
 
-    let wPub = 0;
-    let pPub = 0;
-
-    for (const e of entries) {
-      const p = e.prob_novig;
-      if (p == null || !Number.isFinite(p)) continue;
-
-      const w = weightConsensus(e.book);
-      wSum += w;
-      pSum += p * w;
-
-      const w0 = weightPublic(e.book);
-      wPub += w0;
-      pPub += p * w0;
-    }
-
-    const consensus_prob = wSum ? pSum / wSum : null;
-    const public_prob = wPub ? pPub / wPub : null;
-    const lean =
-      consensus_prob != null && public_prob != null ? consensus_prob - public_prob : null;
-
-    // best EV pick for THIS side
     let bestPick = null;
     for (const e of entries) {
       if (!Number.isFinite(e.price)) continue;
       const ev = calcEV(consensus_prob, e.price);
       if (ev == null) continue;
-      if (!bestPick || ev > bestPick.ev) {
-        bestPick = { odds: e.price, book: e.book, ev };
-      }
+      if (!bestPick || ev > bestPick.ev) bestPick = { odds: e.price, book: e.book, ev };
     }
 
     out.push({
@@ -111,6 +100,7 @@ function consensusForSides(sideBuckets) {
       point: entries[0]?.point ?? null,
 
       consensus_prob,
+      sharp_prob,
       public_prob,
       lean,
 
@@ -122,26 +112,8 @@ function consensusForSides(sideBuckets) {
     });
   }
 
-  // Most likely first, but keep both sides
   out.sort((a, b) => (b.consensus_prob ?? 0) - (a.consensus_prob ?? 0));
   return out;
-}
-
-/**
- * Weighted book composition, no sharp premium applied here.
- * This answers: how much of this market is coming from sharp books vs public books.
- */
-function sharpShare(entries) {
-  let sharpW = 0;
-  let totalW = 0;
-
-  for (const e of entries) {
-    const w = BOOK_BASE[e.book] ?? 0.85;
-    totalW += w;
-    if (SHARP_BOOKS.has(e.book)) sharpW += w;
-  }
-
-  return totalW ? sharpW / totalW : null;
 }
 
 module.exports = async (req, res) => {
@@ -187,13 +159,10 @@ module.exports = async (req, res) => {
           }
         }
 
-        const normalize = key => {
-          const sides = consensusForSides(buckets[key] || {});
-          return {
-            sides,
-            sharp_share: sharpShare(entriesAll[key])
-          };
-        };
+        const normalize = key => ({
+          sides: consensusForSides(buckets[key] || {}),
+          sharp_share: sharpShare(entriesAll[key])
+        });
 
         return {
           id: game.id,

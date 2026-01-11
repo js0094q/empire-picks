@@ -17,33 +17,15 @@
 
   <main class="layout">
     <section class="hero">
-      <div class="hero-row">
-        <div>
-          <h1>NFL Market Intelligence</h1>
-          <p>Sharp vs public, no-vig, confidence filtered.</p>
-        </div>
-
-        <button id="refresh-btn" class="btn btn-primary" type="button">
-          Refresh
-        </button>
-      </div>
+      <h1>Markets</h1>
+      <p>Sharp-weighted consensus, EV-ranked opportunities, and clean game cards.</p>
     </section>
 
     <div id="games-container" class="games">
-      <div class="muted">Loading games…</div>
+      <div class="muted">Loading markets…</div>
     </div>
   </main>
 
   <script type="module" src="/script.js"></script>
-  <script>
-    // Keep HTML static, script.js exposes window.__refreshGames
-    document.addEventListener("DOMContentLoaded", () => {
-      const btn = document.getElementById("refresh-btn");
-      if (!btn) return;
-      btn.addEventListener("click", () => {
-        if (typeof window.__refreshGames === "function") window.__refreshGames(true);
-      });
-    });
-  </script>
 </body>
 </html>

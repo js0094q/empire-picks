@@ -10,24 +10,26 @@ async function fetchProps() {
   return r.ok ? r.json() : null;
 }
 
-function renderPropRow(p) {
+function renderPropRow(p, rank) {
   const evText =
     p.ev == null || !Number.isFinite(p.ev) ? "" : ` · EV ${(p.ev * 100).toFixed(1)}%`;
 
   return `
-    <div class="side top">
+    <div class="side ${rank === 0 ? "top" : ""}">
       <div class="side-main">
         <div class="side-label">
           ${p.player}
           ${p.point != null ? `<span class="pt">${p.point}</span>` : ""}
+          <span class="pt">· ${p.side}</span>
         </div>
         <div class="side-odds">${fmtOdds(p.odds)}</div>
       </div>
 
       <div class="side-meta">
-        <span class="pill pill-prob">${p.side} ${pct(p.prob)}</span>
+        <span class="pill pill-prob">${pct(p.prob)}</span>
         <span class="pill pill-ev">${p.book}${evText}</span>
-        <span class="pill pill-top">TOP PROP</span>
+        <span class="pill lean-neutral">${p.books} books</span>
+        ${rank === 0 ? `<span class="pill pill-top">TOP IN MARKET</span>` : ""}
       </div>
     </div>
   `;
@@ -36,7 +38,7 @@ function renderPropRow(p) {
 function renderMarketBlock(market, picks) {
   if (!Array.isArray(picks) || !picks.length) return "";
 
-  const rows = picks.map(renderPropRow).join("");
+  const rows = picks.map((p, i) => renderPropRow(p, i)).join("");
 
   return `
     <div class="game-card">
@@ -64,7 +66,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const blocks = [];
-
   for (const [market, picks] of Object.entries(data.markets)) {
     blocks.push(renderMarketBlock(market, picks));
   }

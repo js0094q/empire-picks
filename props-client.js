@@ -1,16 +1,8 @@
-/* ===============================
-   UTILS
-   =============================== */
-
 const qs = new URLSearchParams(window.location.search);
 const EVENT_ID = qs.get("id");
 
 const pct = v => (v == null || !Number.isFinite(v) ? "—" : (v * 100).toFixed(1) + "%");
 const fmtOdds = o => (o == null || !Number.isFinite(o) ? "—" : o > 0 ? `+${o}` : `${o}`);
-
-/* ===============================
-   FETCH
-   =============================== */
 
 async function fetchProps() {
   if (!EVENT_ID) return null;
@@ -18,44 +10,43 @@ async function fetchProps() {
   return r.ok ? r.json() : null;
 }
 
-/* ===============================
-   RENDER
-   =============================== */
-
-function renderProp(player, market, side) {
-  if (!side) return "";
-
+function renderPropRow(p) {
   const evText =
-    side.ev == null || !Number.isFinite(side.ev) ? "" : ` · EV ${(side.ev * 100).toFixed(1)}%`;
+    p.ev == null || !Number.isFinite(p.ev) ? "" : ` · EV ${(p.ev * 100).toFixed(1)}%`;
 
   return `
-    <div class="market-row">
-      <span class="market-tag">${market}</span>
-      <div class="market-main">
-        <div class="market-name">${player}</div>
-        <div class="market-odds">${fmtOdds(side.odds)}</div>
-        <div class="market-meta">
-          Consensus ${pct(side.prob)}${evText}
+    <div class="side top">
+      <div class="side-main">
+        <div class="side-label">
+          ${p.player}
+          ${p.point != null ? `<span class="pt">${p.point}</span>` : ""}
         </div>
+        <div class="side-odds">${fmtOdds(p.odds)}</div>
+      </div>
+
+      <div class="side-meta">
+        <span class="pill pill-prob">${p.side} ${pct(p.prob)}</span>
+        <span class="pill pill-ev">${p.book}${evText}</span>
+        <span class="pill pill-top">TOP PROP</span>
       </div>
     </div>
   `;
 }
 
-function renderMarketBlock(market, rows) {
-  if (!rows.length) return "";
+function renderMarketBlock(market, picks) {
+  if (!Array.isArray(picks) || !picks.length) return "";
+
+  const rows = picks.map(renderPropRow).join("");
 
   return `
     <div class="game-card">
-      <div class="section-title">${market.replace(/_/g, " ")}</div>
-      <div class="stack">${rows.join("")}</div>
+      <div class="market-head">
+        <div class="market-title">${market.replace(/_/g, " ").toUpperCase()}</div>
+      </div>
+      <div class="market-sides">${rows}</div>
     </div>
   `;
 }
-
-/* ===============================
-   BOOTSTRAP
-   =============================== */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("props-container");
@@ -74,16 +65,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const blocks = [];
 
-  for (const [market, players] of Object.entries(data.markets)) {
-    const rows = [];
-    for (const p of players) {
-      rows.push(renderProp(p.player, "OVER", p.over));
-      rows.push(renderProp(p.player, "UNDER", p.under));
-    }
-    blocks.push(renderMarketBlock(market, rows));
+  for (const [market, picks] of Object.entries(data.markets)) {
+    blocks.push(renderMarketBlock(market, picks));
   }
 
-  container.innerHTML = blocks.length
+  container.innerHTML = blocks.some(Boolean)
     ? blocks.join("")
     : `<div class="muted">No qualified props this game.</div>`;
 });

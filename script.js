@@ -45,9 +45,7 @@ function leanClass(lean) {
 }
 
 function compositionLabel(sharpShare) {
-  if (sharpShare == null || !Number.isFinite(sharpShare)) {
-    return { text: "MIXED", cls: "mix" };
-  }
+  if (sharpShare == null || !Number.isFinite(sharpShare)) return { text: "MIXED", cls: "mix" };
   if (sharpShare >= 0.55) return { text: "SHARP-LED", cls: "sharp" };
   if (sharpShare <= 0.45) return { text: "PUBLIC-LED", cls: "public" };
   return { text: "MIXED", cls: "mix" };
@@ -56,37 +54,34 @@ function compositionLabel(sharpShare) {
 function renderMarketBlock(title, marketObj) {
   if (!marketObj || !Array.isArray(marketObj.sides) || marketObj.sides.length < 1) return "";
 
-  // ML/spread/total should be 2-way, but we still slice defensively
   const sides = marketObj.sides.slice(0, 2);
   const topKey = sides[0]?.side_key;
-
   const comp = compositionLabel(marketObj.sharp_share);
 
-  const rows = sides
-    .map(s => {
-      const isTop = s.side_key === topKey;
+  const rows = sides.map(s => {
+    const isTop = s.side_key === topKey;
 
-      return `
-        <div class="side ${isTop ? "top" : ""}">
-          <div class="side-main">
-            <div class="side-label">
-              ${s.name ?? "—"}
-              ${s.point != null ? `<span class="pt">${s.point > 0 ? "+" : ""}${s.point}</span>` : ""}
-            </div>
-            <div class="side-odds">${fmtOdds(s.best_odds)}</div>
+    return `
+      <div class="side ${isTop ? "top" : ""}">
+        <div class="side-main">
+          <div class="side-label">
+            ${s.name ?? "—"}
+            ${s.point != null ? `<span class="pt">${s.point > 0 ? "+" : ""}${s.point}</span>` : ""}
           </div>
-
-          <div class="side-meta">
-            <span class="pill pill-prob">Consensus ${pct(s.consensus_prob)}</span>
-            <span class="pill pill-public">Public ${pct(s.public_prob)}</span>
-            <span class="pill ${leanClass(s.lean)}">Lean ${fmtLean(s.lean)}</span>
-            ${s.ev != null ? `<span class="pill pill-ev">EV ${(s.ev * 100).toFixed(1)}%</span>` : ""}
-            ${isTop ? `<span class="pill pill-top">MOST LIKELY</span>` : ""}
-          </div>
+          <div class="side-odds">${fmtOdds(s.best_odds)}</div>
         </div>
-      `;
-    })
-    .join("");
+
+        <div class="side-meta">
+          <span class="pill pill-prob">Consensus ${pct(s.consensus_prob)}</span>
+          <span class="pill pill-public">Public ${pct(s.public_prob)}</span>
+          <span class="pill pill-sharp">Sharp ${pct(s.sharp_prob)}</span>
+          <span class="pill ${leanClass(s.lean)}">Lean ${fmtLean(s.lean)}</span>
+          ${s.ev != null ? `<span class="pill pill-ev">EV ${(s.ev * 100).toFixed(1)}%</span>` : ""}
+          ${isTop ? `<span class="pill pill-top">MOST LIKELY</span>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
 
   return `
     <div class="market-block">
@@ -100,10 +95,6 @@ function renderMarketBlock(title, marketObj) {
     </div>
   `;
 }
-
-/* ===============================
-   GAME CARD
-   =============================== */
 
 function gameCard(game) {
   const home = Teams[game.home_team];

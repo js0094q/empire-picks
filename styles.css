@@ -126,7 +126,7 @@ img { max-width: 100%; display: block; }
 }
 
 /* =====================
-   MARKET BLOCKS (NEW)
+   MARKET BLOCKS
    ===================== */
 
 .market-block {
@@ -305,4 +305,5 @@ img { max-width: 100%; display: block; }
 @media (max-width: 640px) {
   .topbar { padding: 14px 16px; }
   .layout { padding: 16px; }
+  .kickoff { font-size: 0.8rem; }
 }

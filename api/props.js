@@ -4,26 +4,23 @@ const API_KEY = process.env.ODDS_API_KEY;
 const SPORT = "americanfootball_nfl";
 const REGIONS = "us";
 
-/**
- * Display policy
- */
-const PROP_MIN_PROB = 0.50;      // keep reasonable props, not just extreme favorites
-const PROP_MIN_BOOKS = 1;        // allow single-book props
-const MAX_ROWS_PER_MARKET = 25;  // per game per market
+/* ===============================
+   DISPLAY POLICY
+   =============================== */
+const PROP_MIN_PROB = 0.50;
+const PROP_MIN_BOOKS = 1;
+const MAX_ROWS_PER_MARKET = 25;
 
-/**
- * Book weighting
- */
+/* ===============================
+   BOOK WEIGHTS
+   =============================== */
 const BOOK_BASE = {
   pinnacle: 1.25,
   circa: 1.20,
   betcris: 1.10,
-
   betonlineag: 1.05,
-
   fanduel: 1.0,
   draftkings: 1.0,
-
   betmgm: 0.97,
   caesars: 0.95,
   betrivers: 0.92
@@ -31,190 +28,120 @@ const BOOK_BASE = {
 
 const NAMED_SHARPS = new Set(["pinnacle", "circa", "betcris"]);
 
-function baseW(bookKey) {
-  return BOOK_BASE[bookKey] ?? 0.85;
-}
-
-function americanToProb(odds) {
-  return odds > 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
-}
-
-function noVigPair(pA, pB) {
-  const total = pA + pB;
-  if (!total) return [null, null];
-  return [pA / total, pB / total];
-}
-
-function calcEV(prob, odds) {
-  if (prob == null || !Number.isFinite(prob) || odds == null) return null;
-  const payout = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
-  return prob * payout - (1 - prob);
-}
-
-/**
- * Expanded prop markets (NFL player markets)
- * If your plan supports more, you can keep adding here.
- *
- * Notes:
- * - Some markets only appear for certain games/books.
- * - Some will return only a subset of players.
- */
-const PRIMARY_MARKETS = [
-  // TD markets
+const VALID_MARKETS = [
+  // Touchdowns
   "player_anytime_td",
   "player_1st_td",
   "player_last_td",
 
   // Passing
-  "player_pass_tds",
   "player_pass_yds",
+  "player_pass_tds",
   "player_pass_completions",
   "player_pass_attempts",
-  "player_pass_interceptions",
-  "player_pass_longest_completion",
 
   // Rushing
   "player_rush_yds",
   "player_rush_attempts",
-  "player_rush_longest",
 
   // Receiving
   "player_receptions",
-  "player_reception_yds",
-  "player_reception_longest",
-
-  // Kicking (availability varies by book)
-  "player_field_goals",
-  "player_kicking_points",
-
-  // Defense/Sacks/INTs (often limited)
-  "player_sacks",
-  "player_interceptions"
+  "player_reception_yds"
 ];
 
-// Fallback markets in case an event has sparse markets
-const FALLBACK_MARKETS = [
-  "player_anytime_td",
-  "player_pass_yds",
-  "player_rush_yds",
-  "player_reception_yds",
-  "player_receptions"
-];
+/* ===============================
+   HELPERS
+   =============================== */
+const baseW = b => BOOK_BASE[b] ?? 0.85;
 
-/**
- * Determine sharp set from books present:
- * - if named sharps present, use them
- * - else proxy: top ~30% by weight among present books
- */
-function determineSharpSet(booksPresent) {
-  const namedPresent = booksPresent.filter(b => NAMED_SHARPS.has(b));
-  if (namedPresent.length > 0) return { sharpSet: new Set(namedPresent), source: "named" };
+const americanToProb = o =>
+  o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100);
 
-  const sorted = booksPresent
+const noVigPair = (a, b) => {
+  const t = a + b;
+  return t ? [a / t, b / t] : [null, null];
+};
+
+const calcEV = (p, o) => {
+  if (!Number.isFinite(p) || !Number.isFinite(o)) return null;
+  const win = o > 0 ? o / 100 : 100 / Math.abs(o);
+  return p * win - (1 - p);
+};
+
+function determineSharpSet(books) {
+  const named = books.filter(b => NAMED_SHARPS.has(b));
+  if (named.length) return { set: new Set(named), source: "named" };
+
+  const sorted = books
     .map(b => ({ b, w: baseW(b) }))
     .sort((a, b) => b.w - a.w);
 
-  if (sorted.length <= 1) return { sharpSet: new Set(sorted.map(x => x.b)), source: "proxy" };
-
-  const k = Math.max(1, Math.round(sorted.length * 0.30));
-  return { sharpSet: new Set(sorted.slice(0, k).map(x => x.b)), source: "proxy" };
+  const k = Math.max(1, Math.round(sorted.length * 0.3));
+  return { set: new Set(sorted.slice(0, k).map(x => x.b)), source: "proxy" };
 }
 
-function weightedAvg(entries, predicateFn) {
-  let wSum = 0;
-  let pSum = 0;
-
+function weightedAvg(entries, fn) {
+  let w = 0, s = 0;
   for (const e of entries) {
-    if (predicateFn && !predicateFn(e)) continue;
-    if (e.prob_novig == null || !Number.isFinite(e.prob_novig)) continue;
-
-    const w = baseW(e.book);
-    wSum += w;
-    pSum += e.prob_novig * w;
+    if (fn && !fn(e)) continue;
+    if (!Number.isFinite(e.prob_novig)) continue;
+    const bw = baseW(e.book);
+    w += bw;
+    s += bw * e.prob_novig;
   }
-
-  return wSum ? pSum / wSum : null;
+  return w ? s / w : null;
 }
 
 function sharpShare(entries, sharpSet) {
-  let sharpW = 0;
-  let totalW = 0;
-
+  let sw = 0, tw = 0;
   for (const e of entries) {
     const w = baseW(e.book);
-    totalW += w;
-    if (sharpSet.has(e.book)) sharpW += w;
+    tw += w;
+    if (sharpSet.has(e.book)) sw += w;
   }
-
-  return totalW ? sharpW / totalW : null;
+  return tw ? sw / tw : null;
 }
 
-async function fetchEventOdds(eventId, markets) {
+async function fetchEvent(eventId) {
   const url =
     `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${eventId}/odds` +
     `?regions=${REGIONS}` +
-    `&markets=${encodeURIComponent(markets.join(","))}` +
+    `&markets=${VALID_MARKETS.join(",")}` +
     `&oddsFormat=american` +
     `&apiKey=${API_KEY}`;
 
   const r = await fetch(url);
-  const json = await r.json();
-  return json;
+  return r.json();
 }
 
+/* ===============================
+   HANDLER
+   =============================== */
 module.exports = async (req, res) => {
   const { id } = req.query;
-  if (!id) return res.status(200).json({ markets: {}, error: "Missing id" });
+  if (!id) return res.json({ markets: {}, error: "Missing event id" });
 
   try {
-    let data = await fetchEventOdds(id, PRIMARY_MARKETS);
+    const data = await fetchEvent(id);
 
-    // Surface API errors
-    if (data && !Array.isArray(data) && (data.message || data.error_code || data.code)) {
-      return res.status(200).json({
+    if (!Array.isArray(data.bookmakers)) {
+      return res.json({
         markets: {},
-        error: data.message || "Odds API error",
-        meta: { code: data.code || data.error_code || null }
+        error: data?.message || "No bookmakers available"
       });
     }
 
-    // If no bookmakers, try fallback once
-    const noBooks = !data || !data.bookmakers || data.bookmakers.length === 0;
-    if (noBooks) {
-      data = await fetchEventOdds(id, FALLBACK_MARKETS);
-
-      if (data && !Array.isArray(data) && (data.message || data.error_code || data.code)) {
-        return res.status(200).json({
-          markets: {},
-          error: data.message || "Odds API error",
-          meta: { code: data.code || data.error_code || null }
-        });
-      }
-    }
-
-    /**
-     * raw[marketKey][player||point] = { player, point, perBook: { bookKey: [{name, odds}] } }
-     */
     const raw = {};
 
-    for (const book of data.bookmakers || []) {
-      for (const m of book.markets || []) {
+    for (const book of data.bookmakers) {
+      for (const m of book.markets) {
         if (!raw[m.key]) raw[m.key] = {};
-
-        for (const o of m.outcomes || []) {
+        for (const o of m.outcomes) {
           if (!o.description) continue;
-
-          const player = o.description;
-          const point = o.point ?? null;
-          const groupKey = `${player}||${point}`;
-
-          if (!raw[m.key][groupKey]) raw[m.key][groupKey] = { player, point, perBook: {} };
-          if (!raw[m.key][groupKey].perBook[book.key]) raw[m.key][groupKey].perBook[book.key] = [];
-
-          raw[m.key][groupKey].perBook[book.key].push({
-            name: o.name,
-            odds: o.price
-          });
+          const key = `${o.description}||${o.point ?? ""}`;
+          raw[m.key][key] ??= { player: o.description, point: o.point ?? null, perBook: {} };
+          raw[m.key][key].perBook[book.key] ??= [];
+          raw[m.key][key].perBook[book.key].push({ name: o.name, odds: o.price });
         }
       }
     }
@@ -225,101 +152,69 @@ module.exports = async (req, res) => {
       const rows = [];
 
       for (const g of Object.values(raw[mk])) {
-        const sideBuckets = {};
+        const sides = {};
 
-        // Build per-side entries with no-vig when a 2-way book is present
-        for (const [bookKey, outs] of Object.entries(g.perBook)) {
-          if (outs.length === 2 && Number.isFinite(outs[0].odds) && Number.isFinite(outs[1].odds)) {
-            const p0 = americanToProb(outs[0].odds);
-            const p1 = americanToProb(outs[1].odds);
-            const [nv0, nv1] = noVigPair(p0, p1);
-
-            const e0 = { side: outs[0].name, odds: outs[0].odds, prob_novig: nv0, book: bookKey };
-            const e1 = { side: outs[1].name, odds: outs[1].odds, prob_novig: nv1, book: bookKey };
-
-            if (!sideBuckets[e0.side]) sideBuckets[e0.side] = [];
-            if (!sideBuckets[e1.side]) sideBuckets[e1.side] = [];
-            sideBuckets[e0.side].push(e0);
-            sideBuckets[e1.side].push(e1);
+        for (const [book, outs] of Object.entries(g.perBook)) {
+          if (outs.length === 2) {
+            const [a, b] = outs.map(o => americanToProb(o.odds));
+            const [na, nb] = noVigPair(a, b);
+            [{ ...outs[0], prob_novig: na }, { ...outs[1], prob_novig: nb }]
+              .forEach(e => (sides[e.name] ??= []).push({ ...e, book }));
           } else {
-            for (const o of outs) {
-              if (!Number.isFinite(o.odds)) continue;
-              const entry = {
+            outs.forEach(o =>
+              (sides[o.name] ??= []).push({
                 side: o.name,
                 odds: o.odds,
                 prob_novig: americanToProb(o.odds),
-                book: bookKey
-              };
-              if (!sideBuckets[entry.side]) sideBuckets[entry.side] = [];
-              sideBuckets[entry.side].push(entry);
-            }
+                book
+              })
+            );
           }
         }
 
-        const allEntriesForGroup = Object.values(sideBuckets).flat();
-        const booksPresent = Array.from(new Set(allEntriesForGroup.map(e => e.book)));
-        const { sharpSet, source: sharp_source } = determineSharpSet(booksPresent);
+        const entries = Object.values(sides).flat();
+        const books = [...new Set(entries.map(e => e.book))];
+        const { set: sharpSet, source } = determineSharpSet(books);
 
-        for (const [sideName, entries] of Object.entries(sideBuckets)) {
-          const bookCount = entries.length;
-          if (bookCount < PROP_MIN_BOOKS) continue;
+        for (const [side, es] of Object.entries(sides)) {
+          if (es.length < PROP_MIN_BOOKS) continue;
 
-          const consensus_prob = weightedAvg(entries);
-          if (consensus_prob == null || consensus_prob < PROP_MIN_PROB) continue;
+          const prob = weightedAvg(es);
+          if (!prob || prob < PROP_MIN_PROB) continue;
 
-          const sharp_prob = weightedAvg(entries, e => sharpSet.has(e.book));
-          const public_prob = weightedAvg(entries, e => !sharpSet.has(e.book));
-          const book_lean = sharp_prob != null && public_prob != null ? sharp_prob - public_prob : null;
-
-          // Market Lean: how far from 50/50 the market is leaning toward this side
-          const market_lean = consensus_prob - 0.5;
-
-          let best = null;
-          for (const e of entries) {
-            const ev = calcEV(consensus_prob, e.odds);
-            if (ev == null) continue;
-            if (!best || ev > best.ev) best = { odds: e.odds, book: e.book, ev };
-          }
-          if (!best) continue;
+          const sharp = weightedAvg(es, e => sharpSet.has(e.book));
+          const pub = weightedAvg(es, e => !sharpSet.has(e.book));
+          const best = es
+            .map(e => ({ ...e, ev: calcEV(prob, e.odds) }))
+            .filter(e => e.ev != null)
+            .sort((a, b) => b.ev - a.ev)[0];
 
           rows.push({
             player: g.player,
             point: g.point,
-            side: sideName,
-
-            prob: consensus_prob,
-            sharp_prob,
-            public_prob,
-            book_lean,
-            market_lean,
-
-            sharp_share: sharpShare(allEntriesForGroup, sharpSet),
-            sharp_source,
-
+            side,
+            prob,
+            sharp_prob: sharp,
+            public_prob: pub,
+            book_lean: sharp != null && pub != null ? sharp - pub : null,
+            market_lean: prob - 0.5,
             odds: best.odds,
             book: best.book,
             ev: best.ev,
-            books: bookCount
+            books: es.length,
+            sharp_share: sharpShare(entries, sharpSet),
+            sharp_source: source
           });
         }
       }
 
-      rows.sort(
-        (a, b) =>
-          (b.prob ?? 0) - (a.prob ?? 0) ||
-          (b.ev ?? 0) - (a.ev ?? 0) ||
-          (b.books ?? 0) - (a.books ?? 0)
-      );
-
-      markets[mk] = rows.slice(0, MAX_ROWS_PER_MARKET);
+      markets[mk] = rows
+        .sort((a, b) => (b.prob - a.prob) || (b.ev - a.ev))
+        .slice(0, MAX_ROWS_PER_MARKET);
     }
 
-    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=30");
-    res.status(200).json({
-      markets,
-      meta: { requested_markets: PRIMARY_MARKETS }
-    });
+    res.json({ markets });
   } catch {
-    res.status(200).json({ markets: {}, error: "Server error" });
+    res.json({ markets: {}, error: "Server error" });
   }
 };

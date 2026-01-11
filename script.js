@@ -56,32 +56,36 @@ function renderMarketBlock(title, marketObj) {
 
   const sides = marketObj.sides.slice(0, 2);
   const topKey = sides[0]?.side_key;
+
   const comp = compositionLabel(marketObj.sharp_share);
+  const sharpLabel = marketObj.sharp_source === "proxy" ? "Sharp*" : "Sharp";
 
-  const rows = sides.map(s => {
-    const isTop = s.side_key === topKey;
+  const rows = sides
+    .map(s => {
+      const isTop = s.side_key === topKey;
 
-    return `
-      <div class="side ${isTop ? "top" : ""}">
-        <div class="side-main">
-          <div class="side-label">
-            ${s.name ?? "—"}
-            ${s.point != null ? `<span class="pt">${s.point > 0 ? "+" : ""}${s.point}</span>` : ""}
+      return `
+        <div class="side ${isTop ? "top" : ""}">
+          <div class="side-main">
+            <div class="side-label">
+              ${s.name ?? "—"}
+              ${s.point != null ? `<span class="pt">${s.point > 0 ? "+" : ""}${s.point}</span>` : ""}
+            </div>
+            <div class="side-odds">${fmtOdds(s.best_odds)}</div>
           </div>
-          <div class="side-odds">${fmtOdds(s.best_odds)}</div>
-        </div>
 
-        <div class="side-meta">
-          <span class="pill pill-prob">Consensus ${pct(s.consensus_prob)}</span>
-          <span class="pill pill-public">Public ${pct(s.public_prob)}</span>
-          <span class="pill pill-sharp">Sharp ${pct(s.sharp_prob)}</span>
-          <span class="pill ${leanClass(s.lean)}">Lean ${fmtLean(s.lean)}</span>
-          ${s.ev != null ? `<span class="pill pill-ev">EV ${(s.ev * 100).toFixed(1)}%</span>` : ""}
-          ${isTop ? `<span class="pill pill-top">MOST LIKELY</span>` : ""}
+          <div class="side-meta">
+            <span class="pill pill-prob">Consensus ${pct(s.consensus_prob)}</span>
+            <span class="pill pill-public">Public ${pct(s.public_prob)}</span>
+            <span class="pill pill-sharp">${sharpLabel} ${pct(s.sharp_prob)}</span>
+            <span class="pill ${leanClass(s.lean)}">Lean ${fmtLean(s.lean)}</span>
+            ${s.ev != null ? `<span class="pill pill-ev">EV ${(s.ev * 100).toFixed(1)}%</span>` : ""}
+            ${isTop ? `<span class="pill pill-top">MOST LIKELY</span>` : ""}
+          </div>
         </div>
-      </div>
-    `;
-  }).join("");
+      `;
+    })
+    .join("");
 
   return `
     <div class="market-block">
@@ -130,10 +134,6 @@ function gameCard(game) {
     </a>
   `;
 }
-
-/* ===============================
-   BOOTSTRAP
-   =============================== */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");

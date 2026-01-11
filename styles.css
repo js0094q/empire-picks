@@ -211,6 +211,7 @@ img { max-width: 100%; display: block; }
 .side-label {
   font-weight: 800;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
 }
@@ -255,6 +256,12 @@ img { max-width: 100%; display: block; }
   border-color: rgba(168,85,247,.22);
   background: rgba(168,85,247,.10);
   color: var(--purple);
+}
+
+.pill-sharp {
+  border-color: rgba(34,197,94,.22);
+  background: rgba(34,197,94,.10);
+  color: var(--green);
 }
 
 .pill-ev {

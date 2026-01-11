@@ -1,10 +1,20 @@
 import { Teams } from "./teams.js";
 
-const qs = new URLSearchParams(window.location.search);
-const EVENT_ID = qs.get("id");
-
 const pct = v => (v == null || !Number.isFinite(v) ? "—" : (v * 100).toFixed(1) + "%");
 const fmtOdds = o => (o == null || !Number.isFinite(o) ? "—" : o > 0 ? `+${o}` : `${o}`);
+
+const fmtLean = v => {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${(v * 100).toFixed(1)}%`;
+};
+
+function leanClass(v) {
+  if (v == null || !Number.isFinite(v)) return "lean-neutral";
+  if (v > 0.01) return "lean-sharp";
+  if (v < -0.01) return "lean-public";
+  return "lean-neutral";
+}
 
 async function fetchGames() {
   try {
@@ -22,9 +32,32 @@ async function fetchProps(eventId) {
   return r.ok ? r.json() : null;
 }
 
+function gameHeaderHTML(game) {
+  const home = Teams[game.home_team];
+  const away = Teams[game.away_team];
+
+  const kickoff = new Date(game.commence_time).toLocaleString("en-US", {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+
+  return `
+    <div class="game-header">
+      <div class="teams">
+        <img class="team-logo" src="${away?.logo || ""}" alt="${game.away_team}" />
+        <span class="at">@</span>
+        <img class="team-logo" src="${home?.logo || ""}" alt="${game.home_team}" />
+      </div>
+      <div class="kickoff">${kickoff}</div>
+    </div>
+  `;
+}
+
 function renderPropRow(p, rank) {
-  const evText =
-    p.ev == null || !Number.isFinite(p.ev) ? "" : ` · EV ${(p.ev * 100).toFixed(1)}%`;
+  const evText = p.ev == null || !Number.isFinite(p.ev) ? "" : `EV ${(p.ev * 100).toFixed(1)}%`;
+
+  const sharpLabel = p.sharp_source === "proxy" ? "Sharp*" : "Sharp";
 
   return `
     <div class="side ${rank === 0 ? "top" : ""}">
@@ -39,8 +72,16 @@ function renderPropRow(p, rank) {
 
       <div class="side-meta">
         <span class="pill pill-prob">${pct(p.prob)}</span>
-        <span class="pill pill-ev">${p.book}${evText}</span>
+
+        <span class="pill pill-sharp">${sharpLabel} ${pct(p.sharp_prob)}</span>
+        <span class="pill pill-public">Public ${pct(p.public_prob)}</span>
+
+        <span class="pill ${leanClass(p.book_lean)}">Book Lean ${fmtLean(p.book_lean)}</span>
+        <span class="pill ${leanClass(p.market_lean)}">Market Lean ${fmtLean(p.market_lean)}</span>
+
+        <span class="pill pill-ev">${p.book}${evText ? ` · ${evText}` : ""}</span>
         <span class="pill lean-neutral">${p.books} books</span>
+
         ${rank === 0 ? `<span class="pill pill-top">TOP IN MARKET</span>` : ""}
       </div>
     </div>
@@ -68,12 +109,7 @@ function renderPropsPayload(payload) {
   }
 
   if (payload.error) {
-    return `
-      <div class="muted" style="padding:10px 0">
-        ${payload.error}
-        ${payload.meta?.code ? `<div style="margin-top:6px">Code: ${payload.meta.code}</div>` : ""}
-      </div>
-    `;
+    return `<div class="muted" style="padding:10px 0">${payload.error}</div>`;
   }
 
   const markets = payload.markets || {};
@@ -91,100 +127,34 @@ function renderPropsPayload(payload) {
   return blocks || `<div class="muted" style="padding:10px 0">No qualified props this game.</div>`;
 }
 
-function gameHeaderHTML(game) {
-  const home = Teams[game.home_team];
-  const away = Teams[game.away_team];
-
-  const kickoff = new Date(game.commence_time).toLocaleString("en-US", {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-
+function gameCardShell(game) {
   return `
-    <div class="game-header" style="margin-bottom:0;border-bottom:0;padding-bottom:0">
-      <div class="teams">
-        <img class="team-logo" src="${away?.logo || ""}" alt="${game.away_team}" />
-        <span class="at">@</span>
-        <img class="team-logo" src="${home?.logo || ""}" alt="${game.home_team}" />
-      </div>
-      <div class="kickoff">${kickoff}</div>
-    </div>
-  `;
-}
-
-function gameAccordionCard(game) {
-  return `
-    <div class="game-card">
+    <div class="game-card" id="game-${game.id}">
       ${gameHeaderHTML(game)}
-
-      <button class="acc-btn" type="button" data-eid="${game.id}">
-        <span>Show Props</span>
-        <span class="acc-chevron">▾</span>
-      </button>
-
-      <div class="acc-panel" id="panel-${game.id}">
-        <div class="muted" style="padding:14px 0">Not loaded yet.</div>
+      <div class="props-body" id="props-${game.id}">
+        <div class="muted" style="padding:14px 0">Loading props…</div>
       </div>
     </div>
   `;
 }
 
-function wireAccordions(container) {
-  container.querySelectorAll(".acc-btn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const eid = btn.getAttribute("data-eid");
-      const panel = document.getElementById(`panel-${eid}`);
-      const isOpen = btn.classList.contains("open");
-
-      // Toggle closed
-      if (isOpen) {
-        btn.classList.remove("open");
-        panel.style.display = "none";
-        return;
-      }
-
-      // Open
-      btn.classList.add("open");
-      panel.style.display = "block";
-
-      // Load once
-      if (panel.getAttribute("data-loaded") === "1") return;
-
-      panel.innerHTML = `<div class="muted" style="padding:14px 0">Loading props…</div>`;
-
-      const payload = await fetchProps(eid);
-      panel.innerHTML = renderPropsPayload(payload);
-      panel.setAttribute("data-loaded", "1");
-    });
+/**
+ * Concurrency-limited loader to avoid rate limits
+ */
+async function runWithConcurrency(items, workerFn, concurrency = 3) {
+  const queue = items.slice();
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (queue.length) {
+      const item = queue.shift();
+      await workerFn(item);
+    }
   });
-}
-
-async function renderSingleEvent(container, eventId) {
-  container.innerHTML = `<div class="muted">Loading props…</div>`;
-
-  const payload = await fetchProps(eventId);
-  const html = renderPropsPayload(payload);
-
-  container.innerHTML = `
-    <div class="game-card">
-      <div class="market-head">
-        <div class="market-title">PROPS</div>
-      </div>
-      ${html}
-    </div>
-  `;
+  await Promise.all(workers);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("props-container");
   if (!container) return;
-
-  // If user linked directly to a game
-  if (EVENT_ID) {
-    await renderSingleEvent(container, EVENT_ID);
-    return;
-  }
 
   const games = await fetchGames();
   if (!games.length) {
@@ -192,13 +162,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  container.innerHTML = games
-    .sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time))
-    .map(gameAccordionCard)
-    .join("");
+  const sorted = games.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
+  container.innerHTML = sorted.map(gameCardShell).join("");
 
-  // Hide panels by default
-  container.querySelectorAll(".acc-panel").forEach(p => (p.style.display = "none"));
+  await runWithConcurrency(
+    sorted,
+    async (game) => {
+      const mount = document.getElementById(`props-${game.id}`);
+      if (!mount) return;
 
-  wireAccordions(container);
+      const payload = await fetchProps(game.id);
+      mount.innerHTML = renderPropsPayload(payload);
+    },
+    3
+  );
 });

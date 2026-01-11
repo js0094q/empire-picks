@@ -60,8 +60,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const data = await fetchProps();
-  if (!data || !data.markets) {
-    container.innerHTML = `<div class="muted">No player props available.</div>`;
+
+  if (!data) {
+    container.innerHTML = `<div class="muted">No response from props endpoint.</div>`;
+    return;
+  }
+
+  if (data.error) {
+    container.innerHTML = `
+      <div class="game-card">
+        <div class="market-head">
+          <div class="market-title">PROPS UNAVAILABLE</div>
+        </div>
+        <div class="muted" style="padding:10px 0">
+          ${data.error}
+        </div>
+        ${data.meta?.code ? `<div class="muted" style="padding:0">Code: ${data.meta.code}</div>` : ""}
+      </div>
+    `;
+    return;
+  }
+
+  if (!data.markets || Object.keys(data.markets).length === 0) {
+    container.innerHTML = `<div class="muted">No props returned for this event.</div>`;
     return;
   }
 

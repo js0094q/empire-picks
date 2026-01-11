@@ -17,21 +17,16 @@
    RESET / BASE
    ===================== */
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   background: radial-gradient(1200px 600px at 50% -20%, #0f172a, #020617);
   color: var(--text);
 }
 
-img {
-  max-width: 100%;
-  display: block;
-}
+img { max-width: 100%; display: block; }
 
 /* =====================
    TOP NAV
@@ -45,26 +40,18 @@ img {
   border-bottom: 1px solid var(--border);
 }
 
-.logo {
-  font-weight: 700;
-  letter-spacing: 0.4px;
-}
+.logo { font-weight: 800; letter-spacing: 0.4px; }
 
-.nav {
-  display: flex;
-  gap: 16px;
-}
+.nav { display: flex; gap: 16px; }
 
 .nav-link {
   color: var(--muted);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .nav-link:hover,
-.nav-link.active {
-  color: var(--blue);
-}
+.nav-link.active { color: var(--blue); }
 
 /* =====================
    LAYOUT
@@ -84,104 +71,179 @@ img {
   margin-bottom: 28px;
 }
 
-.hero h1 {
-  margin: 0 0 6px;
-}
-
-.hero p {
-  margin: 0;
-  color: var(--muted);
-}
+.hero h1 { margin: 0 0 6px; }
+.hero p { margin: 0; color: var(--muted); }
 
 /* =====================
    GRID / CARDS
    ===================== */
 
-.games {
-  display: grid;
-  gap: 20px;
-}
+.games { display: grid; gap: 20px; }
 
 .game-card {
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border-radius: 16px;
-  padding: 20px;
+  padding: 18px;
   border: 1px solid var(--border);
 }
 
 /* =====================
-   MARKET ROWS (used by props + markets)
+   ACCORDION
    ===================== */
 
-.market-row {
+.accordion-trigger {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.game-header {
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  margin-bottom: 12px;
+}
+
+.accordion .right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chev {
+  color: var(--muted);
+  font-size: 0.95rem;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.accordion.open .chev { transform: rotate(180deg); }
+
+.accordion-panel {
+  padding-top: 14px;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.section-title {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+/* =====================
+   HEADER TEAMS
+   ===================== */
+
+.teams {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.at { color: var(--muted); font-weight: 800; }
+
+.kickoff {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* =====================
+   MARKET ROWS
+   ===================== */
+
+.market-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
   padding: 14px;
   background: rgba(255,255,255,.02);
   border-radius: 12px;
   border: 1px solid var(--border);
 }
 
+.market-tag {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--blue);
+  background: rgba(56,189,248,.12);
+  border: 1px solid rgba(56,189,248,.18);
+}
+
 .market-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  gap: 6px;
 }
 
 .market-name {
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+.market-odds {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
 .market-meta {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--muted);
 }
 
 /* =====================
-   BADGES / PILLS
+   ACTIONS / BUTTONS
    ===================== */
 
-.pill-mini {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+.actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
 }
 
-.pill-play {
-  background: rgba(34,197,94,.25);
-  color: var(--green);
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: rgba(255,255,255,.03);
 }
 
-.pill-pass {
-  background: rgba(239,68,68,.25);
-  color: var(--red);
+.btn:hover {
+  border-color: rgba(56,189,248,.35);
 }
 
-/* =====================
-   CONFIDENCE / ARROWS
-   ===================== */
-
-.arrow {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.arrow.up {
-  color: var(--green);
-}
-
-.arrow.down {
-  color: var(--red);
-}
-
-.arrow.flat {
-  color: var(--muted);
+.btn-primary {
+  background: rgba(56,189,248,.16);
+  border-color: rgba(56,189,248,.22);
+  color: var(--blue);
 }
 
 /* =====================
@@ -199,13 +261,18 @@ img {
    ===================== */
 
 @media (max-width: 640px) {
+  .topbar { padding: 14px 16px; }
+  .layout { padding: 16px; }
+
   .market-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+    grid-template-columns: 1fr;
   }
 
-  .arrow {
-    align-self: flex-end;
+  .actions {
+    justify-content: stretch;
+  }
+
+  .btn {
+    width: 100%;
   }
 }

@@ -1,6 +1,5 @@
 {
   "version": 2,
-
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "props.html", "use": "@vercel/static" },
@@ -12,7 +11,6 @@
     { "src": "api/events.js", "use": "@vercel/node" },
     { "src": "api/props.js", "use": "@vercel/node" }
   ],
-
   "routes": [
     {
       "src": "/api/(.*)",

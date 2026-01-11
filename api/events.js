@@ -21,7 +21,7 @@ const BOOK_BASE = {
   betrivers: 0.92
 };
 
-const SHARP_BOOKS = new Set(["pinnacle", "circa", "betcris"]);
+const NAMED_SHARPS = new Set(["pinnacle", "circa", "betcris"]);
 
 function americanToProb(odds) {
   return odds > 0
@@ -64,27 +64,59 @@ function weightedAvg(entries, predicateFn) {
   return wSum ? pSum / wSum : null;
 }
 
-function sharpShare(entries) {
+function sharpShare(entries, sharpSet) {
   let sharpW = 0;
   let totalW = 0;
 
   for (const e of entries) {
     const w = baseW(e.book);
     totalW += w;
-    if (SHARP_BOOKS.has(e.book)) sharpW += w;
+    if (sharpSet.has(e.book)) sharpW += w;
   }
 
   return totalW ? sharpW / totalW : null;
 }
 
-function consensusForSides(sideBuckets) {
+/**
+ * Determine which books count as “sharp” for THIS market:
+ * - If named sharps exist in the market, use them.
+ * - Else create a proxy tier = top ~30% by base weight among available books.
+ */
+function determineSharpSetForMarket(entries) {
+  const booksPresent = Array.from(new Set(entries.map(e => e.book)));
+
+  const namedPresent = booksPresent.filter(b => NAMED_SHARPS.has(b));
+  if (namedPresent.length > 0) {
+    return { sharpSet: new Set(namedPresent), source: "named" };
+  }
+
+  // Proxy: top weighted 30% of present books
+  const sorted = booksPresent
+    .map(b => ({ b, w: baseW(b) }))
+    .sort((a, b) => b.w - a.w);
+
+  const n = sorted.length;
+  if (n <= 1) {
+    return { sharpSet: new Set(sorted.map(x => x.b)), source: "proxy" };
+  }
+
+  const k = Math.max(1, Math.round(n * 0.30));
+  const top = sorted.slice(0, k).map(x => x.b);
+  return { sharpSet: new Set(top), source: "proxy" };
+}
+
+function consensusForSides(sideBuckets, sharpSet) {
   const out = [];
 
   for (const [sideKey, entries] of Object.entries(sideBuckets)) {
     const consensus_prob = weightedAvg(entries);
-    const sharp_prob = weightedAvg(entries, e => SHARP_BOOKS.has(e.book));
-    const public_prob = weightedAvg(entries, e => !SHARP_BOOKS.has(e.book));
-    const lean = sharp_prob != null && public_prob != null ? sharp_prob - public_prob : null;
+
+    const sharp_prob = weightedAvg(entries, e => sharpSet.has(e.book));
+    const public_prob = weightedAvg(entries, e => !sharpSet.has(e.book));
+
+    // If either bucket is empty, lean is not observable
+    const lean =
+      sharp_prob != null && public_prob != null ? sharp_prob - public_prob : null;
 
     let bestPick = null;
     for (const e of entries) {
@@ -159,10 +191,17 @@ module.exports = async (req, res) => {
           }
         }
 
-        const normalize = key => ({
-          sides: consensusForSides(buckets[key] || {}),
-          sharp_share: sharpShare(entriesAll[key])
-        });
+        function normalize(marketKey) {
+          const entries = entriesAll[marketKey] || [];
+          const { sharpSet, source } = determineSharpSetForMarket(entries);
+
+          return {
+            sides: consensusForSides(buckets[marketKey] || {}, sharpSet),
+            sharp_share: sharpShare(entries, sharpSet),
+            sharp_source: source,
+            sharp_books: Array.from(sharpSet)
+          };
+        }
 
         return {
           id: game.id,

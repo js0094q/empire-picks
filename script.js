@@ -100,6 +100,10 @@ function renderMarketBlock(title, marketObj) {
   `;
 }
 
+/* ===============================
+   GAME CARD
+   =============================== */
+
 function gameCard(game) {
   const home = Teams[game.home_team];
   const away = Teams[game.away_team];
@@ -111,10 +115,7 @@ function gameCard(game) {
   });
 
   return `
-    <a href="/props.html?id=${game.id}"
-       class="game-card"
-       style="text-decoration:none;color:inherit">
-
+    <div class="game-card">
       <div class="game-header">
         <div class="teams">
           <img class="team-logo" src="${away?.logo || ""}" alt="${game.away_team}" />
@@ -127,13 +128,13 @@ function gameCard(game) {
       ${renderMarketBlock("ML", game?.markets?.h2h)}
       ${renderMarketBlock("SPREAD", game?.markets?.spreads)}
       ${renderMarketBlock("TOTAL", game?.markets?.totals)}
-
-      <div class="muted" style="margin-top:10px;font-size:.78rem;padding:0">
-        Click to view player props
-      </div>
-    </a>
+    </div>
   `;
 }
+
+/* ===============================
+   BOOTSTRAP
+   =============================== */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("games-container");

@@ -5,11 +5,11 @@ const SPORT = "americanfootball_nfl";
 const REGIONS = "us";
 
 /**
- * Display policy (loosened so props show reliably)
+ * Display policy
  */
-const PROP_MIN_PROB = 0.50;      // keep all reasonable props
+const PROP_MIN_PROB = 0.50;      // keep reasonable props, not just extreme favorites
 const PROP_MIN_BOOKS = 1;        // allow single-book props
-const MAX_ROWS_PER_MARKET = 30;  // per game per market
+const MAX_ROWS_PER_MARKET = 25;  // per game per market
 
 /**
  * Book weighting
@@ -30,21 +30,6 @@ const BOOK_BASE = {
 };
 
 const NAMED_SHARPS = new Set(["pinnacle", "circa", "betcris"]);
-
-/**
- * Markets to request
- * Keep these conservative and commonly available. Add more once stable.
- */
-const PRIMARY_MARKETS = [
-  "player_anytime_td",
-  "player_pass_tds"
-];
-
-// Optional fallback if a given event has sparse props
-const FALLBACK_MARKETS = [
-  "player_anytime_td",
-  "player_pass_tds"
-];
 
 function baseW(bookKey) {
   return BOOK_BASE[bookKey] ?? 0.85;
@@ -67,7 +52,57 @@ function calcEV(prob, odds) {
 }
 
 /**
- * Determine sharp set for a given prop group from books present:
+ * Expanded prop markets (NFL player markets)
+ * If your plan supports more, you can keep adding here.
+ *
+ * Notes:
+ * - Some markets only appear for certain games/books.
+ * - Some will return only a subset of players.
+ */
+const PRIMARY_MARKETS = [
+  // TD markets
+  "player_anytime_td",
+  "player_1st_td",
+  "player_last_td",
+
+  // Passing
+  "player_pass_tds",
+  "player_pass_yds",
+  "player_pass_completions",
+  "player_pass_attempts",
+  "player_pass_interceptions",
+  "player_pass_longest_completion",
+
+  // Rushing
+  "player_rush_yds",
+  "player_rush_attempts",
+  "player_rush_longest",
+
+  // Receiving
+  "player_receptions",
+  "player_reception_yds",
+  "player_reception_longest",
+
+  // Kicking (availability varies by book)
+  "player_field_goals",
+  "player_kicking_points",
+
+  // Defense/Sacks/INTs (often limited)
+  "player_sacks",
+  "player_interceptions"
+];
+
+// Fallback markets in case an event has sparse markets
+const FALLBACK_MARKETS = [
+  "player_anytime_td",
+  "player_pass_yds",
+  "player_rush_yds",
+  "player_reception_yds",
+  "player_receptions"
+];
+
+/**
+ * Determine sharp set from books present:
  * - if named sharps present, use them
  * - else proxy: top ~30% by weight among present books
  */
@@ -134,7 +169,7 @@ module.exports = async (req, res) => {
   try {
     let data = await fetchEventOdds(id, PRIMARY_MARKETS);
 
-    // If API returns error object, surface it
+    // Surface API errors
     if (data && !Array.isArray(data) && (data.message || data.error_code || data.code)) {
       return res.status(200).json({
         markets: {},
@@ -194,7 +229,6 @@ module.exports = async (req, res) => {
 
         // Build per-side entries with no-vig when a 2-way book is present
         for (const [bookKey, outs] of Object.entries(g.perBook)) {
-          // If exactly two outcomes at this book, remove vig for that pair
           if (outs.length === 2 && Number.isFinite(outs[0].odds) && Number.isFinite(outs[1].odds)) {
             const p0 = americanToProb(outs[0].odds);
             const p1 = americanToProb(outs[1].odds);
@@ -208,7 +242,6 @@ module.exports = async (req, res) => {
             sideBuckets[e0.side].push(e0);
             sideBuckets[e1.side].push(e1);
           } else {
-            // Otherwise fallback to implied probability
             for (const o of outs) {
               if (!Number.isFinite(o.odds)) continue;
               const entry = {
@@ -223,12 +256,10 @@ module.exports = async (req, res) => {
           }
         }
 
-        // Determine sharp/public split based on books present in this group
         const allEntriesForGroup = Object.values(sideBuckets).flat();
         const booksPresent = Array.from(new Set(allEntriesForGroup.map(e => e.book)));
         const { sharpSet, source: sharp_source } = determineSharpSet(booksPresent);
 
-        // Build a row per side
         for (const [sideName, entries] of Object.entries(sideBuckets)) {
           const bookCount = entries.length;
           if (bookCount < PROP_MIN_BOOKS) continue;
@@ -240,7 +271,7 @@ module.exports = async (req, res) => {
           const public_prob = weightedAvg(entries, e => !sharpSet.has(e.book));
           const book_lean = sharp_prob != null && public_prob != null ? sharp_prob - public_prob : null;
 
-          // Market lean is how far from 50/50 the market is leaning toward THIS side (un-vig)
+          // Market Lean: how far from 50/50 the market is leaning toward this side
           const market_lean = consensus_prob - 0.5;
 
           let best = null;
@@ -273,7 +304,6 @@ module.exports = async (req, res) => {
         }
       }
 
-      // Rank: highest probability first, then EV, then number of books
       rows.sort(
         (a, b) =>
           (b.prob ?? 0) - (a.prob ?? 0) ||
@@ -287,9 +317,7 @@ module.exports = async (req, res) => {
     res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=30");
     res.status(200).json({
       markets,
-      meta: {
-        requested_markets: PRIMARY_MARKETS
-      }
+      meta: { requested_markets: PRIMARY_MARKETS }
     });
   } catch {
     res.status(200).json({ markets: {}, error: "Server error" });

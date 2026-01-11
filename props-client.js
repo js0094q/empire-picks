@@ -5,11 +5,8 @@
 const qs = new URLSearchParams(window.location.search);
 const EVENT_ID = qs.get("id");
 
-const pct = v =>
-  v == null || !Number.isFinite(v) ? "—" : (v * 100).toFixed(1) + "%";
-
-const fmtOdds = o =>
-  o == null ? "—" : o > 0 ? `+${o}` : `${o}`;
+const pct = v => (v == null || !Number.isFinite(v) ? "—" : (v * 100).toFixed(1) + "%");
+const fmtOdds = o => (o == null || !Number.isFinite(o) ? "—" : o > 0 ? `+${o}` : `${o}`);
 
 /* ===============================
    FETCH
@@ -17,7 +14,7 @@ const fmtOdds = o =>
 
 async function fetchProps() {
   if (!EVENT_ID) return null;
-  const r = await fetch(`/api/props?id=${EVENT_ID}`);
+  const r = await fetch(`/api/props?id=${encodeURIComponent(EVENT_ID)}`, { cache: "no-store" });
   return r.ok ? r.json() : null;
 }
 
@@ -28,6 +25,9 @@ async function fetchProps() {
 function renderProp(player, market, side) {
   if (!side) return "";
 
+  const evText =
+    side.ev == null || !Number.isFinite(side.ev) ? "" : ` · EV ${(side.ev * 100).toFixed(1)}%`;
+
   return `
     <div class="market-row">
       <span class="market-tag">${market}</span>
@@ -35,8 +35,7 @@ function renderProp(player, market, side) {
         <div class="market-name">${player}</div>
         <div class="market-odds">${fmtOdds(side.odds)}</div>
         <div class="market-meta">
-          Consensus ${pct(side.prob)}
-          · EV ${(side.ev * 100).toFixed(1)}%
+          Consensus ${pct(side.prob)}${evText}
         </div>
       </div>
     </div>
@@ -48,8 +47,8 @@ function renderMarketBlock(market, rows) {
 
   return `
     <div class="game-card">
-      <h3 style="margin-bottom:12px">${market.replace(/_/g, " ")}</h3>
-      ${rows.join("")}
+      <div class="section-title">${market.replace(/_/g, " ")}</div>
+      <div class="stack">${rows.join("")}</div>
     </div>
   `;
 }
@@ -63,15 +62,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!container) return;
 
   if (!EVENT_ID) {
-    container.innerHTML =
-      `<div class="muted">Select a game to view player props.</div>`;
+    container.innerHTML = `<div class="muted">Select a game to view player props.</div>`;
     return;
   }
 
   const data = await fetchProps();
   if (!data || !data.markets) {
-    container.innerHTML =
-      `<div class="muted">No player props available.</div>`;
+    container.innerHTML = `<div class="muted">No player props available.</div>`;
     return;
   }
 
@@ -79,12 +76,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   for (const [market, players] of Object.entries(data.markets)) {
     const rows = [];
-
     for (const p of players) {
       rows.push(renderProp(p.player, "OVER", p.over));
       rows.push(renderProp(p.player, "UNDER", p.under));
     }
-
     blocks.push(renderMarketBlock(market, rows));
   }
 

@@ -88,58 +88,6 @@ img { max-width: 100%; display: block; }
 }
 
 /* =====================
-   ACCORDION
-   ===================== */
-
-.accordion-trigger {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.game-header {
-  padding: 2px 2px 8px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  margin-bottom: 12px;
-}
-
-.accordion .right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.chev {
-  color: var(--muted);
-  font-size: 0.95rem;
-  transform: rotate(0deg);
-  transition: transform 160ms ease;
-}
-
-.accordion.open .chev { transform: rotate(180deg); }
-
-.accordion-panel {
-  padding-top: 14px;
-}
-
-.stack {
-  display: grid;
-  gap: 12px;
-}
-
-.section-title {
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  font-size: 0.9rem;
-  color: var(--text);
-}
-
-/* =====================
    HEADER TEAMS
    ===================== */
 
@@ -150,12 +98,16 @@ img { max-width: 100%; display: block; }
 }
 
 .team-logo {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
+  padding: 2px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
 }
 
-.at { color: var(--muted); font-weight: 800; }
+.at { color: var(--muted); font-weight: 900; }
 
 .kickoff {
   color: var(--muted);
@@ -163,87 +115,177 @@ img { max-width: 100%; display: block; }
   white-space: nowrap;
 }
 
+.game-header {
+  padding: 2px 2px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 /* =====================
-   MARKET ROWS
+   MARKET BLOCKS (NEW)
    ===================== */
 
-.market-row {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  padding: 14px;
+.market-block {
+  margin-top: 12px;
+  padding: 12px;
   background: rgba(255,255,255,.02);
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid var(--border);
 }
 
-.market-tag {
-  align-self: flex-start;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--blue);
-  background: rgba(56,189,248,.12);
-  border: 1px solid rgba(56,189,248,.18);
-}
-
-.market-main {
-  display: grid;
-  gap: 6px;
-}
-
-.market-name {
-  font-weight: 700;
+.market-head {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.market-odds {
+.market-title {
   font-weight: 900;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.4px;
+  font-size: 0.85rem;
+  color: var(--text);
 }
 
-.market-meta {
-  font-size: 0.82rem;
+.market-badges { display: flex; gap: 8px; }
+
+/* Composition badges */
+.badge {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.35px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
   color: var(--muted);
 }
 
-/* =====================
-   ACTIONS / BUTTONS
-   ===================== */
-
-.actions {
-  margin-top: 14px;
-  display: flex;
-  justify-content: flex-end;
+.badge-sharp {
+  border-color: rgba(34,197,94,.25);
+  background: rgba(34,197,94,.10);
+  color: var(--green);
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-weight: 800;
-  text-decoration: none;
-  border: 1px solid var(--border);
-  color: var(--text);
-  background: rgba(255,255,255,.03);
+.badge-public {
+  border-color: rgba(239,68,68,.25);
+  background: rgba(239,68,68,.10);
+  color: var(--red);
 }
 
-.btn:hover {
-  border-color: rgba(56,189,248,.35);
-}
-
-.btn-primary {
-  background: rgba(56,189,248,.16);
+.badge-mix {
   border-color: rgba(56,189,248,.22);
+  background: rgba(56,189,248,.10);
   color: var(--blue);
+}
+
+.market-sides {
+  display: grid;
+  gap: 10px;
+}
+
+.side {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+}
+
+.side.top {
+  border-color: rgba(56,189,248,.25);
+  background: rgba(56,189,248,.06);
+}
+
+.side-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.side-label {
+  font-weight: 800;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.side-label .pt {
+  color: var(--muted);
+  font-weight: 900;
+  font-size: 0.88rem;
+}
+
+.side-odds {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  font-size: 1.02rem;
+}
+
+.side-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Pills */
+.pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+}
+
+.pill-prob {
+  border-color: rgba(56,189,248,.22);
+  background: rgba(56,189,248,.10);
+  color: var(--blue);
+}
+
+.pill-public {
+  border-color: rgba(168,85,247,.22);
+  background: rgba(168,85,247,.10);
+  color: var(--purple);
+}
+
+.pill-ev {
+  border-color: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+}
+
+.pill-top {
+  border-color: rgba(34,197,94,.25);
+  background: rgba(34,197,94,.10);
+  color: var(--green);
+}
+
+/* Lean pills */
+.lean-sharp {
+  border-color: rgba(34,197,94,.25);
+  background: rgba(34,197,94,.10);
+  color: var(--green);
+}
+
+.lean-public {
+  border-color: rgba(239,68,68,.25);
+  background: rgba(239,68,68,.10);
+  color: var(--red);
+}
+
+.lean-neutral {
+  border-color: rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
 }
 
 /* =====================
@@ -263,16 +305,4 @@ img { max-width: 100%; display: block; }
 @media (max-width: 640px) {
   .topbar { padding: 14px 16px; }
   .layout { padding: 16px; }
-
-  .market-row {
-    grid-template-columns: 1fr;
-  }
-
-  .actions {
-    justify-content: stretch;
-  }
-
-  .btn {
-    width: 100%;
-  }
 }
